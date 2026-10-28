@@ -2,7 +2,8 @@
     Alles aus Stammdaten: Firma (Telefon, E-Mail, Website, USt-IdNr./Steuernummer,
     Registerangaben aus erpnext_germany), Firmenadresse, Standard-Bankkonto der Firma.
     Die Zeile Inhaber/Geschäftsführung setzt das Template beim Anlegen aus
-    letter_head.owner_line der Konfiguration (leer, solange Platzhalter). -#}
+    letter_head.owner_line der Konfiguration als festen Text ein (HTML-escaped, geschweifte
+    Klammern als Zeichenreferenz, also nie Jinja; leer, solange Platzhalter). -#}
 {%- set company = frappe.get_cached_doc("Company", doc.company) if doc and doc.company else None -%}
 {%- if company -%}
 {%- set address_name = frappe.db.get_value("Dynamic Link", {"link_doctype": "Company", "link_name": company.name, "parenttype": "Address"}, "parent") -%}

@@ -6,6 +6,15 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Sicherheit (Review Epic 0)
+
+- E-1: `letter_head.owner_line` wird als fester Text in den Briefkopf-Quelltext
+  eingesetzt (HTML-escaped, `{`/`}` als Zeichenreferenz, kein `string.Template`):
+  Jinja-Syntax aus der Konfiguration (später Wizard-Eingaben) wird beim Druck nicht mehr
+  ausgeführt.
+- Vertragstests zu `corevatis.setup.onboard` (C-3): Signaturen von
+  `apply_site_template`/`list_templates` und Rückgabe `changes`/`warnings`/`skipped`.
+
 ### Hinzugefügt
 
 - `corevatis_erpnext.setup.list_templates()` (Allowlist der Vorlagen für das

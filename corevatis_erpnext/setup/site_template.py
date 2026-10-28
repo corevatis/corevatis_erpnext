@@ -30,7 +30,6 @@ import html
 import json
 from datetime import date
 from pathlib import Path
-from string import Template
 
 import frappe
 from frappe.utils import add_days, add_years, cint, getdate, today
@@ -623,6 +622,20 @@ def _ensure_company_address(cfg: dict, company: str, report: Report) -> None:
 # „Company Letterhead - Grey“ ist danach Site-Standard.
 ERPNEXT_LETTER_HEADS = ("Company Letterhead", "Company Letterhead - Grey")
 LETTER_HEAD_MARKER = "{#- Briefkopf (Corevatis-Site-Template)"
+OWNER_LINE_SLOT = "$owner_line"
+
+
+def jinja_literal_html(value) -> str:
+	"""Konfigurationswert als festen Text für einen Jinja-Quelltext (Briefkopf, Druckformat).
+
+	Der Briefkopf wird bei jedem Druck mit Frappes Jinja gerendert (ohne Autoescape, mit
+	``frappe.db`` & Co. im Kontext). Werte aus der Konfiguration (später Wizard-Eingaben)
+	dürfen dort weder Markup noch Jinja-Syntax einbringen: HTML-escaped und ``{``/``}``
+	als Zeichenreferenz - ohne ``{`` gibt es keinen Delimiter (``{{``, ``{%``, ``{#``),
+	der Browser bzw. wkhtmltopdf zeigt die Zeichen trotzdem unverändert an.
+	"""
+	text = html.escape("" if value is None else str(value), quote=True)
+	return text.replace("{", "&#123;").replace("}", "&#125;")
 
 
 def _ensure_letter_head(cfg: dict, company: str, report: Report) -> None:
@@ -631,10 +644,11 @@ def _ensure_letter_head(cfg: dict, company: str, report: Report) -> None:
 		return
 	name = _value(spec.get("letter_head_name")) or company
 	if not frappe.db.exists("Letter Head", name):
-		owner_line = html.escape(_value(spec.get("owner_line")) or "")
-		footer = Template(_read_template_file("letter_head_footer.html")).safe_substitute(
-			owner_line=owner_line
-		)
+		footer_source = _read_template_file("letter_head_footer.html")
+		if footer_source.count(OWNER_LINE_SLOT) != 1:
+			raise frappe.ValidationError(f"letter_head_footer.html: {OWNER_LINE_SLOT} genau einmal erwartet")
+		# fester Text, kein Jinja: der Briefkopf-Quelltext wird bei jedem Druck gerendert
+		footer = footer_source.replace(OWNER_LINE_SLOT, jinja_literal_html(_value(spec.get("owner_line"))))
 		frappe.get_doc(
 			{
 				"doctype": "Letter Head",
