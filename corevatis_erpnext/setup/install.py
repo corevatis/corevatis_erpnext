@@ -14,19 +14,25 @@ def after_install() -> None:
 	"""
 	from corevatis_erpnext.anfrage import ensure_anfrage_setup
 	from corevatis_erpnext.crm.setup import ensure_custom_fields
+	from corevatis_erpnext.webform.datenschutz import ensure_datenschutz_seite
 	from corevatis_erpnext.webform.einschaetzung import setup as setup_einschaetzung
 
 	ensure_anfrage_setup()
 	# nach den Feldern aus 1.1: cv_termin/cv_galerie hängen sich an deren Layout (1.3/1.5)
 	ensure_custom_fields()
 	setup_einschaetzung()
+	# Platzhalter /datenschutz für den Link im Web Form (nur wenn die Route frei ist)
+	ensure_datenschutz_seite()
 
 
 def after_migrate() -> None:
 	"""Nach jedem ``bench migrate``: dieselben idempotenten Schritte wie bei der Installation."""
 	from corevatis_erpnext.anfrage import ensure_anfrage_setup
 	from corevatis_erpnext.crm.setup import ensure_custom_fields
+	from corevatis_erpnext.webform.datenschutz import ensure_datenschutz_seite
 
 	ensure_anfrage_setup()
 	# nach den Feldern aus 1.1: cv_termin/cv_galerie hängen sich an deren Layout (1.3/1.5)
 	ensure_custom_fields()
+	# Platzhalter /datenschutz (1.2), legt nichts an, wenn unter der Route schon eine Seite liegt
+	ensure_datenschutz_seite()
