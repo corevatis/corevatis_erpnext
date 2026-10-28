@@ -134,10 +134,10 @@ class TestGalerie(IntegrationTestCase):
 	def test_ungueltige_ziele(self):
 		with self.assertRaises(frappe.DoesNotExistError):
 			galerie.get_bilder("Lead", "GIBT-ES-NICHT")
-		with self.assertRaises(frappe.DoesNotExistError):
-			galerie.get_bilder("Kein Doctype", "x")
-		with self.assertRaises(frappe.ValidationError):
-			galerie.get_bilder("Event Participants", "x")
+		# Allowlist: nur Lead (und später Objekt)
+		for doctype in ("Kein Doctype", "Event Participants", "Event", "User", "File"):
+			with self.assertRaises(frappe.PermissionError):
+				galerie.get_bilder(doctype, "x")
 
 	def test_hooks_doctype_js(self):
 		hooks = frappe.get_hooks("doctype_js", app_name="corevatis_erpnext")
@@ -157,3 +157,19 @@ class TestGalerie(IntegrationTestCase):
 		self.assertEqual(len(eintrag), 1)
 		self.assertEqual(eintrag[0]["quelle"], frappe._("Photo 1"))
 		self.assertEqual(bilder[-1]["file_url"], f4.file_url)  # zuletzt hochgeladen
+
+	def test_feldrechte_permlevel(self):
+		meta = frappe.get_meta("Lead")
+		if not meta.has_field("cv_foto_1") or frappe.get_meta("Lead") is not meta:
+			self.skipTest("cv_foto_1 fehlt oder Meta nicht gecacht")
+		url = "/private/files/nur-mit-feldrecht.png"
+		frappe.db.set_value("Lead", self.lead.name, "cv_foto_1", url)
+		frappe.set_user(LESER)
+		self.assertIn(url, [b["file_url"] for b in galerie.get_bilder("Lead", self.lead.name)])
+		df = meta.get_field("cv_foto_1")
+		alt = df.permlevel
+		df.permlevel = 7  # keine Rolle hat Leserecht auf Ebene 7
+		try:
+			self.assertNotIn(url, [b["file_url"] for b in galerie.get_bilder("Lead", self.lead.name)])
+		finally:
+			df.permlevel = alt

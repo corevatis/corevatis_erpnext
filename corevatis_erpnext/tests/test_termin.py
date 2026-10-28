@@ -287,3 +287,35 @@ class TestTermin(IntegrationTestCase):
 		self.assertEqual(result["warnungen"], [])
 		self.assertEqual(frappe.db.get_value("Lead", self.lead.name, "cv_status"), "Termin")
 		self.assertEqual(frappe.db.get_value("Lead", self.lead.name, "cv_termin"), result["event"])
+
+	def test_fremde_adresse_wird_nicht_aufgeloest(self):
+		anderer = make_lead()
+		fremd = frappe.get_doc(
+			{
+				"doctype": "Address",
+				"address_title": "Fremd",
+				"address_type": "Billing",
+				"address_line1": "Geheimgasse 1",
+				"pincode": "10115",
+				"city": "Berlin",
+				"country": "Germany",
+				"links": [{"link_doctype": "Lead", "link_name": anderer.name}],
+			}
+		).insert(ignore_permissions=True)
+		if not frappe.get_meta("Lead").has_field("cv_objekt_adresse"):
+			self.skipTest("cv_objekt_adresse (1.1) fehlt")
+		frappe.db.set_value("Lead", self.lead.name, "cv_objekt_adresse", fremd.name)
+		lead = frappe.get_doc("Lead", self.lead.name)
+		text = termin.objekt_adresse(lead)
+		self.assertEqual(text, fremd.name)
+		self.assertNotIn("Geheimgasse", text)
+		# eigene, verknüpfte Adresse wird aufgelöst
+		frappe.db.set_value("Lead", self.lead.name, "cv_objekt_adresse", self.adresse.name)
+		self.assertEqual(
+			termin.objekt_adresse(frappe.get_doc("Lead", self.lead.name)), "Kellerweg 7\n48143 Münster"
+		)
+		# Freitext aus 1.1 bleibt Text
+		frappe.db.set_value("Lead", self.lead.name, "cv_objekt_adresse", "Am Hang 3\n48155 Münster")
+		self.assertEqual(
+			termin.objekt_adresse(frappe.get_doc("Lead", self.lead.name)), "Am Hang 3\n48155 Münster"
+		)

@@ -205,20 +205,25 @@ def kunden_name(doc) -> str:
 
 
 def objekt_adresse(doc) -> str:
-	"""Objektadresse mehrzeilig: Feld aus 1.1, sonst verknüpfte Adresse, sonst Ort."""
-	wert = doc.get(FELD_OBJEKT_ADRESSE) if doc.meta.has_field(FELD_OBJEKT_ADRESSE) else None
-	if wert:
-		wert = str(wert)
-		if frappe.db.exists("Address", wert):
-			return _adresse_text(wert)
-		return _html_zu_text(wert).strip()
+	"""Objektadresse mehrzeilig: Feld aus 1.1, sonst verknüpfte Adresse, sonst Ort.
 
+	Ein Address-Name im Feld wird nur aufgelöst, wenn die Adresse mit *diesem* Lead
+	verknüpft ist (Dynamic Link) - sonst bleibt der Wert reiner Text. So lässt sich über
+	einen Lead keine fremde Adresse der Site auslesen.
+	"""
 	adressen = frappe.get_all(
 		"Dynamic Link",
 		filters={"link_doctype": doc.doctype, "link_name": doc.name, "parenttype": "Address"},
 		pluck="parent",
-		limit=1,
+		order_by="creation asc",
 	)
+	wert = doc.get(FELD_OBJEKT_ADRESSE) if doc.meta.has_field(FELD_OBJEKT_ADRESSE) else None
+	if wert:
+		wert = str(wert)
+		if wert in adressen:
+			return _adresse_text(wert)
+		return _html_zu_text(wert).strip()
+
 	if adressen:
 		return _adresse_text(adressen[0])
 	return (doc.get("city") or "").strip()

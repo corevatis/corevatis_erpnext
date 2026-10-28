@@ -27,21 +27,26 @@ from frappe import _
 
 BILD_ENDUNGEN = {"jpg", "jpeg", "png", "gif", "webp", "bmp", "avif", "heic", "heif", "svg"}
 ANHANG_FELDTYPEN = ("Attach", "Attach Image")
+# Allowlist: Galerie nur an diesen Doctypes (Objekt kommt mit 2.1)
+GALERIE_DOCTYPES = ("Lead", "Objekt")
 ERLAUBTE_PRAEFIXE = ("/files/", "/private/files/", "/api/method/frappe_s3_attachment.")
 
 
 @frappe.whitelist()
 def get_bilder(doctype: str, name: str) -> list[dict]:
-	if not doctype or not name or not frappe.db.exists("DocType", doctype):
+	if doctype not in GALERIE_DOCTYPES:
+		frappe.throw(
+			_("Die Foto-Galerie ist für {0} nicht freigegeben.").format(doctype), frappe.PermissionError
+		)
+	if not name or not frappe.db.exists("DocType", doctype):
 		frappe.throw(_("Unbekannter Datensatz."), frappe.DoesNotExistError)
-	meta = frappe.get_meta(doctype)
-	if meta.istable or meta.issingle:
-		frappe.throw(_("Galerie nur für eigenständige Datensätze."))
 	if not frappe.db.exists(doctype, name):
 		frappe.throw(_("{0} {1} nicht gefunden.").format(_(doctype), name), frappe.DoesNotExistError)
 	frappe.has_permission(doctype, "read", doc=name, throw=True)
 
 	doc = frappe.get_doc(doctype, name)
+	# Feldrechte (permlevel) wie bei der REST-API: nicht lesbare Felder leeren
+	doc.apply_fieldlevel_read_permissions()
 	dateien = frappe.get_all(
 		"File",
 		filters={"attached_to_doctype": doctype, "attached_to_name": name, "is_folder": 0},
@@ -63,13 +68,21 @@ def get_bilder(doctype: str, name: str) -> list[dict]:
 
 
 def _feldwerte(doc) -> list[tuple[str, str]]:
+	"""Anhangsfelder des Datensatzes und seiner Kindtabellen, nur mit Leserecht auf das
+	Feld (permlevel) - zusätzlich zu ``apply_fieldlevel_read_permissions``."""
+	# Kindtabellen haben keine eigenen Rechte: es gelten die permlevel des Elterndokuments
+	zugriff = set(doc.meta.get_permlevel_access("read"))
 	werte = []
 	for df in doc.meta.fields:
+		if (df.permlevel or 0) not in zugriff:
+			continue
 		if df.fieldtype in ANHANG_FELDTYPEN and doc.get(df.fieldname):
 			werte.append((doc.get(df.fieldname), _(df.label or df.fieldname)))
 		elif df.fieldtype in ("Table", "Table MultiSelect") and df.options:
 			kind = frappe.get_meta(df.options)
-			felder = [f for f in kind.fields if f.fieldtype in ANHANG_FELDTYPEN]
+			felder = [
+				f for f in kind.fields if f.fieldtype in ANHANG_FELDTYPEN and (f.permlevel or 0) in zugriff
+			]
 			for row in doc.get(df.fieldname) or []:
 				for f in felder:
 					if row.get(f.fieldname):
