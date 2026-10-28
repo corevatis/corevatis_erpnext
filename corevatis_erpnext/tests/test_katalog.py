@@ -219,6 +219,7 @@ class TestKatalogVorlagen(UnitTestCase):
 
 class TestKatalogImport(IntegrationTestCase):
 	data_imports: dict[str, frappe._dict] | None = None
+	vorhandene_einheiten: set[str] = frozenset()
 
 	@classmethod
 	def setUpClass(cls):
@@ -226,6 +227,23 @@ class TestKatalogImport(IntegrationTestCase):
 		if not frappe.db.exists("Company", FIRMA):
 			raise AssertionError(f"Firma {FIRMA} fehlt - Site-Template huelshoff vor den Tests anwenden (CI)")
 		if not frappe.db.exists("Item", "IA-05"):
+			# Einheiten, die andere Tests schon angelegt haben (test_item_felder: m²), auf den
+			# Stand der Vorlage bringen - wie eine Site, deren Einheit zur Vorlage passt. Der
+			# Data Import meldet für sie „existiert bereits“ (Insert New Records).
+			cls.vorhandene_einheiten = set()
+			for z in zeilen("01_uom.csv"):
+				if frappe.db.exists("UOM", z["uom_name"]):
+					cls.vorhandene_einheiten.add(z["uom_name"])
+					frappe.db.set_value(
+						"UOM",
+						z["uom_name"],
+						{
+							"must_be_whole_number": int(z["must_be_whole_number"]),
+							"common_code": z["common_code"],
+							"description": z["description"],
+						},
+					)
+			frappe.db.commit()
 			cls.data_imports = {
 				datei: cls._data_import(doctype, datei)
 				for doctype, datei in DATEIEN
@@ -296,6 +314,12 @@ class TestKatalogImport(IntegrationTestCase):
 		if self.data_imports is None:
 			self.skipTest("Katalog war vor dem Testlauf schon importiert")
 		for datei, ergebnis in self.data_imports.items():
+			if datei == "01_uom.csv" and self.vorhandene_einheiten:
+				# nur die schon vorhandenen Einheiten scheitern (Dubletten), alle anderen kommen an
+				self.assertEqual(ergebnis.status, "Partial Success", f"{datei}: {ergebnis}")
+				self.assertEqual(len(ergebnis.fehler), len(self.vorhandene_einheiten), ergebnis.fehler)
+				self.assertTrue(all("already exists" in f for f in ergebnis.fehler), ergebnis.fehler)
+				continue
 			self.assertEqual(ergebnis.status, "Success", f"{datei}: {ergebnis}")
 			self.assertFalse(ergebnis.fehler, datei)
 			self.assertIn(ergebnis.warnings or "", ("", "[]"), datei)
