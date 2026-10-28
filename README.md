@@ -10,6 +10,17 @@ Die Geschäftslogik (Mengen, Kalkulation, Abschläge) liegt nicht hier, sondern 
 der Kern-App `corevatis`; dieser Adapter ruft sie ausschließlich über deren
 whitelisted API (`corevatis.api.*`) auf.
 
+## Site-Template
+
+```bash
+bench --site <site> execute corevatis_erpnext.setup.apply_site_template --kwargs '{"template": "huelshoff"}'
+bench --site <site> execute corevatis_erpnext.setup.verify_site_template --kwargs '{"template": "huelshoff"}'
+```
+
+Eigene Vorlage: JSON mit `"extends": "_standard"` und `company` (Name, Kürzel,
+`chart_of_accounts` SKR03/SKR04), Aufruf mit `{"config_file": "/absoluter/pfad.json"}`.
+Idempotent; ein zweiter Lauf meldet `"changes": []`.
+
 ## Lizenz
 
 Copyright (C) 2026 Corevatis
@@ -34,7 +45,7 @@ bench --site <site> install-app corevatis_erpnext   # installiert erpnext mit (r
 ```
 corevatis_erpnext/
   hooks.py              required_apps = ["erpnext"], after_install
-  setup/                Site-Template (Platzhalter, Aufgabe 0.4); install.py
+  setup/                Site-Template (Aufgabe 0.4): site_template.py, config.py, templates/*.json
   corevatis_erpnext/    Modul "Corevatis ERPNext"
   translations/de.csv   deutsche Übersetzungen
   tests/                Installationstests
