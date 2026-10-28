@@ -95,8 +95,12 @@ class TestItemFelder(IntegrationTestCase):
 		self.assertEqual(meta.get_field("cv_verfahren").options.split("\n"), ["", *VERFAHREN])
 		self.assertEqual(meta.get_field("cv_leistungsregel").fieldtype, "Data")
 		fieldnames = [df.fieldname for df in meta.fields]
-		# nach der Beschreibung, noch im Tab „Details“ (andere Apps hängen ggf. auch hinter description)
-		self.assertGreater(fieldnames.index("cv_section_leistung"), fieldnames.index("description"))
+		# eigener Abschnitt im Tab „Details“ vor „Description“ (hinter description stünde er im Tab
+		# „Accounting“, weil dort der nächste Tab Break folgt)
+		self.assertGreater(
+			fieldnames.index("cv_section_leistung"), fieldnames.index("over_billing_allowance")
+		)
+		self.assertLess(fieldnames.index("cv_leistungsregel"), fieldnames.index("section_break_11"))
 		self.assertLess(fieldnames.index("cv_leistungsregel"), fieldnames.index("accounting"))
 		for name in ("cv_gewerk", "cv_verfahren", "cv_leistungsregel"):
 			self.assertEqual(meta.get_field(name).module, "Corevatis ERPNext")

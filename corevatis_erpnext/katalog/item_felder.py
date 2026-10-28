@@ -38,7 +38,7 @@ def item_fields() -> list[dict]:
 			"fieldname": "cv_section_leistung",
 			"fieldtype": "Section Break",
 			"label": "Corevatis Service",
-			"insert_after": "description",
+			"insert_after": "over_billing_allowance",
 		},
 		{
 			"fieldname": "cv_gewerk",
