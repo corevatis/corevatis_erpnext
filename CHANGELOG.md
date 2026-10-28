@@ -8,6 +8,8 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ### Hinzugefügt (Epic 1)
 
+- 1.2 Einbettung: Das Formular meldet im iframe die Inhaltshöhe statt der iframe-Höhe (Befund mvp-test:
+  immer 900 px, Formular scrollte im iframe).
 - 1.4 „Wieder öffnen“ leert den Verlustgrund (Befund Verifikation mvp-test: der alte Grund blieb stehen,
   ein erneutes „Als verloren markieren“ hätte ihn ohne Rückfrage übernommen).
 - 1.2 `cv_webform_embedding_domains` auch als Text (Leerzeichen/Komma-getrennt oder als Text abgelegte
