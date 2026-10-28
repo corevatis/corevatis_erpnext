@@ -13,14 +13,20 @@ def after_install() -> None:
 	Onboarding (0.7) - nicht bei jeder Installation und nicht bei jedem ``migrate``.
 	"""
 	from corevatis_erpnext.anfrage import ensure_anfrage_setup
+	from corevatis_erpnext.crm.setup import ensure_custom_fields
 	from corevatis_erpnext.webform.einschaetzung import setup as setup_einschaetzung
 
 	ensure_anfrage_setup()
+	# nach den Feldern aus 1.1: cv_termin/cv_galerie hängen sich an deren Layout (1.3/1.5)
+	ensure_custom_fields()
 	setup_einschaetzung()
 
 
 def after_migrate() -> None:
 	"""Nach jedem ``bench migrate``: dieselben idempotenten Schritte wie bei der Installation."""
 	from corevatis_erpnext.anfrage import ensure_anfrage_setup
+	from corevatis_erpnext.crm.setup import ensure_custom_fields
 
 	ensure_anfrage_setup()
+	# nach den Feldern aus 1.1: cv_termin/cv_galerie hängen sich an deren Layout (1.3/1.5)
+	ensure_custom_fields()

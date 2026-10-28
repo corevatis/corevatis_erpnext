@@ -49,6 +49,15 @@ window.addEventListener("message", function (e) {
 </script>
 ```
 
+## CRM am Lead (Epic 1)
+
+- **Termin anlegen** (Büro/Meister): Dialog → `corevatis_erpnext.crm.termin.termin_anlegen`
+  (Event + Zuweisung Meister + `Lead.cv_termin`, Kundenbestätigung in die Email Queue).
+  Im MVP gibt es kein SMTP: Ohne ausgehendes E-Mail-Konto bleibt der Eintrag „Not Sent“, der
+  Text wird über „Bestätigung anzeigen/kopieren“ manuell übermittelt.
+- **Foto-Galerie**: `corevatis_erpnext.galerie(frm, {fieldname})` aus `public/js/galerie.js`,
+  für weitere Doctypes die Datei in `doctype_js` eintragen und im `refresh` aufrufen.
+
 ## Lizenz
 
 Copyright (C) 2026 Corevatis
@@ -75,6 +84,10 @@ corevatis_erpnext/
   hooks.py              required_apps = ["erpnext"], after_install, override accept (Web Form)
   webform/              Web Form „Kostenlose Einschätzung“ (Aufgabe 1.2)
   setup/                Site-Template (Aufgabe 0.4): site_template.py, config.py, templates/*.json
+  crm/                  Lead: Termin + Terminbestätigung (1.3), Foto-Galerie get_bilder (1.5),
+                        Custom Fields cv_termin/cv_galerie (setup.py)
+  fixtures/             Email Template „Terminbestätigung Besichtigung“
+  public/js/            Desk-Skripte (hooks.doctype_js): galerie.js, lead_galerie.js, lead_termin.js
   corevatis_erpnext/    Modul "Corevatis ERPNext"
   translations/de.csv   deutsche Übersetzungen
   tests/                Installationstests

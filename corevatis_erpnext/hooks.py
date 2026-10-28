@@ -21,13 +21,26 @@ after_install = "corevatis_erpnext.setup.install.after_install"
 # Custom Fields und Fachrollen (ab 1.4 auch der Workflow) nach jedem migrate - idempotent
 after_migrate = ["corevatis_erpnext.setup.install.after_migrate"]
 
+# Fixtures
+# --------
+# Email Template der Terminbestätigung (1.3). Wird bei install/migrate aus der App
+# eingespielt; Textänderungen gehören deshalb in die App, nicht in die Site.
+fixtures = [
+	{"dt": "Email Template", "filters": [["name", "in", ["Terminbestätigung Besichtigung"]]]},
+]
+
 # Desk-Formulare
 # --------------
 # lead.js: Symptom-Checkboxen schreiben live in cv_symptome (1.1), Verlustgrund-Dialog
-# vor der Workflow-Aktion „Als verloren markieren“ (1.4)
+# vor der Workflow-Aktion „Als verloren markieren“ (1.4); galerie.js stellt
+# corevatis_erpnext.galerie(frm) bereit (wiederverwendbar, z. B. für Objekt aus 2.1),
+# lead_galerie.js hängt sie am Lead ein (1.5), lead_termin.js bringt „Termin anlegen“ (1.3)
 doctype_js = {
 	"Lead": [
 		"public/js/lead.js",
+		"public/js/galerie.js",
+		"public/js/lead_galerie.js",
+		"public/js/lead_termin.js",
 	],
 }
 
@@ -37,11 +50,12 @@ doctype_js = {
 # dem Site-Template (z. B. GS-.YYYY.-), solange die Standardserie gewählt ist.
 doc_events = {
 	# Prozess 1 (Epic 1): Symptom-Checkboxen und cv_symptome abgleichen (1.1),
-	# „Verloren“ nur mit Verlustgrund (1.4)
+	# „Verloren“ nur mit Verlustgrund (1.4), cv_termin nur über „Termin anlegen“ (1.3)
 	"Lead": {
 		"validate": [
 			"corevatis_erpnext.anfrage.lead.sync_symptome",
 			"corevatis_erpnext.anfrage.lead.validate_verlustgrund",
+			"corevatis_erpnext.crm.termin.lead_validate",
 		],
 		# Web Form „Kostenlose Einschätzung“ (1.2): utm_source Website, cv_quelle Web Form
 		"before_insert": "corevatis_erpnext.webform.einschaetzung.before_insert_lead",
