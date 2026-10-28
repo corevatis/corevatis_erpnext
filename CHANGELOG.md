@@ -11,6 +11,10 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 - 2.1: `Lead.cv_objekt` (Link auf `Objekt` aus `corevatis`) im Abschnitt „Anfrage“ nach
   `cv_objekt_adresse`. Entsteht nur, wenn `corevatis` installiert ist (after_install/after_migrate
   und `after_app_install`), `before_app_uninstall` von `corevatis` entfernt es (`vor_ort.lead_objekt`).
+- 2.2: Custom Fields am Item im Abschnitt „Corevatis-Leistung“ (Tab „Details“, vor „Beschreibung“): `cv_gewerk`,
+  `cv_verfahren` (Select, Werte wie `Leistungsregel` in `corevatis`), `cv_leistungsregel` (Data:
+  Name der Regel, kein Link). `doc_events` Item `validate`: Wert getrimmt; ist `corevatis`
+  installiert, muss die Regel existieren und lesbar sein (`katalog.item`).
 
 ### Geändert (Review Epic 1)
 

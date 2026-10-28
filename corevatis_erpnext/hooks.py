@@ -61,6 +61,10 @@ doc_events = {
 		# Web Form „Kostenlose Einschätzung“ (1.2): utm_source Website, cv_quelle Web Form
 		"before_insert": "corevatis_erpnext.webform.einschaetzung.before_insert_lead",
 	},
+	# Leistungskatalog (2.2): cv_leistungsregel prüfen, wenn corevatis installiert ist
+	"Item": {
+		"validate": "corevatis_erpnext.katalog.item.validate",
+	},
 	"Sales Invoice": {
 		"before_insert": "corevatis_erpnext.setup.naming.set_return_naming_series",
 	},
