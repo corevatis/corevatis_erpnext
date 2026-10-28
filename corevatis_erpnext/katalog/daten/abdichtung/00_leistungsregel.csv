@@ -4,3 +4,4 @@ laufmeter,Laufmeter,1,"Allgemeine Regel 2.3: Laufmeter der zu sanierenden Wände
 grabvolumen,m³ Grabvolumen,1,"Allgemeine Regel 2.3: Grabvolumen der Außenabschnitte, Standardparameter der Engine."
 stueck,Stück,1,"Allgemeine Regel 2.3: Stückzahl (Öffnungen bzw. manuelle Positionen), Standardparameter der Engine."
 pauschale,Pauschale,1,"Allgemeine Regel 2.3: Pauschale, Menge 1."
+bodenflaeche,Bodenfläche,1,"Allgemeine Regel (Review Epic 2, D-1): Bodenfläche der Räume mit zu sanierendem Boden abzüglich Aussparungen, Standardparameter der Engine."
