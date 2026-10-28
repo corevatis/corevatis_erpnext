@@ -19,5 +19,15 @@ required_apps = ["erpnext"]
 
 after_install = "corevatis_erpnext.setup.install.after_install"
 
+# Document Events
+# ---------------
+# Gutschriften (Sales Invoice mit is_return) bekommen den Rückgabe-Nummernkreis aus
+# dem Site-Template (z. B. GS-.YYYY.-), solange die Standardserie gewählt ist.
+doc_events = {
+	"Sales Invoice": {
+		"before_insert": "corevatis_erpnext.setup.naming.set_return_naming_series",
+	},
+}
+
 # Weitere Hooks (doc_events an Quotation/Sales Order/Sales Invoice, fixtures,
 # Custom Fields) folgen mit den Fachaufgaben (Epics 2, 4, 5, 7).

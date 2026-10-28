@@ -17,6 +17,8 @@ concurrency:
 env:
   FRAPPE_BRANCH: version-16
   ERPNEXT_BRANCH: version-16
+  ERPNEXT_GERMANY_BRANCH: version-16
+  DRUCKFORMATE_BRANCH: version-16-corevatis
   PYTHON_VERSION: "3.14"
   NODE_VERSION: "24"
   RUFF_VERSION: "0.14.10"
@@ -102,18 +104,40 @@ jobs:
         env:
           CI: "Yes"
 
-      - name: ERPNext und App holen, Site anlegen, installieren
+      - name: ERPNext, deutsche Apps und App holen, Site anlegen, installieren
         working-directory: /home/runner/frappe-bench
         run: |
           bench get-app --skip-assets --branch "${ERPNEXT_BRANCH}" erpnext
+          # wie in der Bench-Gruppe corevatis-v16 (docs/0.3-installationsprotokoll.md im Repo Handwerker)
+          bench get-app --skip-assets --branch "${ERPNEXT_GERMANY_BRANCH}" https://github.com/alyf-de/erpnext_germany
+          bench get-app --skip-assets --branch "${DRUCKFORMATE_BRANCH}" https://github.com/corevatis/erpnext_druckformate
           bench get-app --skip-assets corevatis_erpnext "$GITHUB_WORKSPACE"
           bench setup requirements --dev
           bench new-site --db-host 127.0.0.1 --db-root-password root --admin-password admin \
             --mariadb-user-host-login-scope='%' test_site
-          bench --site test_site install-app corevatis_erpnext
+          bench --site test_site install-app erpnext_germany erpnext_druckformate corevatis_erpnext
           bench --site test_site execute frappe.get_installed_apps
         env:
           CI: "Yes"
+
+      - name: Site-Template Hülshoff anwenden (bench execute, wie auf der Zielsite)
+        working-directory: /home/runner/frappe-bench
+        run: |
+          start=$(date +%s)
+          bench --site test_site execute corevatis_erpnext.setup.apply_site_template \
+            --kwargs "{\"config_file\": \"$GITHUB_WORKSPACE/corevatis_erpnext/setup/templates/huelshoff.json\"}" | tee apply.json
+          echo "Laufzeit: $(( $(date +%s) - start )) s"
+          bench --site test_site execute corevatis_erpnext.setup.verify_site_template \
+            --kwargs '{"template": "huelshoff"}' > verify.json
+          python3 - <<'PY'
+          import json
+          # letzte Zeile = Rückgabewert von bench execute (JSON)
+          result = json.loads(open("verify.json").read().strip().splitlines()[-1])
+          print(f"{result['count']} Prüfpunkte, {len(result['failed'])} fehlgeschlagen")
+          for line in result["failed"]:
+              print("  FEHLT:", line)
+          raise SystemExit(0 if result["ok"] else 1)
+          PY
 
       - name: bench run-tests --app corevatis_erpnext
         working-directory: /home/runner/frappe-bench

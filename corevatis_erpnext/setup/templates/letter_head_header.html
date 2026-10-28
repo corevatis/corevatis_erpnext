@@ -1,0 +1,8 @@
+{#- Briefkopf (Corevatis-Site-Template). Wird beim Drucken mit Jinja gerendert (doc = Beleg).
+    Daten kommen aus den Stammdaten der Firma; Logo später über Letter Head → Image. -#}
+{%- set company = frappe.get_cached_doc("Company", doc.company) if doc and doc.company else None -%}
+{%- if company -%}
+<div class="cv-letter-head" style="text-align: right;">
+	<div style="font-size: 16pt; font-weight: bold;">{{ company.company_name }}</div>
+</div>
+{%- endif -%}

@@ -1,0 +1,25 @@
+{
+	"_beschreibung": "Pilotkunde Hülshoff Sanierungstechnik, Willich (Bauwerksabdichtung). Werte mit \"PLATZHALTER\" sind noch nicht bekannt: sie werden nicht geschrieben und im Bericht als offen gemeldet. Vor Go-live mit Hülshoff bzw. Steuerberater klären.",
+	"extends": "_standard",
+	"company": {
+		"company_name": "Hülshoff Sanierungstechnik",
+		"abbr": "HST",
+		"chart_of_accounts": "SKR03",
+		"fiscal_year_start": "01-01",
+		"phone_no": "PLATZHALTER Telefon",
+		"email": "PLATZHALTER E-Mail",
+		"website": "PLATZHALTER Website",
+		"tax_id": "PLATZHALTER USt-IdNr. bzw. Steuernummer"
+	},
+	"address": {
+		"address_title": "Hülshoff Sanierungstechnik",
+		"address_line1": "PLATZHALTER Straße und Hausnummer",
+		"pincode": "47877",
+		"city": "Willich",
+		"country": "Germany"
+	},
+	"letter_head": {
+		"letter_head_name": "Hülshoff Sanierungstechnik",
+		"owner_line": "PLATZHALTER Inhaber/Geschäftsführung"
+	}
+}
