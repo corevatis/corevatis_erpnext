@@ -20,6 +20,9 @@ required_apps = ["erpnext"]
 after_install = "corevatis_erpnext.setup.install.after_install"
 # Custom Fields und Fachrollen (ab 1.4 auch der Workflow) nach jedem migrate - idempotent
 after_migrate = ["corevatis_erpnext.setup.install.after_migrate"]
+# Kern-App corevatis nachträglich installiert/entfernt: Lead.cv_objekt anlegen/entfernen (2.1)
+after_app_install = "corevatis_erpnext.vor_ort.lead_objekt.after_app_install"
+before_app_uninstall = "corevatis_erpnext.vor_ort.lead_objekt.before_app_uninstall"
 
 # Fixtures
 # --------
