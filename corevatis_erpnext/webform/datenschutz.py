@@ -9,7 +9,8 @@ Idempotent und zurückhaltend:
 
 - nur wenn der Link auf die Standardroute zeigt (keine eigene ``cv_webform_datenschutz_url``),
 - nur wenn unter der Route noch keine Web Page existiert - eine vorhandene (auch im Desk
-  bearbeitete oder durch die echte Erklärung ersetzte) Seite bleibt unangetastet.
+  bearbeitete oder durch die echte Erklärung ersetzte) Seite bleibt unangetastet,
+- nicht erneut, wenn der Platzhalter (Titel) im Desk auf eine andere Route verlegt wurde.
 """
 
 import frappe
@@ -34,6 +35,10 @@ def ensure_datenschutz_seite() -> str | None:
 	if datenschutz_url() != f"/{ROUTE}":
 		return None
 	if frappe.db.exists("Web Page", {"route": ROUTE}):
+		return None
+	# Platzhalter schon vorhanden, aber im Desk auf eine andere Route gelegt: nicht erneut anlegen
+	# (gleicher Name aus dem Titel - ein zweites insert würde sonst migrate abbrechen)
+	if frappe.db.exists("Web Page", {"title": TITEL}):
 		return None
 	doc = frappe.get_doc(
 		{

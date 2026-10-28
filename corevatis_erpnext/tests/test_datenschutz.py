@@ -29,25 +29,29 @@ class TestDatenschutzPlatzhalter(IntegrationTestCase):
 		self.assertEqual(frappe.db.count("Web Page", {"route": datenschutz.ROUTE}), 1)
 		self.assertEqual(self._seite().modified, vorher.modified)
 
-	def test_vorhandene_seite_bleibt_und_eigene_url(self):
+	def test_verlegte_seite_wird_nicht_neu_angelegt(self):
 		vorher = self._seite()
 		frappe.db.set_value("Web Page", vorher.name, "route", "datenschutz-alt", update_modified=False)
-		neu = None
+		try:
+			self.assertIsNone(datenschutz.ensure_datenschutz_seite())
+			self.assertFalse(frappe.db.exists("Web Page", {"route": datenschutz.ROUTE}))
+		finally:
+			frappe.db.set_value("Web Page", vorher.name, "route", datenschutz.ROUTE, update_modified=False)
+
+	def test_eigene_url_und_freie_route(self):
+		vorher = self._seite()
+		frappe.delete_doc("Web Page", vorher.name, ignore_permissions=True, force=True)
 		try:
 			# eigene Datenschutz-URL (z. B. WordPress): keine Seite anlegen
 			frappe.local.conf["cv_webform_datenschutz_url"] = "https://www.example.com/datenschutz"
 			self.assertIsNone(datenschutz.ensure_datenschutz_seite())
 			self.assertFalse(frappe.db.exists("Web Page", {"route": datenschutz.ROUTE}))
-			# Standard-URL und freie Route: neu anlegen
-			frappe.local.conf.pop("cv_webform_datenschutz_url", None)
-			neu = datenschutz.ensure_datenschutz_seite()
-			self.assertTrue(neu)
-			self.assertEqual(frappe.db.get_value("Web Page", neu, "route"), datenschutz.ROUTE)
 		finally:
 			frappe.local.conf.pop("cv_webform_datenschutz_url", None)
-			if neu:
-				frappe.delete_doc("Web Page", neu, ignore_permissions=True, force=True)
-			frappe.db.set_value("Web Page", vorher.name, "route", datenschutz.ROUTE, update_modified=False)
+		# Standard-URL und freie Route: (wieder) anlegen
+		neu = datenschutz.ensure_datenschutz_seite()
+		self.assertTrue(neu)
+		self.assertEqual(frappe.db.get_value("Web Page", neu, "route"), datenschutz.ROUTE)
 
 	def test_im_desk_geaenderte_seite_bleibt(self):
 		vorher = self._seite()
