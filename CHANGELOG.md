@@ -15,6 +15,19 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   `cv_verfahren` (Select, Werte wie `Leistungsregel` in `corevatis`), `cv_leistungsregel` (Data:
   Name der Regel, kein Link). `doc_events` Item `validate`: Wert getrimmt; ist `corevatis`
   installiert, muss die Regel existieren und lesbar sein (`katalog.item`).
+- 2.3: Leistungskatalog Abdichtung `katalog/daten/abdichtung/`: Data-Import-Vorlagen (CSV) für UOM,
+  Item Group, Price List, Workstation, Operation, Item, Item Price und BOM (Kostenkomponente
+  „Lohn Montage“ per after_install/after_migrate, der Doctype erlaubt keinen Data Import);
+  48 Leistungspositionen (46 mit Stückliste aus Material und Operation „Montage“ in
+  min/Einheit), 32 Materialien, Preislisten `Standard-Verkauf`/`Standard-Einkauf`, Workstation
+  „Montage“ 48 €/h. Preise, Verbräuche und Zeiten sind gekennzeichnete Annahmen (`ANNAHME 2.3`).
+- 2.3: `corevatis_erpnext.katalog.importieren(firma, paket, force)`: idempotenter Import derselben
+  CSV-Dateien (Onboarding 0.7), ohne `force` kein Überschreiben abweichender Datensätze;
+  `uebersicht` (Kosten/Preise lesen), `list_pakete`.
+- 2.3: Vorlage `00_leistungsregel.csv` mit fünf allgemeinen Leistungsregeln (je Regelart, Standardparameter);
+  nur eingespielt, wenn `corevatis` (Doctype `Leistungsregel`) installiert ist, damit `Item.validate`
+  (2.2) die Regelnamen der Positionen findet.
+- 2.3: CI-Katalog-Prüfung per `bench execute` nach den Tests (0 Änderungen nach dem Data Import).
 
 ### Geändert (Review Epic 1)
 

@@ -1,0 +1,81 @@
+price_list,item_code,uom,price_list_rate,reference,note
+Standard-Verkauf,AL-01,psch,245.05,ANNAHME 2.3,Annahme: Herstellkosten 169.00 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AL-02,Stk,46.4,ANNAHME 2.3,Annahme: Herstellkosten 32.00 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AL-03,Stk,12.33,ANNAHME 2.3,Annahme: Herstellkosten 8.50 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-01,m³,36.34,ANNAHME 2.3,Annahme: Herstellkosten 25.06 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-02,m³,175.45,ANNAHME 2.3,Annahme: Herstellkosten 121.00 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-03,m³,93.09,ANNAHME 2.3,Annahme: Herstellkosten 64.20 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-04,m²,18.13,ANNAHME 2.3,Annahme: Herstellkosten 12.50 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-05,m²,29.58,ANNAHME 2.3,Annahme: Herstellkosten 20.40 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-06,lfm,17.98,ANNAHME 2.3,Annahme: Herstellkosten 12.40 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-07,m²,6.16,ANNAHME 2.3,Annahme: Herstellkosten 4.25 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-08,m²,45.68,ANNAHME 2.3,Annahme: Herstellkosten 31.50 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-09,m²,69.53,ANNAHME 2.3,Annahme: Herstellkosten 47.95 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-10,m²,32.48,ANNAHME 2.3,Annahme: Herstellkosten 22.40 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-11,m²,56.41,ANNAHME 2.3,Annahme: Herstellkosten 38.90 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-12,m²,14.38,ANNAHME 2.3,Annahme: Herstellkosten 9.92 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-13,Stk,200.39,ANNAHME 2.3,Annahme: Herstellkosten 138.20 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-14,Stk,83.81,ANNAHME 2.3,Annahme: Herstellkosten 57.80 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-15,lfm,39.74,ANNAHME 2.3,Annahme: Herstellkosten 27.41 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AA-16,Stk,199.81,ANNAHME 2.3,Annahme: Herstellkosten 137.80 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,IA-01,m²,42.43,ANNAHME 2.3,Annahme: Herstellkosten 29.26 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,IA-02,m²,12.04,ANNAHME 2.3,Annahme: Herstellkosten 8.30 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,IA-03,m²,7.48,ANNAHME 2.3,Annahme: Herstellkosten 5.16 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,IA-04,lfm,21.46,ANNAHME 2.3,Annahme: Herstellkosten 14.80 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,IA-05,m²,35.96,ANNAHME 2.3,Annahme: Herstellkosten 24.80 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,IA-06,m²,55.03,ANNAHME 2.3,Annahme: Herstellkosten 37.95 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,IA-07,lfm,20.07,ANNAHME 2.3,Annahme: Herstellkosten 13.84 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,HS-01,lfm,24.51,ANNAHME 2.3,Annahme: Herstellkosten 16.90 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,HS-02,lfm,33.13,ANNAHME 2.3,Annahme: Herstellkosten 22.85 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,HS-03,lfm,43.65,ANNAHME 2.3,Annahme: Herstellkosten 30.10 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,HS-04,lfm,7.83,ANNAHME 2.3,Annahme: Herstellkosten 5.40 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,HS-05,lfm,78.08,ANNAHME 2.3,Annahme: Herstellkosten 53.85 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,HS-06,Stk,6.34,ANNAHME 2.3,Annahme: Herstellkosten 4.37 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,SP-01,m²,42.43,ANNAHME 2.3,Annahme: Herstellkosten 29.26 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,SP-02,m²,17.84,ANNAHME 2.3,Annahme: Herstellkosten 12.30 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,SP-03,m²,9.06,ANNAHME 2.3,Annahme: Herstellkosten 6.25 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,SP-04,m²,18.13,ANNAHME 2.3,Annahme: Herstellkosten 12.50 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,SP-05,m²,37.41,ANNAHME 2.3,Annahme: Herstellkosten 25.80 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,SP-06,m²,60.9,ANNAHME 2.3,Annahme: Herstellkosten 42.00 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,SP-07,m²,23.06,ANNAHME 2.3,Annahme: Herstellkosten 15.90 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,SP-08,m²,110.64,ANNAHME 2.3,Annahme: Herstellkosten 76.30 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,SP-09,lfm,9.7,ANNAHME 2.3,Annahme: Herstellkosten 6.69 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,SP-10,m²,15.37,ANNAHME 2.3,Annahme: Herstellkosten 10.60 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,SA-01,lfm,65.54,ANNAHME 2.3,Annahme: Herstellkosten 45.20 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,SA-02,Stk,47.85,ANNAHME 2.3,Annahme: Herstellkosten 33.00 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,SA-03,lfm,34.64,ANNAHME 2.3,Annahme: Herstellkosten 23.89 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,SA-04,Stk,74.82,ANNAHME 2.3,Annahme: Herstellkosten 51.60 EUR x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AZ-01,h,69.6,ANNAHME 2.3,Annahme: Stundensatz 48 EUR/h x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Verkauf,AZ-02,h,84.1,ANNAHME 2.3,Annahme: Stundensatz 58 EUR/h x Faktor 1.45; durch Hülshoff-Preis ersetzen
+Standard-Einkauf,MAT-KLEIN,psch,1,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-BAGGER,h,38,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-ENTSORG,m³,42,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-REPMOERTEL,Kg,1.1,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-DICHTSPACHTEL,Kg,1.4,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-VORANSTRICH,l,4.2,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-PMBC,l,3.8,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-GEWEBE,m²,2.5,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-DICHTSCHL,Kg,1.6,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-SULFATEX,Kg,1.9,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-GRUND-SIL,l,5.8,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-XPS,m²,22,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-NOPPEN,m²,3.2,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-DICHTBAND,lfm,4.8,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-MANSCHETTE,Stk,18,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-DRAINROHR,lfm,3.5,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-KIES,m³,48,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-VLIES,m²,1.2,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-SPUELSCHACHT,Stk,85,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-INJ-CREME,l,19.5,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-INJ-SILIKAT,l,6.5,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-PACKER,Stk,1.2,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-BOHRLOCHMOERTEL,Kg,1.2,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-SALZSPERRE,l,7.5,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-SP-SPRITZ,Kg,0.9,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-SP-GRUNDPUTZ,Kg,0.95,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-SP-PUTZ,Kg,1.1,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-SP-FEIN,Kg,1.3,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-ECKSCHIENE,lfm,1.8,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-SILIKATFARBE,l,6.5,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-PU-HARZ,l,28,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen
+Standard-Einkauf,MAT-SCHNELLZEMENT,Kg,4.5,ANNAHME 2.3,Annahme: Einkaufspreis geschätzt (Spanne -30 % bis +30 %); durch Lieferantenpreis ersetzen

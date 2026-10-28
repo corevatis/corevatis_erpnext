@@ -1,0 +1,6 @@
+regel_name,regelart,aktiv,beschreibung
+wandflaeche_netto,Wandfläche netto bis Höhe,1,"Allgemeine Regel 2.3: Wandfläche netto der zu sanierenden Wände, Standardparameter der Engine. Feinere Regeln (z. B. bis 1,50 m) folgen mit Hülshoffs Angeboten."
+laufmeter,Laufmeter,1,"Allgemeine Regel 2.3: Laufmeter der zu sanierenden Wände, Standardparameter der Engine."
+grabvolumen,m³ Grabvolumen,1,"Allgemeine Regel 2.3: Grabvolumen der Außenabschnitte, Standardparameter der Engine."
+stueck,Stück,1,"Allgemeine Regel 2.3: Stückzahl (Öffnungen bzw. manuelle Positionen), Standardparameter der Engine."
+pauschale,Pauschale,1,"Allgemeine Regel 2.3: Pauschale, Menge 1."

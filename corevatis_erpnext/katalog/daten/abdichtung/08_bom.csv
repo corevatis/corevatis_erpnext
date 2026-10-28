@@ -1,0 +1,66 @@
+item,company,currency,quantity,is_active,is_default,with_operations,rm_cost_as_per,buying_price_list,items.item_code,items.qty,items.uom,operations.operation,operations.workstation,operations.time_in_mins,operations.description
+AL-01,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-KLEIN,25,psch,Montage,Montage,180,ANNAHME 2.3: 180 min/psch (Spanne 135-225)
+AL-02,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-KLEIN,8,psch,Montage,Montage,30,ANNAHME 2.3: 30 min/Stk (Spanne 22-38)
+AL-03,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-KLEIN,0.5,psch,Montage,Montage,10,ANNAHME 2.3: 10 min/Stk (Spanne 8-12)
+AA-01,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-BAGGER,0.12,h,Montage,Montage,25,ANNAHME 2.3: 25 min/m³ (Spanne 19-31)
+,,,,,,,,,MAT-KLEIN,0.5,psch,,,,
+AA-02,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-KLEIN,1,psch,Montage,Montage,150,ANNAHME 2.3: 150 min/m³ (Spanne 112-188)
+AA-03,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-ENTSORG,1.3,m³,Montage,Montage,12,ANNAHME 2.3: 12 min/m³ (Spanne 9-15)
+AA-04,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-KLEIN,0.5,psch,Montage,Montage,15,ANNAHME 2.3: 15 min/m² (Spanne 11-19)
+AA-05,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-REPMOERTEL,4,Kg,Montage,Montage,20,ANNAHME 2.3: 20 min/m² (Spanne 15-25)
+AA-06,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-DICHTSPACHTEL,2,Kg,Montage,Montage,12,ANNAHME 2.3: 12 min/lfm (Spanne 9-15)
+AA-07,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-VORANSTRICH,0.25,l,Montage,Montage,4,ANNAHME 2.3: 4 min/m² (Spanne 3-5)
+AA-08,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-PMBC,4.5,l,Montage,Montage,18,ANNAHME 2.3: 18 min/m² (Spanne 14-22)
+AA-09,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-PMBC,6,l,Montage,Montage,28,ANNAHME 2.3: 28 min/m² (Spanne 21-35)
+,,,,,,,,,MAT-GEWEBE,1.1,m²,,,,
+AA-10,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-DICHTSCHL,4,Kg,Montage,Montage,20,ANNAHME 2.3: 20 min/m² (Spanne 15-25)
+AA-11,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-XPS,1.05,m²,Montage,Montage,15,ANNAHME 2.3: 15 min/m² (Spanne 11-19)
+,,,,,,,,,MAT-PMBC,1,l,,,,
+AA-12,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-NOPPEN,1.1,m²,Montage,Montage,8,ANNAHME 2.3: 8 min/m² (Spanne 6-10)
+AA-13,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-PMBC,6,l,Montage,Montage,120,ANNAHME 2.3: 120 min/Stk (Spanne 90-150)
+,,,,,,,,,MAT-DICHTBAND,3,lfm,,,,
+,,,,,,,,,MAT-KLEIN,5,psch,,,,
+AA-14,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-MANSCHETTE,1,Stk,Montage,Montage,45,ANNAHME 2.3: 45 min/Stk (Spanne 34-56)
+,,,,,,,,,MAT-PMBC,1,l,,,,
+AA-15,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-DRAINROHR,1.1,lfm,Montage,Montage,20,ANNAHME 2.3: 20 min/lfm (Spanne 15-25)
+,,,,,,,,,MAT-KIES,0.12,m³,,,,
+,,,,,,,,,MAT-VLIES,1.5,m²,,,,
+AA-16,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-SPUELSCHACHT,1,Stk,Montage,Montage,60,ANNAHME 2.3: 60 min/Stk (Spanne 45-75)
+,,,,,,,,,MAT-KIES,0.1,m³,,,,
+IA-01,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-ENTSORG,0.03,m³,Montage,Montage,35,ANNAHME 2.3: 35 min/m² (Spanne 26-44)
+IA-02,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-KLEIN,0.3,psch,Montage,Montage,10,ANNAHME 2.3: 10 min/m² (Spanne 8-12)
+IA-03,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-GRUND-SIL,0.2,l,Montage,Montage,5,ANNAHME 2.3: 5 min/m² (Spanne 4-6)
+IA-04,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-DICHTSPACHTEL,2,Kg,Montage,Montage,15,ANNAHME 2.3: 15 min/lfm (Spanne 11-19)
+IA-05,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-DICHTSCHL,4.5,Kg,Montage,Montage,22,ANNAHME 2.3: 22 min/m² (Spanne 16-28)
+IA-06,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-SULFATEX,6.5,Kg,Montage,Montage,32,ANNAHME 2.3: 32 min/m² (Spanne 24-40)
+IA-07,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-DICHTBAND,1.05,lfm,Montage,Montage,10,ANNAHME 2.3: 10 min/lfm (Spanne 8-12)
+,,,,,,,,,MAT-DICHTSCHL,0.5,Kg,,,,
+HS-01,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-INJ-CREME,0.2,l,Montage,Montage,15,ANNAHME 2.3: 15 min/lfm (Spanne 11-19)
+,,,,,,,,,MAT-KLEIN,1,psch,,,,
+HS-02,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-INJ-CREME,0.3,l,Montage,Montage,20,ANNAHME 2.3: 20 min/lfm (Spanne 15-25)
+,,,,,,,,,MAT-KLEIN,1,psch,,,,
+HS-03,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-INJ-CREME,0.4,l,Montage,Montage,26,ANNAHME 2.3: 26 min/lfm (Spanne 20-32)
+,,,,,,,,,MAT-KLEIN,1.5,psch,,,,
+HS-04,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-BOHRLOCHMOERTEL,0.5,Kg,Montage,Montage,6,ANNAHME 2.3: 6 min/lfm (Spanne 4-8)
+HS-05,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-INJ-SILIKAT,2.5,l,Montage,Montage,35,ANNAHME 2.3: 35 min/lfm (Spanne 26-44)
+,,,,,,,,,MAT-PACKER,8,Stk,,,,
+HS-06,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-INJ-CREME,0.06,l,Montage,Montage,4,ANNAHME 2.3: 4 min/Stk (Spanne 3-5)
+SP-01,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-ENTSORG,0.03,m³,Montage,Montage,35,ANNAHME 2.3: 35 min/m² (Spanne 26-44)
+SP-02,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-KLEIN,0.3,psch,Montage,Montage,15,ANNAHME 2.3: 15 min/m² (Spanne 11-19)
+SP-03,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-SALZSPERRE,0.3,l,Montage,Montage,5,ANNAHME 2.3: 5 min/m² (Spanne 4-6)
+SP-04,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-SP-SPRITZ,5,Kg,Montage,Montage,10,ANNAHME 2.3: 10 min/m² (Spanne 8-12)
+SP-05,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-SP-GRUNDPUTZ,12,Kg,Montage,Montage,18,ANNAHME 2.3: 18 min/m² (Spanne 14-22)
+SP-06,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-SP-PUTZ,20,Kg,Montage,Montage,25,ANNAHME 2.3: 25 min/m² (Spanne 19-31)
+SP-07,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-SP-FEIN,3,Kg,Montage,Montage,15,ANNAHME 2.3: 15 min/m² (Spanne 11-19)
+SP-08,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-SP-SPRITZ,5,Kg,Montage,Montage,48,ANNAHME 2.3: 48 min/m² (Spanne 36-60)
+,,,,,,,,,MAT-SP-GRUNDPUTZ,12,Kg,,,,
+,,,,,,,,,MAT-SP-PUTZ,20,Kg,,,,
+SP-09,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-ECKSCHIENE,1.05,lfm,Montage,Montage,6,ANNAHME 2.3: 6 min/lfm (Spanne 4-8)
+SP-10,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-SILIKATFARBE,0.4,l,Montage,Montage,10,ANNAHME 2.3: 10 min/m² (Spanne 8-12)
+SA-01,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-PU-HARZ,0.3,l,Montage,Montage,40,ANNAHME 2.3: 40 min/lfm (Spanne 30-50)
+,,,,,,,,,MAT-PACKER,4,Stk,,,,
+SA-02,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-SCHNELLZEMENT,2,Kg,Montage,Montage,30,ANNAHME 2.3: 30 min/Stk (Spanne 22-38)
+SA-03,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-DICHTBAND,1.05,lfm,Montage,Montage,20,ANNAHME 2.3: 20 min/lfm (Spanne 15-25)
+,,,,,,,,,MAT-SULFATEX,1.5,Kg,,,,
+SA-04,Hülshoff Sanierungstechnik,EUR,1,1,1,1,Price List,Standard-Einkauf,MAT-MANSCHETTE,1,Stk,Montage,Montage,40,ANNAHME 2.3: 40 min/Stk (Spanne 30-50)
+,,,,,,,,,MAT-DICHTSCHL,1,Kg,,,,
