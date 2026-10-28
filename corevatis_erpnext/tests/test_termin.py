@@ -108,7 +108,8 @@ class TestTermin(IntegrationTestCase):
 		self.assertTrue(text.startswith("Guten Tag Erika Musterfrau,"), text)
 		self.assertIn("Dienstag, 05.03.2030, 09:30 Uhr (Dauer ca. 1 Stunde 30 Minuten)", text)
 		self.assertIn("Kellerweg 7\n48143 Münster", text)
-		self.assertIn("Max Meister", text)
+		# Name aus dem User-Datensatz (andere Testmodule können denselben Benutzer anlegen)
+		self.assertIn(frappe.utils.get_fullname(MEISTER), text)
 		self.assertNotIn("Kellertür", text)  # interne Notiz nicht beim Kunden
 		self.assertNotIn("<", text)
 		firma = termin.firma(self.lead)
