@@ -74,6 +74,16 @@ class TestSiteTemplateConfig(UnitTestCase):
 		self.assertIn("address.address_line1", found)
 		self.assertNotIn("company.company_name", found)
 
+	def test_template_names_strict(self):
+		from corevatis_erpnext.setup import list_templates
+
+		self.assertEqual(list_templates(), ["_standard", "huelshoff"])
+		for bad in ("../../../etc/passwd", "/etc/passwd", "Huelshoff", "a.b", "x y"):
+			with self.assertRaises(SiteTemplateConfigError, msg=bad):
+				load_config(template=bad)
+			with self.assertRaises(SiteTemplateConfigError, msg=bad):
+				load_config(config={"extends": bad, "company": {"company_name": "A", "abbr": "A"}})
+
 	def test_deep_merge(self):
 		merged = deep_merge({"a": {"b": 1, "c": [1]}, "d": 1}, {"a": {"c": [2]}, "e": 2})
 		self.assertEqual(merged, {"a": {"b": 1, "c": [2]}, "d": 1, "e": 2})
