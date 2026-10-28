@@ -1,0 +1,128 @@
+{
+	"_beschreibung": "Corevatis-Standard für deutsche Handwerksbetriebe (ERPNext v16). Kundenvorlagen erben per \"extends\": \"_standard\" und überschreiben einzelne Schlüssel (Objekte werden zusammengeführt, Listen ersetzt).",
+	"system_settings": {
+		"language": "de",
+		"country": "Germany",
+		"time_zone": "Europe/Berlin",
+		"currency": "EUR",
+		"date_format": "dd.mm.yyyy",
+		"time_format": "HH:mm",
+		"number_format": "#.###,##",
+		"first_day_of_the_week": "Monday"
+	},
+	"global_defaults": {
+		"disable_rounded_total": 1
+	},
+	"company": {
+		"country": "Germany",
+		"default_currency": "EUR",
+		"chart_of_accounts": "SKR03",
+		"fiscal_year_start": "01-01"
+	},
+	"taxes": {
+		"_beschreibung": "Steuervorlagen legt ERPNext beim Anlegen der Firma aus country_wise_tax.json passend zum SKR an (19 %/7 %, Inland/EU/Drittland, § 13b). Das Template prüft sie und setzt den Artikelsteuer-Standard an der obersten Artikelgruppe.",
+		"default_sales_template": "Lieferung oder sonstige Leistung im Inland",
+		"default_purchase_template": "Lieferung aus dem Inland",
+		"default_item_tax_template": "19 %",
+		"item_tax_templates": ["19 %", "7 %", "0 %"]
+	},
+	"naming_series": {
+		"Quotation": {"series": "ANG-.YYYY.-"},
+		"Sales Order": {"series": "AB-.YYYY.-"},
+		"Delivery Note": {"series": "LS-.YYYY.-"},
+		"Sales Invoice": {"series": "RE-.YYYY.-", "return_series": "GS-.YYYY.-"},
+		"Project": {"series": "PRJ-.YYYY.-"}
+	},
+	"warehouses": [
+		{"warehouse_name": "Hauptlager", "is_default": 1},
+		{"warehouse_name": "Fahrzeug"}
+	],
+	"permission_sets": {
+		"voll": ["read", "write", "create", "submit", "cancel", "amend", "report", "export", "print", "email", "share"],
+		"bearbeiten": ["read", "write", "create", "report", "export", "print", "email", "share"],
+		"erfassen": ["read", "write", "create", "report", "print"],
+		"aktualisieren": ["read", "write", "report", "print"],
+		"lesen": ["read", "report", "print"]
+	},
+	"roles": {
+		"Büro": {
+			"desk_access": 1,
+			"role_profile": ["Sales User", "Accounts User", "Stock User", "Projects User"],
+			"permissions": {
+				"Lead": "bearbeiten",
+				"Opportunity": "bearbeiten",
+				"Customer": "bearbeiten",
+				"Contact": "bearbeiten",
+				"Address": "bearbeiten",
+				"Event": "bearbeiten",
+				"Quotation": "voll",
+				"Sales Order": "voll",
+				"Delivery Note": "voll",
+				"Sales Invoice": "voll",
+				"Project": "bearbeiten",
+				"Task": "bearbeiten",
+				"Item": "lesen",
+				"Item Price": "lesen",
+				"Timesheet": "lesen",
+				"Stock Entry": "lesen",
+				"Warehouse": "lesen"
+			}
+		},
+		"Meister": {
+			"desk_access": 1,
+			"role_profile": ["Projects Manager", "Sales User", "Stock User"],
+			"permissions": {
+				"Project": "bearbeiten",
+				"Task": "bearbeiten",
+				"Timesheet": "voll",
+				"Quotation": "voll",
+				"BOM": "voll",
+				"Item": "bearbeiten",
+				"Item Price": "bearbeiten",
+				"Lead": "bearbeiten",
+				"Opportunity": "bearbeiten",
+				"Event": "bearbeiten",
+				"Stock Entry": "voll",
+				"Material Request": "voll",
+				"Customer": "lesen",
+				"Contact": "lesen",
+				"Address": "lesen",
+				"Sales Order": "lesen",
+				"Delivery Note": "lesen",
+				"Warehouse": "lesen",
+				"Bin": "lesen"
+			}
+		},
+		"Monteur": {
+			"desk_access": 1,
+			"role_profile": ["Employee"],
+			"permissions": {
+				"Timesheet": "erfassen",
+				"Stock Entry": "erfassen",
+				"Task": "aktualisieren",
+				"Project": "lesen",
+				"Event": "lesen",
+				"Customer": "lesen",
+				"Contact": "lesen",
+				"Address": "lesen",
+				"Item": "lesen",
+				"Warehouse": "lesen",
+				"Bin": "lesen"
+			}
+		}
+	},
+	"print_formats": {
+		"_beschreibung": "Standard-Druckformat je Doctype aus erpnext_druckformate; wird nur gesetzt, wenn das Druckformat existiert und noch kein Standard gesetzt ist.",
+		"Quotation": "Angebot",
+		"Sales Order": "Auftragsbestätigung",
+		"Delivery Note": "Lieferschein",
+		"Sales Invoice": "Ausgangsrechnung",
+		"Request for Quotation": "Angebotsanfrage",
+		"Purchase Order": "Bestellung",
+		"Dunning": "Mahnung"
+	},
+	"address_template_germany": true,
+	"erpnext_germany": {
+		"prevent_gaps_in_transaction_naming": 1
+	}
+}
