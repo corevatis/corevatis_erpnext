@@ -148,6 +148,22 @@ jobs:
           bench --site test_site set-config allow_tests true
           bench --site test_site run-tests --app corevatis_erpnext
 
+      - name: Katalog Abdichtung per bench execute (nach dem Data Import der Tests - 0 Änderungen)
+        working-directory: /home/runner/frappe-bench
+        run: |
+          bench --site test_site execute corevatis_erpnext.katalog.importieren \
+            --kwargs '{"firma": "Hülshoff Sanierungstechnik"}' > katalog.json
+          python3 - <<'PY'
+          import json
+          result = json.loads(open("katalog.json").read().strip().splitlines()[-1])
+          print(f"{result['unveraendert']} unverändert, {len(result['changes'])} Änderungen, "
+                f"{len(result['skipped'])} abweichend, {len(result['warnings'])} Hinweise")
+          for key in ("changes", "skipped", "warnings"):
+              for line in result[key]:
+                  print(f"  {key}:", line)
+          raise SystemExit(0 if not (result["changes"] or result["skipped"] or result["warnings"]) else 1)
+          PY
+
       - name: Lizenzliste
         run: |
           version="$(python -c 'import re; print(re.search(r"__version__ = \"(.+)\"", open("corevatis_erpnext/__init__.py").read())[1])')"

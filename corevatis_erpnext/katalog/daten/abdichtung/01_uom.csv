@@ -1,0 +1,9 @@
+uom_name,must_be_whole_number,common_code,description
+m²,0,MTK,Quadratmeter
+lfm,0,MTR,Laufmeter
+m³,0,MTQ,Kubikmeter
+Stk,1,H87,Stück
+h,0,HUR,Stunde
+min,0,MIN,Minute
+psch,0,LS,Pauschale
+l,0,LTR,Liter

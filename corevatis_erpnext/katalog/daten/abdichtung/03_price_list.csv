@@ -1,0 +1,3 @@
+price_list_name,currency,selling,buying,enabled
+Standard-Verkauf,EUR,1,0,1
+Standard-Einkauf,EUR,0,1,1

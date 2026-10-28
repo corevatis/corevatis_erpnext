@@ -1,0 +1,2 @@
+workstation_name,production_capacity,description,workstation_costs.operating_component,workstation_costs.operating_cost
+Montage,1,"ANNAHME 2.3: Lohnkostensatz Monteur 48 EUR/h (Spanne 42-58 EUR/h), Wert durch Hülshoff ersetzen",Lohn Montage,48
