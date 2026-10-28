@@ -13,12 +13,15 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 PLACEHOLDER_PREFIX = "PLATZHALTER"
 SUPPORTED_CHARTS = ("SKR03", "SKR04")
+# Vorlagennamen werden zu Dateinamen in TEMPLATE_DIR: nur dieses Muster, kein Pfad
+TEMPLATE_NAME_RE = re.compile(r"^[_a-z0-9-]{1,64}$")
 
 
 class SiteTemplateConfigError(ValueError):
@@ -63,9 +66,16 @@ def find_placeholders(value: Any, path: str = "") -> list[str]:
 	return found
 
 
+def list_templates() -> list[str]:
+	"""Namen der mitgelieferten Vorlagen (Allowlist für Aufrufer wie das Onboarding)."""
+	return sorted(p.stem for p in TEMPLATE_DIR.glob("*.json") if TEMPLATE_NAME_RE.match(p.stem))
+
+
 def _template_path(name: str) -> Path:
+	if not isinstance(name, str) or not TEMPLATE_NAME_RE.match(name):
+		raise SiteTemplateConfigError(f"Ungültiger Vorlagenname {name!r} (nur a-z, 0-9, _ und -)")
 	path = TEMPLATE_DIR / f"{name}.json"
-	if not path.is_file():
+	if path.resolve().parent != TEMPLATE_DIR.resolve() or not path.is_file():
 		raise SiteTemplateConfigError(f"Vorlage {name!r} nicht gefunden ({path})")
 	return path
 

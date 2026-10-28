@@ -8,6 +8,9 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ### Hinzugefügt
 
+- `corevatis_erpnext.setup.list_templates()` (Allowlist der Vorlagen für das
+  Onboarding, Aufgabe 0.7); Vorlagennamen nur noch `^[_a-z0-9-]{1,64}$`, kein Pfad
+  außerhalb von `templates/` (Härtung gegen Pfad-Traversal über `extends`/`template`).
 - Site-Template (Aufgabe 0.4): `corevatis_erpnext.setup.apply_site_template` und
   `verify_site_template` für `bench execute`, JSON-Vorlagen `_standard` und `huelshoff`
   (Firma, SKR03/SKR04, Steuern 19 %/7 %, Nummernkreise, Rollen Büro/Meister/Monteur,

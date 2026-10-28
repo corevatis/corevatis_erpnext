@@ -21,3 +21,10 @@ def verify_site_template(config=None, config_file=None, template=None):
 	from corevatis_erpnext.setup.site_template import verify_site_template as _verify
 
 	return _verify(config=config, config_file=config_file, template=template)
+
+
+def list_templates():
+	"""Vorhandene Vorlagen (Allowlist für ``corevatis.setup.onboard``, Aufgabe 0.7)."""
+	from corevatis_erpnext.setup.config import list_templates as _list
+
+	return _list()
