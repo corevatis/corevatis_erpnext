@@ -1,0 +1,169 @@
+{
+ "charts": [],
+ "content": "[{\"id\": \"cvsc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Offene Anfragen\", \"col\": 3}}, {\"id\": \"cvsc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Anfragen nach Status\", \"col\": 3}}, {\"id\": \"cvsc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Neue Anfrage\", \"col\": 3}}, {\"id\": \"cvsc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Termine\", \"col\": 3}}, {\"id\": \"cvsc4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Web Form Anfrage\", \"col\": 3}}, {\"id\": \"cvsp0\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvcd0\", \"type\": \"card\", \"data\": {\"card_name\": \"Anfragen\", \"col\": 4}}, {\"id\": \"cvcd1\", \"type\": \"card\", \"data\": {\"card_name\": \"Einstellungen\", \"col\": 4}}]",
+ "creation": "2026-10-28 12:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "inbox",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Anfragen",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Anfragen",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Lead",
+   "link_count": 0,
+   "link_to": "Lead",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Kontakt",
+   "link_count": 0,
+   "link_to": "Contact",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Adresse",
+   "link_count": 0,
+   "link_to": "Address",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Termin",
+   "link_count": 0,
+   "link_to": "Event",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Einstellungen",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Web Form",
+   "link_count": 0,
+   "link_to": "Web Form",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Lead-Quelle",
+   "link_count": 0,
+   "link_to": "UTM Source",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "CRM-Einstellungen",
+   "link_count": 0,
+   "link_to": "CRM Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-28 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Anfragen",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [
+  {
+   "role": "Büro"
+  },
+  {
+   "role": "Meister"
+  }
+ ],
+ "sequence_id": 1.0,
+ "shortcuts": [
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Offene Anfragen",
+   "link_to": "Lead",
+   "stats_filter": "[[\"Lead\", \"status\", \"not in\", [\"Converted\", \"Do Not Contact\"], false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "Report Builder",
+   "label": "Anfragen nach Status",
+   "link_to": "Lead",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "New",
+   "label": "Neue Anfrage",
+   "link_to": "Lead",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "Calendar",
+   "label": "Termine",
+   "link_to": "Event",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "Web Form Anfrage",
+   "type": "URL",
+   "url": "/app/web-form?doc_type=Lead"
+  }
+ ],
+ "standard": 1,
+ "title": "Anfragen",
+ "type": "Workspace"
+}

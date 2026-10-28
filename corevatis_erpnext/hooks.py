@@ -18,12 +18,27 @@ required_apps = ["erpnext"]
 # ------------
 
 after_install = "corevatis_erpnext.setup.install.after_install"
+# Custom Fields und Fachrollen (ab 1.4 auch der Workflow) nach jedem migrate - idempotent
+after_migrate = ["corevatis_erpnext.setup.install.after_migrate"]
+
+# Desk-Formulare
+# --------------
+# lead.js: Symptom-Checkboxen schreiben live in cv_symptome (1.1)
+doctype_js = {
+	"Lead": [
+		"public/js/lead.js",
+	],
+}
 
 # Document Events
 # ---------------
 # Gutschriften (Sales Invoice mit is_return) bekommen den Rückgabe-Nummernkreis aus
 # dem Site-Template (z. B. GS-.YYYY.-), solange die Standardserie gewählt ist.
 doc_events = {
+	# Prozess 1 (Epic 1): Symptom-Checkboxen und cv_symptome abgleichen
+	"Lead": {
+		"validate": "corevatis_erpnext.anfrage.lead.sync_symptome",
+	},
 	"Sales Invoice": {
 		"before_insert": "corevatis_erpnext.setup.naming.set_return_naming_series",
 	},
