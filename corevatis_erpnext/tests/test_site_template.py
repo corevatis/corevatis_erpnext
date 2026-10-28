@@ -181,7 +181,10 @@ class TestSiteTemplate(IntegrationTestCase):
 	def test_letter_head(self):
 		name = frappe.db.get_value("Company", self.company, "default_letter_head")
 		self.assertEqual(name, "Hülshoff Sanierungstechnik")
-		footer = frappe.db.get_value("Letter Head", name, "footer")
+		footer, source = frappe.db.get_value("Letter Head", name, ["footer", "source"])
+		self.assertEqual(source, "HTML")
+		# ersetzt ERPNexts mitgelieferten Standard „Company Letterhead - Grey“
+		self.assertEqual(frappe.db.get_value("Letter Head", {"is_default": 1}), name)
 		self.assertNotIn("PLATZHALTER", footer)
 		self.assertNotIn("$owner_line", footer)
 

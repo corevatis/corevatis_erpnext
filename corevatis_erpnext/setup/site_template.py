@@ -619,6 +619,12 @@ def _ensure_company_address(cfg: dict, company: str, report: Report) -> None:
 	report.change("Adresse", f"Firmenadresse {doc.name} angelegt")
 
 
+# Von ERPNext bei der Installation angelegte Briefköpfe (erpnext/setup/install.py);
+# „Company Letterhead - Grey“ ist danach Site-Standard.
+ERPNEXT_LETTER_HEADS = ("Company Letterhead", "Company Letterhead - Grey")
+LETTER_HEAD_MARKER = "{#- Briefkopf (Corevatis-Site-Template)"
+
+
 def _ensure_letter_head(cfg: dict, company: str, report: Report) -> None:
 	spec = cfg.get("letter_head")
 	if spec is None:
@@ -637,14 +643,31 @@ def _ensure_letter_head(cfg: dict, company: str, report: Report) -> None:
 				"content": _read_template_file("letter_head_header.html"),
 				"footer_source": "HTML",
 				"footer": footer,
-				"is_default": 0 if frappe.db.exists("Letter Head", {"is_default": 1}) else 1,
+				"is_default": 0,
 			}
 		).insert(ignore_permissions=True)
 		report.change("Briefkopf", f"{name} angelegt")
 
+	# Frappe setzt beim Anlegen außerhalb von install/migrate immer source = "Image"
+	# (LetterHead.before_insert); für den eigenen HTML-Briefkopf zurückstellen.
+	source, content = frappe.db.get_value("Letter Head", name, ["source", "content"])
+	if source != "HTML" and (content or "").startswith(LETTER_HEAD_MARKER):
+		frappe.db.set_value("Letter Head", name, "source", "HTML")
+		report.change("Briefkopf", f"{name}: Quelle HTML")
+
 	if not frappe.db.get_value("Company", company, "default_letter_head"):
 		frappe.db.set_value("Company", company, "default_letter_head", name)
 		report.change("Briefkopf", f"{name} als Standard der Firma")
+
+	# Site-Standard: gilt für Belege ohne letter_head (z. B. über die REST-API angelegt;
+	# nur der Desk übernimmt den Briefkopf der Firma). Nur ERPNexts mitgelieferten
+	# Standard ersetzen, nie einen eigenen.
+	current = frappe.db.get_value("Letter Head", {"is_default": 1})
+	if current != name and (not current or current in ERPNEXT_LETTER_HEADS):
+		doc = frappe.get_doc("Letter Head", name)
+		doc.is_default = 1
+		doc.save(ignore_permissions=True)
+		report.change("Briefkopf", f"{name} als Site-Standard (statt {current or 'keinem'})")
 
 
 def _ensure_print_formats(cfg: dict, report: Report) -> None:
@@ -828,6 +851,14 @@ def _verify(cfg: dict) -> dict:
 		name = _value(cfg["letter_head"].get("letter_head_name")) or company
 		check("Briefkopf", frappe.db.exists("Letter Head", name), name)
 		check("Briefkopf Standard der Firma", data.default_letter_head, data.default_letter_head or "leer")
+		source = frappe.db.get_value("Letter Head", name, "source")
+		check("Briefkopf Quelle HTML", source == "HTML", source or "fehlt")
+		site_default = frappe.db.get_value("Letter Head", {"is_default": 1})
+		check(
+			"Briefkopf Site-Standard",
+			site_default == name or (site_default and site_default not in ERPNEXT_LETTER_HEADS),
+			site_default or "keiner",
+		)
 
 	if cfg.get("address_template_germany"):
 		template = frappe.db.get_value("Address Template", "Germany", "template") or ""
