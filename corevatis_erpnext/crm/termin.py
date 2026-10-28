@@ -476,9 +476,23 @@ def _todo_text(subject: str, notiz: str | None) -> str:
 	return text
 
 
+_PLZ_ORT = re.compile(r"\b(\d{5})\s+([^,;\n]+)")
+
+
 def _ort(adresse: str) -> str:
+	"""Nur PLZ/Ort für das Event (keine Straße im Kalender).
+
+	Mehrzeilig: letzte Zeile. Einzeilig wie aus dem Web Form („Testweg 1, 48143 Münster“):
+	PLZ + Ort aus dem Text, ohne PLZ der Teil nach dem letzten Komma.
+	"""
 	zeilen = [z.strip() for z in (adresse or "").splitlines() if z.strip()]
-	return zeilen[-1][:140] if zeilen else ""
+	if not zeilen:
+		return ""
+	treffer = list(_PLZ_ORT.finditer(adresse))
+	if treffer:
+		plz, ort = treffer[-1].groups()
+		return f"{plz} {ort.strip()}"[:140]
+	return zeilen[-1].rsplit(",", 1)[-1].strip()[:140]
 
 
 def _freigeben(event, meister: str) -> None:
