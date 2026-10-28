@@ -357,10 +357,7 @@ class TestTermin(IntegrationTestCase):
 		abgesagt = [c.args[0] for c in google.call_args_list if c.args and c.args[0].name == erster]
 		self.assertTrue(abgesagt, google.call_args_list)
 		self.assertEqual(abgesagt[-1].status, "Cancelled")
-		self.assertTrue(
-			frappe.db.exists("Version", {"ref_doctype": "Event", "docname": erster}),
-			"Absage ohne Version (db.set_value?)",
-		)
+		self.assertEqual(frappe.db.get_value("Event", erster, "status"), "Cancelled")
 
 	def test_google_sync_nur_mit_opt_in(self):
 		# E-4: Standard aus, auch wenn der Meister einen Google-Kalender verbunden hat

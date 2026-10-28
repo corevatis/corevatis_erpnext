@@ -210,6 +210,9 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 		# E-2: Desk/Import/E-Mail-Leads prüfen Dubletten weiter
 		email = f"desk-{uuid.uuid4().hex[:12]}@example.com"
 		self.emails.append(email)
+		# Lead im Test-Thread nicht offen lassen: die Namensserie bliebe gesperrt, und die
+		# HTTP-Einsendungen der folgenden Tests (eigene Verbindung) warteten darauf
+		self.addCleanup(frappe.db.rollback)
 		make_lead(first_name="Desk", email_id=email)
 		with self.assertRaises(frappe.DuplicateEntryError):
 			make_lead(first_name="Desk 2", email_id=email)
@@ -458,6 +461,7 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 		# im Verlauf muss die endgültige URL tragen (vorher /private/files/... → 403)
 		from frappe.core.doctype.file.file import File
 
+		self.addCleanup(frappe.db.rollback)  # Namensserie freigeben (siehe oben)
 		lead = make_lead()
 		original = File.after_insert
 
