@@ -19,6 +19,7 @@ Gäste gesperrt, Dateien kommen nur über dieses Formular (Base64 im ``accept``-
 site_config-Schlüssel (alle optional):
     cv_webform_rate_limit         Einsendungen je IP und Zeitfenster, Standard 10 (0 = aus)
     cv_webform_rate_window        Zeitfenster in Sekunden, Standard 3600
+    cv_webform_rate_limit_global  Einsendungen je Zeitfenster insgesamt, Standard 60 (0 = aus)
     cv_webform_embedding_domains  erlaubte Einbettungs-Origins (Liste oder durch Leerzeichen
                                   getrennt), z. B. ["https://www.example.de"]; setzt
                                   ``Content-Security-Policy: frame-ancestors`` nur für dieses
@@ -29,6 +30,7 @@ site_config-Schlüssel (alle optional):
 import base64
 import binascii
 import hashlib
+import ipaddress
 import json
 import re
 
@@ -55,6 +57,7 @@ FOTO_FELDER = ("cv_foto_1", "cv_foto_2", "cv_foto_3")
 
 RATE_LIMIT = 10
 RATE_WINDOW = 3600
+RATE_LIMIT_GLOBAL = 60
 
 _DATAURL = re.compile(r"^data:(?P<mime>[\w.+/-]*)(?:;[\w.+=-]+)*;base64,(?P<b64>[A-Za-z0-9+/=]+)$")
 _HEIF_BRANDS = {b"heic", b"heix", b"hevc", b"hevx", b"heim", b"heis", b"mif1", b"msf1"}
@@ -147,34 +150,60 @@ def _load_payload(data) -> frappe._dict:
 	return frappe._dict(data)
 
 
-def client_ip() -> str:
-	"""Client-IP: ``CF-Connecting-IP`` (setzt Cloudflare, vom Client nicht fälschbar), sonst
-	Frappes ``request_ip`` (erster Eintrag aus ``X-Forwarded-For``)."""
-	return cstr(
-		frappe.get_request_header("CF-Connecting-IP") or frappe.local.request_ip or "unbekannt"
-	).strip()
+def client_ip() -> str | None:
+	"""Client-IP ausschließlich aus Frappes ``request_ip`` (erster Eintrag aus
+	``X-Forwarded-For``). Kein Header wird hier selbst ausgewertet: Der Press-Proxy setzt
+	die echte Adresse per nginx ``real_ip`` (``CF-Connecting-IP``, vertraut nur Cloudflare
+	und dem Tunnel-Connector) und überschreibt ``X-Forwarded-For`` mit ``$remote_addr``.
+	Ungültige Werte → ``None``."""
+	try:
+		return str(ipaddress.ip_address(cstr(frappe.local.request_ip).strip()))
+	except ValueError:
+		return None
 
 
-def rate_limit_config() -> tuple[int, int]:
+def rate_limit_config() -> tuple[int, int, int]:
+	"""(Limit je IP, Zeitfenster in s, globales Limit je Formular)."""
 	conf = frappe.local.conf
-	limit = conf.get("cv_webform_rate_limit")
-	window = conf.get("cv_webform_rate_window")
-	return (RATE_LIMIT if limit in (None, "") else cint(limit), cint(window) or RATE_WINDOW)
+
+	def _int(key, default):
+		value = conf.get(key)
+		return default if value in (None, "") else cint(value)
+
+	return (
+		_int("cv_webform_rate_limit", RATE_LIMIT),
+		_int("cv_webform_rate_window", RATE_WINDOW) or RATE_WINDOW,
+		_int("cv_webform_rate_limit_global", RATE_LIMIT_GLOBAL),
+	)
 
 
-def check_rate_limit():
-	"""Höchstens ``limit`` Einsendungen je IP und Zeitfenster (zusätzlich zu Frappes eigenem
-	Limit auf ``accept``: 10 je Minute). Zählt jeden Versuch, auch abgewiesene."""
-	if not getattr(frappe.local, "request", None):
-		return
-	limit, window = rate_limit_config()
-	if limit <= 0:
-		return
-	key = frappe.cache.make_key(f"cv:webform:{WEB_FORM}:{client_ip()}")
+def _count(bucket: str, window: int) -> int:
+	key = frappe.cache.make_key(f"cv:webform:{WEB_FORM}:{bucket}")
 	count = frappe.cache.incrby(key, 1)
 	if count == 1:
 		frappe.cache.expire(key, window)
-	if count > limit:
+	return count
+
+
+def check_rate_limit():
+	"""Rate-Limit (zusätzlich zu Frappes eigenem Limit auf ``accept``: 10 je Minute):
+
+	- je Client-IP höchstens ``cv_webform_rate_limit`` Einsendungen im Zeitfenster,
+	- ohne gültige IP ein gemeinsamer Bucket „unbekannt“ mit einem Drittel des Limits,
+	- global je Formular höchstens ``cv_webform_rate_limit_global`` (Rückfallschranke).
+
+	Zählt jeden Versuch, auch abgewiesene. 0 schaltet die jeweilige Grenze ab."""
+	if not getattr(frappe.local, "request", None):
+		return
+	limit, window, limit_global = rate_limit_config()
+	exceeded = False
+	if limit > 0:
+		ip = client_ip()
+		bucket_limit = limit if ip else max(1, limit // 3)
+		exceeded = _count(f"ip:{ip or 'unbekannt'}", window) > bucket_limit
+	if limit_global > 0:
+		exceeded = _count("global", window) > limit_global or exceeded
+	if exceeded:
 		frappe.throw(
 			_("Zu viele Anfragen. Bitte versuchen Sie es später erneut oder rufen Sie uns an."),
 			frappe.RateLimitExceededError,

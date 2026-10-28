@@ -81,7 +81,7 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 		super().setUpClass()
 		cls.emails = []
 		# eigenes Limit hier großzügig; der Rate-Limit-Test setzt es gezielt herunter
-		cls._rl = patch.object(ez, "rate_limit_config", return_value=(1000, 3600))
+		cls._rl = patch.object(ez, "rate_limit_config", return_value=(1000, 3600, 0))
 		cls._rl.start()
 
 	@classmethod
@@ -141,7 +141,7 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 			"post",
 			ACCEPT_URL,
 			json={"web_form": web_form, "data": json.dumps(data)},
-			headers={"CF-Connecting-IP": ip, "X-Forwarded-For": ip},
+			headers={"X-Forwarded-For": ip},
 		)
 
 	def leads(self, email: str) -> list[str]:
@@ -341,10 +341,14 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 		self.assertEqual(self.submit(again).status_code, 200)
 		self.assertEqual(len(self.leads(data["email_id"])), 2)
 
+	def _reset_limits(self, *buckets):
+		for bucket in buckets:
+			frappe.cache.delete(frappe.cache.make_key(f"cv:webform:{ez.WEB_FORM}:{bucket}"))
+
 	def test_rate_limit_per_ip(self):
 		ip = "192.0.2.77"
-		with patch.object(ez, "rate_limit_config", return_value=(2, 60)):
-			frappe.cache.delete(frappe.cache.make_key(f"cv:webform:{ez.WEB_FORM}:{ip}"))
+		self._reset_limits(f"ip:{ip}", "ip:192.0.2.78")
+		with patch.object(ez, "rate_limit_config", return_value=(2, 60, 0)):
 			self.assertEqual(self.submit(self.payload(cv_fotos=[]), ip=ip).status_code, 200)
 			self.assertEqual(self.submit(self.payload(cv_fotos=[]), ip=ip).status_code, 200)
 			blocked = self.payload(cv_fotos=[])
@@ -353,6 +357,46 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 			# andere IP nicht betroffen
 			self.assertEqual(self.submit(self.payload(cv_fotos=[]), ip="192.0.2.78").status_code, 200)
 
+	def test_rate_limit_ignores_spoofed_headers(self):
+		ip = "192.0.2.90"
+		self._reset_limits(f"ip:{ip}")
+		with patch.object(ez, "rate_limit_config", return_value=(1, 60, 0)):
+			first = _request(
+				"post",
+				ACCEPT_URL,
+				json={"web_form": ez.WEB_FORM, "data": json.dumps(self.payload(cv_fotos=[]))},
+				headers={"X-Forwarded-For": ip, "CF-Connecting-IP": "198.51.100.1"},
+			)
+			self.assertEqual(first.status_code, 200)
+			# gefälschter CF-Connecting-IP ändert den Schlüssel nicht
+			second = _request(
+				"post",
+				ACCEPT_URL,
+				json={"web_form": ez.WEB_FORM, "data": json.dumps(self.payload(cv_fotos=[]))},
+				headers={"X-Forwarded-For": ip, "CF-Connecting-IP": "198.51.100.2"},
+			)
+			self.assertEqual(second.status_code, 429)
+
+	def test_client_ip_validated(self):
+		for value, expected in (
+			("192.0.2.1", "192.0.2.1"),
+			("2001:db8::1", "2001:db8::1"),
+			("unbekannt", None),
+			("1.2.3.4:x", None),
+			("", None),
+			(None, None),
+		):
+			with patch.object(frappe.local, "request_ip", value, create=True):
+				self.assertEqual(ez.client_ip(), expected)
+
+	def test_rate_limit_global(self):
+		self._reset_limits("global", "ip:192.0.2.101", "ip:192.0.2.102", "ip:192.0.2.103")
+		with patch.object(ez, "rate_limit_config", return_value=(100, 60, 2)):
+			self.assertEqual(self.submit(self.payload(cv_fotos=[]), ip="192.0.2.101").status_code, 200)
+			self.assertEqual(self.submit(self.payload(cv_fotos=[]), ip="192.0.2.102").status_code, 200)
+			self.assertEqual(self.submit(self.payload(cv_fotos=[]), ip="192.0.2.103").status_code, 429)
+		self._reset_limits("global")
+
 	def test_guest_upload_file_stays_forbidden(self):
 		self.assertFalse(frappe.get_system_settings("allow_guests_to_upload_files"))
 		ip = _ip()
@@ -360,7 +404,7 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 			"post",
 			"/api/method/upload_file",
 			data={"is_private": "1", "doctype": "Lead", "file": (io.BytesIO(_jpg()), "x.jpg")},
-			headers={"CF-Connecting-IP": ip, "X-Forwarded-For": ip},
+			headers={"X-Forwarded-For": ip},
 		)
 		self.assertEqual(response.status_code, 403, response.get_data(as_text=True)[:500])
 

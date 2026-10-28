@@ -31,7 +31,8 @@ Route `/kostenlose-einschaetzung/new` (Gast, kein Login): Anfrage → Lead mit b
 |---|---|---|
 | `cv_webform_embedding_domains` | Origins, die das Formular per iframe einbetten dürfen (`frame-ancestors`) | keine |
 | `cv_webform_datenschutz_url` | Link der Datenschutzerklärung | `/datenschutz` |
-| `cv_webform_rate_limit` / `cv_webform_rate_window` | Einsendungen je IP und Zeitfenster (s) | 10 / 3600 |
+| `cv_webform_rate_limit` / `cv_webform_rate_window` | Einsendungen je Client-IP (`request_ip`) und Zeitfenster (s); ohne gültige IP gemeinsamer Bucket mit einem Drittel | 10 / 3600 |
+| `cv_webform_rate_limit_global` | Einsendungen je Zeitfenster insgesamt (Rückfallschranke) | 60 |
 
 Einbettung (WordPress, „Individuelles HTML“-Block):
 
