@@ -1,0 +1,140 @@
+{
+ "card_fields": [
+  {
+   "doctype": "Kanban Board Field",
+   "fieldname": "cv_objekttyp",
+   "idx": 1,
+   "label": "Property Type"
+  },
+  {
+   "doctype": "Kanban Board Field",
+   "fieldname": "cv_bauteil",
+   "idx": 2,
+   "label": "Building Component"
+  },
+  {
+   "doctype": "Kanban Board Field",
+   "fieldname": "cv_dringlichkeit",
+   "idx": 3,
+   "label": "Urgency"
+  }
+ ],
+ "columns": [
+  {
+   "column_name": "Neu",
+   "doctype": "Kanban Board Column",
+   "idx": 1,
+   "indicator": "Orange",
+   "order": "[]",
+   "status": "Active"
+  },
+  {
+   "column_name": "Termin",
+   "doctype": "Kanban Board Column",
+   "idx": 2,
+   "indicator": "Light Blue",
+   "order": "[]",
+   "status": "Active"
+  },
+  {
+   "column_name": "Besichtigt",
+   "doctype": "Kanban Board Column",
+   "idx": 3,
+   "indicator": "Blue",
+   "order": "[]",
+   "status": "Active"
+  },
+  {
+   "column_name": "Angebot",
+   "doctype": "Kanban Board Column",
+   "idx": 4,
+   "indicator": "Purple",
+   "order": "[]",
+   "status": "Active"
+  },
+  {
+   "column_name": "Gewonnen",
+   "doctype": "Kanban Board Column",
+   "idx": 5,
+   "indicator": "Green",
+   "order": "[]",
+   "status": "Active"
+  },
+  {
+   "column_name": "Verloren",
+   "doctype": "Kanban Board Column",
+   "idx": 6,
+   "indicator": "Red",
+   "order": "[]",
+   "status": "Active"
+  }
+ ],
+ "creation": "2026-10-28 12:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Kanban Board",
+ "field_name": "cv_status",
+ "filters": "[]",
+ "footer_date_field": "Modified",
+ "group_by_fields": [
+  {
+   "doctype": "Kanban Board Group Field",
+   "fieldname": "lead_owner",
+   "idx": 1,
+   "label": "Lead Owner"
+  },
+  {
+   "doctype": "Kanban Board Group Field",
+   "fieldname": "cv_dringlichkeit",
+   "idx": 2,
+   "label": "Urgency"
+  },
+  {
+   "doctype": "Kanban Board Group Field",
+   "fieldname": "cv_objekttyp",
+   "idx": 3,
+   "label": "Property Type"
+  }
+ ],
+ "idx": 0,
+ "image_field": "cv_foto_1",
+ "is_standard": "Yes",
+ "kanban_board_name": "Anfragen",
+ "modified": "2026-10-28 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Anfragen",
+ "owner": "Administrator",
+ "preview_fields": [
+  {
+   "doctype": "Kanban Board Field",
+   "fieldname": "mobile_no",
+   "idx": 1,
+   "label": "Mobile No"
+  },
+  {
+   "doctype": "Kanban Board Field",
+   "fieldname": "cv_objekt_adresse",
+   "idx": 2,
+   "label": "Property Address"
+  },
+  {
+   "doctype": "Kanban Board Field",
+   "fieldname": "cv_symptome",
+   "idx": 3,
+   "label": "Symptoms"
+  },
+  {
+   "doctype": "Kanban Board Field",
+   "fieldname": "cv_quelle",
+   "idx": 4,
+   "label": "Inquiry Source"
+  }
+ ],
+ "private": 0,
+ "reference_doctype": "Lead",
+ "show_assigned_to": 1,
+ "show_labels": 0,
+ "show_tags_on_card": 1,
+ "title_field": "title",
+ "use_kanban_v2": 1
+}

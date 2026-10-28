@@ -4,6 +4,7 @@ import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 from corevatis_erpnext.anfrage.custom_fields import custom_fields
+from corevatis_erpnext.anfrage.workflow import ensure_workflow
 
 # Fachrollen aus dem Site-Template (docs/0.4-site-template.md). Workspace und Workflow
 # brauchen sie auch auf Sites, auf denen das Template (noch) nicht lief; beide Apps
@@ -26,3 +27,5 @@ def ensure_lead_fields() -> None:
 def ensure_anfrage_setup() -> None:
 	ensure_roles()
 	ensure_lead_fields()
+	# nach den Feldern: der Workflow braucht cv_status und die Rollen
+	ensure_workflow()

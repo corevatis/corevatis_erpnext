@@ -14,9 +14,11 @@ Kein Rechnen, nur Normalisieren - bleibt deshalb im Adapter.
 
 import re
 
+import frappe
+from frappe import _
 from frappe.utils import cint
 
-from corevatis_erpnext.anfrage.custom_fields import SYMPTOME
+from corevatis_erpnext.anfrage.custom_fields import STATUS_VERLOREN, SYMPTOME
 
 _BY_VALUE = {value.casefold(): fieldname for fieldname, _label, value in SYMPTOME}
 _SPLIT = re.compile(r"[\n,;]+")
@@ -64,3 +66,13 @@ def sync_symptome(doc, method=None) -> None:
 	for fieldname, _label, _value in SYMPTOME:
 		doc.set(fieldname, 1 if fieldname in checked else 0)
 	doc.set("cv_symptome", build_symptome(checked, extra) or None)
+
+
+def validate_verlustgrund(doc, method=None) -> None:
+	"""``validate``-Hook am Lead (1.4): „Verloren“ nur mit Verlustgrund - auch per API/Kanban."""
+	if doc.get("cv_status") == STATUS_VERLOREN and not doc.get("cv_verlustgrund"):
+		frappe.throw(
+			_("Please select a loss reason before marking the inquiry as lost."),
+			frappe.MandatoryError,
+			title=_("Loss Reason"),
+		)

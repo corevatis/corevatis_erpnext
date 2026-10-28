@@ -17,6 +17,11 @@ OBJEKTTYPEN = ("EFH", "MFH", "Gewerbe", "Öffentlich", "Sonstiges")
 BAUTEILE = ("Keller außen", "Keller innen", "Sockel", "EG/Wand", "Dach", "Bad", "Sonstiges")
 DRINGLICHKEITEN = ("Normal", "Dringend", "Notfall")
 
+# Aufgabe 1.4: eigener Anfragestatus (Workflow „Lead Anfrage“), unabhängig von Lead.status
+ANFRAGE_STATUS = ("Neu", "Termin", "Besichtigt", "Angebot", "Gewonnen", "Verloren")
+STATUS_VERLOREN = "Verloren"
+VERLUSTGRUENDE = ("Preis", "kein Bedarf", "Wettbewerber", "keine Rückmeldung", "Sonstiges")
+
 # (Checkbox-Feld, englisches Label, Wert in cv_symptome) - Reihenfolge = Anzeige
 SYMPTOME = (
 	("cv_symptom_feuchte_waende", "Damp Walls", "feuchte Wände"),
@@ -40,6 +45,30 @@ def _select(*values: str, blank: bool = True) -> str:
 def lead_fields() -> list[dict]:
 	"""Custom Fields am Lead in Formular-Reihenfolge (``insert_after`` verkettet)."""
 	fields: list[dict] = [
+		# Anfragestatus (1.4) im Kopf neben dem ERPNext-Status; gesetzt nur über den
+		# Workflow „Lead Anfrage“ (Aktionen, Kanban), deshalb im Formular schreibgeschützt
+		{
+			"fieldname": "cv_status",
+			"fieldtype": "Select",
+			"label": "Inquiry Status",
+			"options": _select(*ANFRAGE_STATUS, blank=False),
+			"default": ANFRAGE_STATUS[0],
+			"read_only": 1,
+			"no_copy": 1,
+			"in_standard_filter": 1,
+			"insert_after": "status",
+		},
+		{
+			"fieldname": "cv_verlustgrund",
+			"fieldtype": "Select",
+			"label": "Loss Reason",
+			"options": _select(*VERLUSTGRUENDE),
+			"depends_on": f"eval:doc.cv_status=='{STATUS_VERLOREN}'",
+			"mandatory_depends_on": f"eval:doc.cv_status=='{STATUS_VERLOREN}'",
+			"no_copy": 1,
+			"in_standard_filter": 1,
+			"insert_after": "cv_status",
+		},
 		# Abschnitt „Anfrage“ nach den Kopfdaten (request_type ist das letzte Feld vor
 		# „Contact Info“)
 		{

@@ -106,7 +106,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-28 12:00:00.000000",
+ "modified": "2026-10-28 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Corevatis ERPNext",
  "name": "Anfragen",
@@ -131,15 +131,15 @@
    "doc_view": "List",
    "label": "Offene Anfragen",
    "link_to": "Lead",
-   "stats_filter": "[[\"Lead\", \"status\", \"not in\", [\"Converted\", \"Do Not Contact\"], false]]",
+   "stats_filter": "[[\"Lead\", \"cv_status\", \"not in\", [\"Gewonnen\", \"Verloren\"], false]]",
    "type": "DocType"
   },
   {
    "color": "Blue",
-   "doc_view": "Report Builder",
+   "doc_view": "Kanban",
+   "kanban_board": "Anfragen",
    "label": "Anfragen nach Status",
    "link_to": "Lead",
-   "stats_filter": "[]",
    "type": "DocType"
   },
   {
