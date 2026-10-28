@@ -3,7 +3,7 @@ Steuerberechnung, Nummernkreise, Rechte, zweite Firma mit SKR04."""
 
 import frappe
 from frappe.tests import IntegrationTestCase, UnitTestCase
-from frappe.utils import add_days, flt, getdate, today
+from frappe.utils import add_days, cint, flt, getdate, today
 from frappe.utils.nestedset import get_root_of
 
 from corevatis_erpnext.setup import apply_site_template, verify_site_template
@@ -344,6 +344,21 @@ class TestSiteTemplate(IntegrationTestCase):
 		self.assertEqual(flt(quotation.net_total), 100.0)
 		self.assertEqual(flt(quotation.total_taxes_and_charges), 19.0)
 		self.assertEqual(flt(quotation.grand_total), 119.0)
+
+	def test_keine_zusatz_steuerzeilen_aus_artikelsteuer(self):
+		# Die deutsche Artikelsteuervorlage 19 % trägt den Satz auch für Vorsteuer-, EU- und
+		# § 13b-Konten; mit add_taxes_from_item_tax_template=1 hängt das Desk-Formular
+		# (taxes_and_totals.js) diese Konten als weitere 19-%-Zeilen an (mvp-test, Angebot
+		# aus drei Katalogpositionen: Steuer 3.609,06 statt 515,58).
+		self.assertEqual(self.config["taxes"]["add_taxes_from_item_tax_template"], 0)
+		self.assertEqual(
+			cint(frappe.db.get_single_value("Accounts Settings", "add_taxes_from_item_tax_template")), 0
+		)
+		template = frappe.db.get_value("Item Tax Template", {"company": self.company, "title": "19 %"})
+		rates = frappe.get_all(
+			"Item Tax Template Detail", {"parent": template, "tax_rate": 19}, pluck="tax_type"
+		)
+		self.assertGreater(len(rates), 1)  # Grund für die Einstellung, siehe oben
 
 	def test_invoice_and_credit_note_series(self):
 		from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
