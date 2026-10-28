@@ -95,7 +95,9 @@ class TestItemFelder(IntegrationTestCase):
 		self.assertEqual(meta.get_field("cv_verfahren").options.split("\n"), ["", *VERFAHREN])
 		self.assertEqual(meta.get_field("cv_leistungsregel").fieldtype, "Data")
 		fieldnames = [df.fieldname for df in meta.fields]
-		self.assertEqual(fieldnames.index("cv_section_leistung"), fieldnames.index("description") + 1)
+		# nach der Beschreibung, noch im Tab „Details“ (andere Apps hängen ggf. auch hinter description)
+		self.assertGreater(fieldnames.index("cv_section_leistung"), fieldnames.index("description"))
+		self.assertLess(fieldnames.index("cv_leistungsregel"), fieldnames.index("accounting"))
 		for name in ("cv_gewerk", "cv_verfahren", "cv_leistungsregel"):
 			self.assertEqual(meta.get_field(name).module, "Corevatis ERPNext")
 
