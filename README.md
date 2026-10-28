@@ -34,6 +34,16 @@ Route `/kostenlose-einschaetzung/new` (Gast, kein Login): Anfrage → Lead mit b
 | `cv_webform_rate_limit` / `cv_webform_rate_window` | Einsendungen je Client-IP (`request_ip`) und Zeitfenster (s); ohne gültige IP gemeinsamer Bucket mit einem Drittel | 10 / 3600 |
 | `cv_webform_rate_limit_global` | angenommene Einsendungen je Zeitfenster insgesamt (Rückfallschranke; abgewiesene Versuche zählen nicht) | 100 |
 
+**Bekannte E-Mail-Adresse:** Gibt es zur E-Mail schon einen *offenen* Lead (Anfragestatus nicht
+Gewonnen/Verloren, ERPNext-Status nicht Converted/Do Not Contact), legt das Formular keinen neuen
+Lead und keinen neuen Contact an: Die neuen Angaben erscheinen als Kommentar „Weitere Anfrage über
+das Web Form“ im Verlauf dieses Leads, die Fotos als private Anhänge (leere Foto-Felder werden
+gefüllt, belegte bleiben); Status und Felder des Leads bleiben unverändert. Ohne offenen Lead
+(z. B. nur ein verlorener) entsteht ein neuer Lead. Die ERPNext-Einstellung „Lead-Dubletten per
+E-Mail erlauben“ bleibt aus – die Dublettenprüfung für Desk, Import und E-Mail gilt weiter. Die
+Antwort an den Browser ist in allen Fällen gleich; der Erfolgstext weist darauf hin, dass eine noch
+offene Anfrage ergänzt wird.
+
 Einbettung (WordPress, „Individuelles HTML“-Block):
 
 ```html
@@ -54,7 +64,20 @@ window.addEventListener("message", function (e) {
 - **Termin anlegen** (Büro/Meister): Dialog → `corevatis_erpnext.crm.termin.termin_anlegen`
   (Event + Zuweisung Meister + `Lead.cv_termin`, Kundenbestätigung in die Email Queue).
   Im MVP gibt es kein SMTP: Ohne ausgehendes E-Mail-Konto bleibt der Eintrag „Not Sent“, der
-  Text wird über „Bestätigung anzeigen/kopieren“ manuell übermittelt.
+  Text wird über „Bestätigung anzeigen/kopieren“ manuell übermittelt. „Termin anlegen“ bei
+  bestehendem Termin sagt den alten über `Event.save()` ab (Hooks wie der Google-Sync laufen).
+- **Terminbestätigung (Email Template „Terminbestätigung Besichtigung“)**: keine Fixture mehr.
+  `corevatis_erpnext.crm.email_vorlagen.ensure_email_templates` legt die Vorlage in
+  `after_install`/`after_migrate` an und aktualisiert sie nur, solange sie auf der Site
+  unverändert ist (Hash-Vergleich wie beim Druckformat-Sync). **Änderungen im Desk bleiben
+  erhalten**; die ausgelieferte Fassung zurückholen:
+  `bench --site <site> execute corevatis_erpnext.crm.email_vorlagen.ensure_email_templates --kwargs '{"force": true}'`
+  (oder einmalig `cv_email_template_force_sync: 1` in der site_config).
+- **Google Calendar** (Datenschutzentscheidung): Termine gehen nur an den Google-Kalender des
+  Meisters, wenn die Site es erlaubt – site_config `cv_termin_google_sync: 1`, **Standard aus**.
+  Übertragen werden dann Betreff (mit Kundenname) und PLZ/Ort.
+- **Als verloren markieren**: Der Desk-Dialog speichert Verlustgrund und Workflow-Übergang in
+  einem Aufruf (`corevatis_erpnext.anfrage.lead.als_verloren_markieren`).
 - **Foto-Galerie**: `corevatis_erpnext.galerie(frm, {fieldname})` aus `public/js/galerie.js`,
   für weitere Doctypes die Datei in `doctype_js` eintragen und im `refresh` aufrufen.
 
@@ -86,7 +109,7 @@ corevatis_erpnext/
   setup/                Site-Template (Aufgabe 0.4): site_template.py, config.py, templates/*.json
   crm/                  Lead: Termin + Terminbestätigung (1.3), Foto-Galerie get_bilder (1.5),
                         Custom Fields cv_termin/cv_galerie (setup.py)
-  fixtures/             Email Template „Terminbestätigung Besichtigung“
+  crm/vorlagen/         Email Template „Terminbestätigung Besichtigung“ (Quelle für email_vorlagen.py)
   public/js/            Desk-Skripte (hooks.doctype_js): galerie.js, lead_galerie.js, lead_termin.js
   corevatis_erpnext/    Modul "Corevatis ERPNext"
   translations/de.csv   deutsche Übersetzungen
