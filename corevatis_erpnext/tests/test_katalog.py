@@ -290,7 +290,7 @@ class TestKatalogImport(IntegrationTestCase):
 		def feld(doctype, spalte):
 			df = get_df_for_column_header(doctype, spalte)
 			self.assertIsNotNone(df, f"{doctype}: Spalte {spalte!r} passt zu keinem Feld")
-			tabelle = df.child_table_df.fieldname if df.get("is_child_table_field") else None
+			tabelle = df.child_table_df.fieldname if df.get("is_child_table_field") else ""
 			return (tabelle, df.fieldname)
 
 		for doctype, datei in DATEIEN:
@@ -304,7 +304,7 @@ class TestKatalogImport(IntegrationTestCase):
 			self.assertEqual(len(vorlage), len(header), f"{datei}: {vorlage}")
 			# Felder der Vorlagen-Spalten (Beschriftungen sind übersetzt, die Felder nicht)
 			vorlagen_felder = [
-				(df.child_table_df.fieldname if df.is_child_table_field else None, df.fieldname)
+				(df.child_table_df.fieldname if df.is_child_table_field else "", df.fieldname)
 				for df in exporter.fields
 			]
 			self.assertEqual(sorted(feld(doctype, s) for s in header), sorted(vorlagen_felder), datei)
@@ -478,7 +478,13 @@ class TestKatalogImport(IntegrationTestCase):
 				"items": [{"item_code": code, "qty": menge} for code, menge in ANGEBOT],
 			}
 		)
-		angebot.set_missing_values()  # wie das Formular: Preise aus der Preisliste
+		# wie das Formular: Standard-Steuervorlage der Firma, Preise aus der Preisliste
+		vorlage = frappe.db.get_value(
+			"Sales Taxes and Charges Template", {"company": FIRMA, "is_default": 1, "disabled": 0}, "name"
+		)
+		self.assertTrue(vorlage, "Standard-Verkaufssteuervorlage HST fehlt (Site-Template)")
+		angebot.taxes_and_charges = vorlage
+		angebot.set_missing_values()
 		angebot.insert(ignore_permissions=True)
 		for zeile in angebot.items:
 			self.assertEqual(flt(zeile.rate), BEISPIELE[zeile.item_code]["vk"], zeile.item_code)
@@ -493,15 +499,12 @@ class TestKatalogImport(IntegrationTestCase):
 			for z in angebot.items
 		)
 		self.assertEqual(flt(hk, 2), ANGEBOT_HK)
-		# Standard-Steuervorlage der Firma (Site-Template): Zeile USt 19 % mit 515,58
-		steuern = [(z.account_head, flt(z.rate), flt(z.tax_amount)) for z in angebot.taxes]
-		if steuern:
-			ust19 = [z for z in steuern if z[1] == 19]
-			self.assertEqual(
-				[z[2] for z in ust19],
-				[ANGEBOT_UST],
-				f"{steuern} {[(z.item_code, z.item_tax_template) for z in angebot.items]}",
-			)
+		# Standard-Steuervorlage der Firma (Site-Template): USt 19 % auf 1776
+		steuern = [(z.account_head, flt(z.tax_amount)) for z in angebot.taxes]
+		self.assertEqual(angebot.taxes_and_charges, vorlage)
+		self.assertEqual(flt(angebot.total_taxes_and_charges), ANGEBOT_UST, steuern)
+		self.assertEqual([b for k, b in steuern if k.startswith("1776")], [ANGEBOT_UST], steuern)
+		self.assertEqual(flt(angebot.grand_total), flt(ANGEBOT_NETTO + ANGEBOT_UST, 2))
 
 	def test_uebersicht(self):
 		zeilen_ = {z["item_code"]: z for z in uebersicht(firma=FIRMA)}
