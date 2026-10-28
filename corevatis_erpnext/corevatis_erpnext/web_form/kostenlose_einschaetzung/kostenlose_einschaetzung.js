@@ -193,6 +193,11 @@ frappe.ready(function () {
 
 	if (inFrame) {
 		document.body.classList.add("cv-embed");
+		// Frappe setzt html/body auf die Höhe des Viewports; im iframe ergäbe das immer die
+		// aktuelle iframe-Höhe statt der Inhaltshöhe (Befund mvp-test: stets 900 px gemeldet)
+		document.documentElement.style.height = "auto";
+		document.body.style.height = "auto";
+		document.body.style.minHeight = "0";
 		if (window.ResizeObserver) {
 			new ResizeObserver(postHeight).observe(document.body);
 		}
