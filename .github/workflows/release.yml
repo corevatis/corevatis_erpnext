@@ -1,0 +1,67 @@
+name: Release
+
+# Semver-Release: Tag vX.Y.Z (muss zu __version__ passen) -> komplette CI,
+# dann GitHub-Release mit Changelog-Auszug und THIRD_PARTY_LICENSES.md.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: GitHub-Release
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Tag gegen Version prüfen (Semver)
+        id: version
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          app="$(python3 -c 'import re; print(re.search(r"^name = \"(.+)\"", open("pyproject.toml").read(), re.M)[1])')"
+          version="$(python3 -c "import re; print(re.search(r'__version__ = \"(.+)\"', open('${app}/__init__.py').read())[1])")"
+          echo "$tag" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$' \
+            || { echo "::error::Tag $tag ist keine Semver-Version vX.Y.Z"; exit 1; }
+          [ "v${version}" = "$tag" ] || { echo "::error::Tag $tag passt nicht zu __version__ ${version}"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Changelog
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          # Abschnitt "## [X.Y.Z]" aus CHANGELOG.md bis zum nächsten "## ["
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" {on=1; next}
+            on && /^## \[/ {exit}
+            on {print}
+          ' CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "_Kein Eintrag in CHANGELOG.md für ${version}._" > notes.md
+          prev="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+          {
+            echo
+            if [ -n "$prev" ]; then echo "### Commits seit ${prev}"; range="${prev}..${GITHUB_REF_NAME}"
+            else echo "### Commits"; range="${GITHUB_REF_NAME}"; fi
+            echo
+            git log --no-merges --format='- %s (%h)' "$range"
+            echo
+            echo "Lizenzliste der Python-Abhängigkeiten: THIRD_PARTY_LICENSES.md (Asset)."
+          } >> notes.md
+          cat notes.md
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: third-party-licenses
+
+      - name: Release anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file notes.md \
+            --verify-tag THIRD_PARTY_LICENSES.md

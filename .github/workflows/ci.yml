@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FRAPPE_BRANCH: version-16
+  ERPNEXT_BRANCH: version-16
+  PYTHON_VERSION: "3.14"
+  NODE_VERSION: "24"
+  RUFF_VERSION: "0.14.10"
+  IMPORT_LINTER_VERSION: "2.15"
+
+jobs:
+  lint:
+    name: Lint (ruff, import-linter)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: ruff check / format --check
+        run: |
+          pip install "ruff==${RUFF_VERSION}" "import-linter==${IMPORT_LINTER_VERSION}"
+          ruff check .
+          ruff format --check .
+      - name: lint-imports (kein Python-Import aus corevatis)
+        run: lint-imports
+      - name: Selbsttest Lizenz-Klassifizierung
+        run: python .github/helper/licenses.py --selftest
+
+  tests:
+    name: ERPNext-v16-Site – Installation und bench run-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      redis-cache:
+        image: redis:alpine
+        ports:
+          - 13000:6379
+      redis-queue:
+        image: redis:alpine
+        ports:
+          - 11000:6379
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval=5s --health-timeout=2s --health-retries=20
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Frappe-/ERPNext-Commits ermitteln (Cache-Schlüssel)
+        id: upstream
+        run: |
+          echo "frappe=$(git ls-remote https://github.com/frappe/frappe "refs/heads/${FRAPPE_BRANCH}" | cut -f1)" >> "$GITHUB_OUTPUT"
+          echo "erpnext=$(git ls-remote https://github.com/frappe/erpnext "refs/heads/${ERPNEXT_BRANCH}" | cut -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pip / yarn
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.cache/yarn
+          key: bench-erpnext-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('pyproject.toml') }}-${{ steps.upstream.outputs.frappe }}-${{ steps.upstream.outputs.erpnext }}
+          restore-keys: |
+            bench-erpnext-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+
+      - name: Werkzeuge
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mariadb-client
+          pip install frappe-bench pip-licenses
+          yarn config set cache-folder ~/.cache/yarn
+
+      - name: bench init (Frappe ${{ env.FRAPPE_BRANCH }})
+        run: |
+          bench init --frappe-branch "${FRAPPE_BRANCH}" --skip-redis-config-generation --skip-assets \
+            --python "$(which python)" ~/frappe-bench
+        env:
+          CI: "Yes"
+
+      - name: ERPNext und App holen, Site anlegen, installieren
+        working-directory: /home/runner/frappe-bench
+        run: |
+          bench get-app --skip-assets --branch "${ERPNEXT_BRANCH}" erpnext
+          bench get-app --skip-assets corevatis_erpnext "$GITHUB_WORKSPACE"
+          bench setup requirements --dev
+          bench new-site --db-host 127.0.0.1 --db-root-password root --admin-password admin \
+            --mariadb-user-host-login-scope='%' test_site
+          bench --site test_site install-app corevatis_erpnext
+          bench --site test_site execute frappe.get_installed_apps
+        env:
+          CI: "Yes"
+
+      - name: bench run-tests --app corevatis_erpnext
+        working-directory: /home/runner/frappe-bench
+        run: |
+          bench --site test_site set-config allow_tests true
+          bench --site test_site run-tests --app corevatis_erpnext
+
+      - name: Lizenzliste
+        run: |
+          version="$(python -c 'import re; print(re.search(r"__version__ = \"(.+)\"", open("corevatis_erpnext/__init__.py").read())[1])')"
+          python .github/helper/licenses.py --python ~/frappe-bench/env/bin/python --app corevatis_erpnext \
+            --version "$version" --out THIRD_PARTY_LICENSES.md
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: third-party-licenses
+          path: THIRD_PARTY_LICENSES.md
+          if-no-files-found: ignore
