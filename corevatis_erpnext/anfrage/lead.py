@@ -69,7 +69,20 @@ def sync_symptome(doc, method=None) -> None:
 
 
 def validate_verlustgrund(doc, method=None) -> None:
-	"""``validate``-Hook am Lead (1.4): „Verloren“ nur mit Verlustgrund - auch per API/Kanban."""
+	"""``validate``-Hook am Lead (1.4): „Verloren“ nur mit Verlustgrund - auch per API/Kanban.
+
+	Beim Verlassen von „Verloren“ (z. B. „Wieder öffnen“) wird der alte Grund geleert: Er
+	gehört zum abgeschlossenen Verlust, und der Desk-Dialog fragt bei einem erneuten
+	„Als verloren markieren“ nur, wenn kein Grund gesetzt ist.
+	"""
+	before = doc.get_doc_before_save() if not doc.is_new() else None
+	if (
+		before
+		and before.get("cv_status") == STATUS_VERLOREN
+		and doc.get("cv_status") != STATUS_VERLOREN
+		and doc.get("cv_verlustgrund")
+	):
+		doc.cv_verlustgrund = None
 	if doc.get("cv_status") == STATUS_VERLOREN and not doc.get("cv_verlustgrund"):
 		frappe.throw(
 			_("Please select a loss reason before marking the inquiry as lost."),
