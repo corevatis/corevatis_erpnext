@@ -43,10 +43,18 @@ doc_events = {
 			"corevatis_erpnext.anfrage.lead.sync_symptome",
 			"corevatis_erpnext.anfrage.lead.validate_verlustgrund",
 		],
+		# Web Form „Kostenlose Einschätzung“ (1.2): utm_source Website, cv_quelle Web Form
+		"before_insert": "corevatis_erpnext.webform.einschaetzung.before_insert_lead",
 	},
 	"Sales Invoice": {
 		"before_insert": "corevatis_erpnext.setup.naming.set_return_naming_series",
 	},
+}
+
+# Web Form „Kostenlose Einschätzung“ (1.2): Honeypot, Datenschutz, Rate-Limit und private
+# Fotos. Andere Web Forms reicht die Funktion unverändert an Frappe weiter.
+override_whitelisted_methods = {
+	"frappe.website.doctype.web_form.web_form.accept": "corevatis_erpnext.webform.einschaetzung.accept",
 }
 
 # Weitere Hooks (doc_events an Quotation/Sales Order/Sales Invoice, fixtures,
