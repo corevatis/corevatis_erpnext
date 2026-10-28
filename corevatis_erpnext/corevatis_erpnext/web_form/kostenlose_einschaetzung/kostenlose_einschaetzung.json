@@ -24,7 +24,7 @@
  "max_attachment_size": 10,
  "meta_description": "Kostenlose Einschätzung Ihres Feuchteschadens – mit Fotos, unverbindlich.",
  "meta_title": "Kostenlose Einschätzung",
- "modified": "2026-10-28 12:00:00.000000",
+ "modified": "2026-10-28 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Corevatis ERPNext",
  "name": "kostenlose-einschaetzung",
@@ -34,7 +34,7 @@
  "show_attachments": 0,
  "show_list": 0,
  "show_sidebar": 0,
- "success_message": "Ihre Anfrage ist bei uns eingegangen. Wir sehen uns Ihre Angaben und Fotos an und melden uns zeitnah bei Ihnen.",
+ "success_message": "Ihre Anfrage ist bei uns eingegangen. Wir sehen uns Ihre Angaben und Fotos an und melden uns zeitnah bei Ihnen. Haben Sie uns schon einmal geschrieben und ist diese Anfrage noch offen, ergänzen wir sie um Ihre neuen Angaben und Fotos.",
  "success_title": "Vielen Dank für Ihre Anfrage",
  "title": "Kostenlose Einschätzung",
  "web_form_fields": [

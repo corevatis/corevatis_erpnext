@@ -11,7 +11,17 @@ Ablauf einer Einsendung (``POST /api/method/frappe.website.doctype.web_form.web_
    ``cv_symptom_*`` aus 1.1, Pflichtfelder, Select-Werte); ``before_insert_lead`` setzt
    ``utm_source`` und ``cv_quelle``. ``cv_symptome`` baut der 1.1-Hook ``sync_symptome``.
 4. Die Fotos werden danach als **private** ``File`` am Lead angelegt (``is_private=1``).
-   Mit ``frappe_s3_attachment`` lädt dessen ``File.after_insert`` sie in den Bucket.
+   Mit ``frappe_s3_attachment`` lädt dessen ``File.after_insert`` sie in den Bucket; der
+   Anhang-Eintrag im Verlauf entsteht erst danach mit der endgültigen URL.
+
+Bekannte E-Mail-Adresse (Review Epic 1, E-2): Gibt es zur E-Mail bereits einen **offenen** Lead
+(``cv_status`` nicht Gewonnen/Verloren, ERPNext-Status nicht Converted/Do Not Contact), entsteht
+kein neuer Lead und kein neuer Contact: Die neuen Angaben kommen als Kommentar, die Fotos als
+Anhänge an diesen Lead, sein Status bleibt unverändert. Ohne offenen Lead (auch wenn ein
+abgeschlossener existiert) entsteht ein neuer Lead. Die ERPNext-Einstellung „Lead-Dubletten per
+E-Mail erlauben“ bleibt dabei aus - die Dublettenprüfung für Desk, Import und E-Mail gilt weiter,
+nur dieses Formular übergeht sie für den neuen Lead neben einem abgeschlossenen. Die Antwort an
+den Browser ist in beiden Fällen gleich (kein Rückschluss, ob die Adresse bekannt ist).
 
 Gäste brauchen dafür **kein** ``allow_guests_to_upload_files``: ``upload_file`` bleibt für
 Gäste gesperrt, Dateien kommen nur über dieses Formular (Base64 im ``accept``-Aufruf).
@@ -106,11 +116,19 @@ def accept_einschaetzung(data: str | dict):
 			exc=frappe.ValidationError,
 		)
 
+	# globale Sperre vor dem Dekodieren/Prüfen der Fotos (bis ~23 MB Base64, Pillow; E-9)
+	check_global_limit()
 	fotos = parse_fotos(payload.get(KEY_FOTOS))
 	check_text_lengths(payload)
-	check_global_limit()
 	for key in (KEY_HONEYPOT, KEY_DATENSCHUTZ, KEY_FOTOS, *FOTO_FELDER, "image"):
 		payload.pop(key, None)
+
+	bestehend = offener_lead(payload.get("email_id"))
+	if bestehend:
+		lead = anfrage_anhaengen(bestehend, payload, fotos)
+		count_global()
+		_datenschutz_kommentar(lead)
+		return _antwort()
 
 	frappe_accept = frappe.get_attr(FRAPPE_ACCEPT)
 	frappe.flags.cv_einschaetzung = True
@@ -130,13 +148,104 @@ def accept_einschaetzung(data: str | dict):
 
 	count_global()
 	attach_fotos(lead, fotos)
+	_datenschutz_kommentar(lead)
+	return _antwort()
+
+
+def _datenschutz_kommentar(lead):
 	lead.add_comment(
 		"Info",
 		_("Datenschutzerklärung im Web Form „Kostenlose Einschätzung“ akzeptiert ({0}).").format(
 			escape_html(datenschutz_url())
 		),
 	)
-	return _antwort()
+
+
+# ---------------------------------------------------------------------------
+# Bekannte E-Mail-Adresse: an den offenen Lead hängen (E-2)
+# ---------------------------------------------------------------------------
+
+# Lead gilt als abgeschlossen: Anfragestatus (1.4) bzw. ERPNext-Status
+ABGESCHLOSSEN_CV_STATUS = ("Gewonnen", "Verloren")
+ABGESCHLOSSEN_STATUS = ("Converted", "Do Not Contact")
+
+
+def offener_lead(email) -> str | None:
+	"""Jüngster offene Lead zur E-Mail-Adresse (Groß-/Kleinschreibung egal), sonst ``None``."""
+	email = cstr(email).strip()
+	if not email:
+		return None
+	felder = ["name", "status"]
+	if frappe.get_meta("Lead").has_field("cv_status"):
+		felder.append("cv_status")
+	for lead in frappe.get_all(
+		"Lead", filters={"email_id": email}, fields=felder, order_by="creation desc", limit=20
+	):
+		if lead.status in ABGESCHLOSSEN_STATUS or lead.get("cv_status") in ABGESCHLOSSEN_CV_STATUS:
+			continue
+		return lead.name
+	return None
+
+
+def anfrage_anhaengen(lead_name: str, payload: dict, fotos: list[tuple[str, bytes]]):
+	"""Weitere Anfrage zu einem offenen Lead: Pflichtfelder wie beim Anlegen prüfen, die Angaben
+	als Kommentar, die Fotos als private Anhänge an den Lead. Felder und Status des Leads bleiben
+	unverändert, es entsteht kein Contact."""
+	web_form = frappe.get_doc("Web Form", WEB_FORM)
+	neu = frappe.new_doc("Lead")
+	for row in web_form.web_form_fields:
+		if row.fieldname and row.fieldtype not in ("HTML", "Section Break", "Column Break"):
+			neu.set(row.fieldname, payload.get(row.fieldname, ""))
+	# gleiche Prüfung wie Frappes accept (Pflichtfelder, E-Mail/Telefon-Format des Formulars)
+	if hasattr(web_form, "validate_submission"):
+		web_form.validate_submission(neu)
+	else:
+		web_form.validate_mandatory(neu)
+
+	lead = frappe.get_doc("Lead", lead_name)
+	lead.add_comment(
+		"Comment",
+		anfrage_kommentar(web_form, neu, len(fotos)),
+		comment_by=_("Web Form „Kostenlose Einschätzung“"),
+	)
+	attach_fotos(lead, fotos)
+	return lead
+
+
+def anfrage_kommentar(web_form, neu, anzahl_fotos: int) -> str:
+	"""HTML-Kommentar mit den Angaben der weiteren Anfrage (alle Werte escaped)."""
+	meta = frappe.get_meta("Lead")
+	zeilen, symptome = [], []
+	for row in web_form.web_form_fields:
+		fieldname = row.fieldname
+		if not fieldname or row.fieldtype in ("HTML", "Section Break", "Column Break"):
+			continue
+		label = row.label or _(meta.get_label(fieldname))
+		wert = neu.get(fieldname)
+		if row.fieldtype == "Check":
+			if cint(wert):
+				symptome.append(label)
+			continue
+		wert = cstr(wert).strip()
+		if wert:
+			zeilen.append((label, wert))
+	if symptome:
+		zeilen.append((_("Aufgefallen"), ", ".join(symptome)))
+	teile = [
+		"<p><strong>"
+		+ escape_html(_("Weitere Anfrage über das Web Form „Kostenlose Einschätzung“"))
+		+ "</strong> "
+		+ escape_html(_("(gleiche E-Mail-Adresse, Status unverändert)"))
+		+ "</p><ul>"
+	]
+	for label, wert in zeilen:
+		teile.append(
+			f"<li><strong>{escape_html(label)}:</strong> {escape_html(wert).replace(chr(10), '<br>')}</li>"
+		)
+	teile.append("</ul>")
+	if anzahl_fotos:
+		teile.append("<p>" + escape_html(_("{0} Foto(s) als Anhang.").format(anzahl_fotos)) + "</p>")
+	return "".join(teile)
 
 
 def _antwort():
@@ -312,12 +421,20 @@ def parse_fotos(value) -> list[tuple[str, bytes]]:
 	return fotos
 
 
+def _kein_anhang_kommentar():
+	pass
+
+
 def attach_fotos(lead, fotos: list[tuple[str, bytes]]):
 	"""Fotos als private Dateien am Lead; Felder ``cv_foto_1..3`` bzw. ``image`` setzen."""
 	if not fotos:
 		return
 	meta = frappe.get_meta("Lead")
-	felder = [f for f in FOTO_FELDER if meta.has_field(f)]
+	# nur leere Foto-Felder füllen (weitere Anfrage an einen bestehenden Lead überschreibt nichts),
+	# übrige Fotos sind reine Anhänge
+	foto_felder = [f for f in FOTO_FELDER if meta.has_field(f)]
+	belegt = frappe.db.get_value("Lead", lead.name, foto_felder, as_dict=True) if foto_felder else None
+	felder = [f for f in foto_felder if not (belegt or {}).get(f)]
 	values = {}
 	for i, (file_name, content) in enumerate(fotos):
 		feld = felder[i] if i < len(felder) else None
@@ -332,7 +449,13 @@ def attach_fotos(lead, fotos: list[tuple[str, bytes]]):
 				"content": content,
 			}
 		)
+		# Anhang-Eintrag im Verlauf erst nach dem Insert: File.after_insert schreibt ihn sonst mit
+		# der lokalen URL, bevor frappe_s3_attachment (doc_events after_insert) die Datei in den
+		# Bucket legt und file_url umschreibt - der Link im Verlauf lieferte dann 403 (E-10)
+		file_doc.create_attachment_record = _kein_anhang_kommentar
 		file_doc.insert(ignore_permissions=True)
+		del file_doc.create_attachment_record
+		file_doc.create_attachment_record()
 		if feld:
 			values[feld] = file_doc.file_url
 	# frappe_s3_attachment setzt ``image`` selbst, ohne S3 übernehmen wir das
@@ -388,6 +511,14 @@ def before_insert_lead(doc, method=None):
 	contact = getattr(doc, "contact_doc", None)
 	if contact:
 		contact.flags.ignore_permissions = True
+	# Ein offener Lead zur Adresse wurde vorher schon erkannt (anfrage_anhaengen); hier gibt es
+	# höchstens abgeschlossene Leads - neue Anfrage = neuer Lead. ERPNext würde ihn bei aus-
+	# geschalteter Dubletten-Einstellung abweisen; nur für diese Einsendung übergangen (E-2).
+	doc.check_email_id_is_unique = _keine_dublettenpruefung
+
+
+def _keine_dublettenpruefung():
+	pass
 
 
 # ---------------------------------------------------------------------------
@@ -489,9 +620,12 @@ HTML_FELDER = {
 
 
 def setup():
-	"""after_install / Patch: UTM Source „Website“, Lead-Dubletten per E-Mail erlauben
-	(Kund:innen schicken mehrere Anfragen, z. B. für verschiedene Objekte; das Büro führt
-	Dubletten zusammen). Danach im CRM-Settings änderbar - wird nicht bei jedem migrate
-	erzwungen."""
+	"""after_install / Patch: UTM Source „Website“.
+
+	Bis 0.2 wurde hier zusätzlich die site-weite ERPNext-Einstellung „Lead-Dubletten per E-Mail
+	erlauben“ eingeschaltet - das schaltete die Dublettenprüfung auch für Desk, Import und
+	E-Mail ab und erzeugte je erneuter Anfrage Lead **und** Contact. Jetzt hängt das Formular
+	weitere Anfragen an den offenen Lead (``anfrage_anhaengen``); Patch
+	``v0_3.lead_dubletten_pruefung`` schaltet die Einstellung auf bestehenden Sites wieder aus
+	(Review Epic 1, E-2)."""
 	ensure_utm_source()
-	frappe.db.set_single_value("CRM Settings", "allow_lead_duplication_based_on_emails", 1)
