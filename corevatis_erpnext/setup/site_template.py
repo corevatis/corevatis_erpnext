@@ -660,12 +660,20 @@ def _ensure_print_formats(cfg: dict, report: Report) -> None:
 		current = frappe.get_meta(doctype).default_print_format
 		if current == print_format:
 			continue
-		if current:
-			report.skip("Druckformate", f"{doctype} hat schon Standard {current!r}")
+		if _is_custom_print_format(current):
+			report.skip("Druckformate", f"{doctype} hat schon eigenen Standard {current!r}")
 			continue
 		make_property_setter(doctype, None, "default_print_format", print_format, "Data", for_doctype=True)
 		frappe.clear_cache(doctype=doctype)
 		report.change("Druckformate", f"{doctype}: Standard {print_format}")
+
+
+def _is_custom_print_format(name: str | None) -> bool:
+	"""Eigenes (nicht von einer App geliefertes) Druckformat? Standardformate wie
+	„Quotation Classic“ (ERPNext setzt sie im Doctype als Standard) dürfen ersetzt werden."""
+	if not name:
+		return False
+	return frappe.db.get_value("Print Format", name, "standard") == "No"
 
 
 def _ensure_erpnext_germany(cfg: dict, report: Report) -> None:
@@ -828,7 +836,11 @@ def _verify(cfg: dict) -> dict:
 	for doctype, print_format in (cfg.get("print_formats") or {}).items():
 		if frappe.db.exists("Print Format", print_format):
 			current = frappe.get_meta(doctype).default_print_format
-			check(f"Druckformat {doctype}", current, current or "leer")
+			check(
+				f"Druckformat {doctype}",
+				current == print_format or (current and _is_custom_print_format(current)),
+				current or "leer",
+			)
 
 	settings = frappe.get_single("System Settings")
 	for field, value in (cfg.get("system_settings") or {}).items():
