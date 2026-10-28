@@ -1,0 +1,72 @@
+/* Web Form „Kostenlose Einschätzung“ */
+
+/* Honeypot: für Menschen unsichtbar, für Screenreader ausgeblendet (aria-hidden) */
+.cv-hp {
+	position: absolute !important;
+	left: -10000px !important;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+}
+
+.cv-check-group {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+	gap: 0.25rem 1rem;
+}
+
+.cv-check {
+	display: flex;
+	gap: 0.5rem;
+	align-items: flex-start;
+	font-weight: normal;
+	margin: 0;
+}
+
+.cv-check input[type="checkbox"] {
+	margin-top: 0.2rem;
+	flex: none;
+}
+
+.cv-symptome.has-error .control-label,
+.cv-symptome.has-error .cv-check {
+	color: var(--red-600, #c0392b);
+}
+
+.cv-foto-liste {
+	margin: 0.5rem 0 0;
+	padding: 0;
+}
+
+.cv-foto {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin-bottom: 0.5rem;
+}
+
+.cv-foto img {
+	width: 4rem;
+	height: 4rem;
+	object-fit: cover;
+	border-radius: 0.25rem;
+	background: var(--gray-100, #f4f5f6);
+}
+
+.cv-foto-name {
+	flex: 1;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+/* Einbettung (iframe bzw. ?embed=1): keine Mindesthöhe, damit die gemeldete Höhe passt */
+body.cv-embed {
+	min-height: 0 !important;
+	background: transparent;
+}
+
+body.cv-embed .page-content-wrapper,
+body.cv-embed .page_content {
+	padding-top: 0;
+	margin-top: 0;
+}

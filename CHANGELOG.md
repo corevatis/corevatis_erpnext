@@ -17,6 +17,16 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ### Hinzugefügt
 
+- Web Form „Kostenlose Einschätzung“ (Aufgabe 1.2, Route `/kostenlose-einschaetzung`):
+  Gast-Anfrage → Lead (`utm_source` „Website“, `cv_quelle` „Web Form“, Symptome,
+  Beschreibung als CRM-Notiz) mit bis zu 3 Fotos (JPG/PNG/HEIC nach Inhalt, je ≤ 10 MiB)
+  als **private** Dateien am Lead (mit `frappe_s3_attachment` im Bucket). `accept` per
+  `override_whitelisted_methods` (andere Web Forms unverändert): Honeypot, Pflicht-
+  Zustimmung Datenschutz, Rate-Limit je Client-IP (`cv_webform_rate_limit`/`_window`),
+  `upload_file` bleibt für Gäste gesperrt. Einbettung per iframe (`?embed=1`, Höhe per
+  `postMessage`), `frame-ancestors` nur für dieses Formular aus
+  `cv_webform_embedding_domains`. Patch `v0_2.webform_einschaetzung`: UTM Source
+  „Website“, Lead-Dubletten per E-Mail erlaubt.
 - `corevatis_erpnext.setup.list_templates()` (Allowlist der Vorlagen für das
   Onboarding, Aufgabe 0.7); Vorlagennamen nur noch `^[_a-z0-9-]{1,64}$`, kein Pfad
   außerhalb von `templates/` (Härtung gegen Pfad-Traversal über `extends`/`template`).

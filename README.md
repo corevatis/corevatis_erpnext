@@ -21,6 +21,33 @@ Eigene Vorlage: JSON mit `"extends": "_standard"` und `company` (Name, Kürzel,
 `chart_of_accounts` SKR03/SKR04), Aufruf mit `{"config_file": "/absoluter/pfad.json"}`.
 Idempotent; ein zweiter Lauf meldet `"changes": []`.
 
+## Web Form „Kostenlose Einschätzung“
+
+Route `/kostenlose-einschaetzung/new` (Gast, kein Login): Anfrage → Lead mit bis zu
+3 privaten Fotos. Logik in `corevatis_erpnext/webform/einschaetzung.py`, Formular unter
+`corevatis_erpnext/corevatis_erpnext/web_form/kostenlose_einschaetzung/`.
+
+| site_config | Bedeutung | Standard |
+|---|---|---|
+| `cv_webform_embedding_domains` | Origins, die das Formular per iframe einbetten dürfen (`frame-ancestors`) | keine |
+| `cv_webform_datenschutz_url` | Link der Datenschutzerklärung | `/datenschutz` |
+| `cv_webform_rate_limit` / `cv_webform_rate_window` | Einsendungen je IP und Zeitfenster (s) | 10 / 3600 |
+
+Einbettung (WordPress, „Individuelles HTML“-Block):
+
+```html
+<iframe id="cv-einschaetzung" src="https://<site>/kostenlose-einschaetzung/new?embed=1"
+  title="Kostenlose Einschätzung" style="width:100%;border:0;min-height:900px" loading="lazy"></iframe>
+<script>
+window.addEventListener("message", function (e) {
+  var f = document.getElementById("cv-einschaetzung");
+  if (e.origin !== "https://<site>" || !e.data) return;
+  if (e.data.type === "corevatis:einschaetzung:height") f.style.height = e.data.height + "px";
+  if (e.data.type === "corevatis:einschaetzung:submitted") f.scrollIntoView({behavior: "smooth"});
+});
+</script>
+```
+
 ## Lizenz
 
 Copyright (C) 2026 Corevatis
@@ -44,7 +71,8 @@ bench --site <site> install-app corevatis_erpnext   # installiert erpnext mit (r
 
 ```
 corevatis_erpnext/
-  hooks.py              required_apps = ["erpnext"], after_install
+  hooks.py              required_apps = ["erpnext"], after_install, override accept (Web Form)
+  webform/              Web Form „Kostenlose Einschätzung“ (Aufgabe 1.2)
   setup/                Site-Template (Aufgabe 0.4): site_template.py, config.py, templates/*.json
   corevatis_erpnext/    Modul "Corevatis ERPNext"
   translations/de.csv   deutsche Übersetzungen
