@@ -31,3 +31,11 @@ Set by the button “Schedule Appointment”.,Wird über den Button „Termin an
 Photo Gallery,Fotogalerie
 Property Record,Objekt
 "Property (building) of this inquiry; created for the on-site appointment","Objekt (Gebäude) dieser Anfrage; wird zum Vor-Ort-Termin angelegt"
+Corevatis Service,Corevatis-Leistung
+Craft Trade,Gewerk
+Remediation Method,Verfahren
+Quantity Rule,Leistungsregel
+Name of the Leistungsregel (Corevatis) that calculates the quantity from the measurement,Name der Leistungsregel (Corevatis) für die Menge aus dem Aufmaß
+Quantity rule {0} does not exist.,Leistungsregel {0} existiert nicht.
+Unknown quantity rule,Unbekannte Leistungsregel
+Not permitted to use quantity rules.,Keine Berechtigung für Leistungsregeln.

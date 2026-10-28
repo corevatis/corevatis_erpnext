@@ -15,6 +15,7 @@ def after_install() -> None:
 	from corevatis_erpnext.anfrage import ensure_anfrage_setup
 	from corevatis_erpnext.crm.email_vorlagen import ensure_email_templates
 	from corevatis_erpnext.crm.setup import ensure_custom_fields
+	from corevatis_erpnext.katalog.item_felder import ensure_item_fields
 	from corevatis_erpnext.vor_ort.lead_objekt import ensure_lead_objekt_field
 	from corevatis_erpnext.webform.datenschutz import ensure_datenschutz_seite
 	from corevatis_erpnext.webform.einschaetzung import setup as setup_einschaetzung
@@ -28,6 +29,8 @@ def after_install() -> None:
 	ensure_datenschutz_seite()
 	# Lead.cv_objekt (2.1), nur wenn corevatis (Doctype Objekt) schon installiert ist
 	ensure_lead_objekt_field()
+	# Item: Gewerk, Verfahren, Leistungsregel (2.2)
+	ensure_item_fields()
 
 
 def after_migrate() -> None:
@@ -35,6 +38,7 @@ def after_migrate() -> None:
 	from corevatis_erpnext.anfrage import ensure_anfrage_setup
 	from corevatis_erpnext.crm.email_vorlagen import ensure_email_templates
 	from corevatis_erpnext.crm.setup import ensure_custom_fields
+	from corevatis_erpnext.katalog.item_felder import ensure_item_fields
 	from corevatis_erpnext.vor_ort.lead_objekt import ensure_lead_objekt_field
 	from corevatis_erpnext.webform.datenschutz import ensure_datenschutz_seite
 
@@ -47,3 +51,5 @@ def after_migrate() -> None:
 	ensure_datenschutz_seite()
 	# Lead.cv_objekt (2.1), nur wenn corevatis (Doctype Objekt) installiert ist
 	ensure_lead_objekt_field()
+	# Item: Gewerk, Verfahren, Leistungsregel (2.2)
+	ensure_item_fields()
