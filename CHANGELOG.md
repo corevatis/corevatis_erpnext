@@ -6,6 +6,31 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (Epic 1)
+
+- 1.3 Termin am Lead: Button „Termin anlegen“ (Datum/Uhrzeit, Dauer, Meister, Notiz) legt ein
+  `Event` an (Private mit Freigabe an Meister und Büro, Kategorie Meeting, Lead als Teilnehmer, Zuweisung an den Meister,
+  Google-Calendar-Sync, falls der Meister einen Kalender verbunden hat), setzt `Lead.cv_termin`,
+  sagt einen vorherigen offenen Termin ab und führt – falls ein Lead-Workflow aktiv ist – den
+  Übergang nach „Termin…“ aus. Kundenbestätigung aus dem Email Template
+  „Terminbestätigung Besichtigung“ (Fixture) in die Email Queue (ohne E-Mail-Konto „Not Sent“,
+  kein Versand), Button „Bestätigung anzeigen/kopieren“ (Text kopieren, als Textdatei
+  speichern, erneut in die Warteschlange). Whitelist `corevatis_erpnext.crm.termin.*`, Rollen
+  Büro/Meister.
+- 1.5 Foto-Galerie: `corevatis_erpnext.galerie(frm)` (Thumbnails, Lightbox mit Vor/Zurück,
+  Tastatur und Wischen, Bildunterschrift Dateiname/Datum/Quelle), am Lead im HTML-Feld
+  `cv_galerie`; Bildliste per `corevatis_erpnext.crm.galerie.get_bilder(doctype, name)` aus
+  Attach-/Attach-Image-Feldern (inkl. Kindtabellen) und File-Anhängen, mit Leserecht-Prüfung.
+- Custom Fields am Lead: `cv_termin` (Link Event, nach `cv_verlustgrund`),
+  `cv_section_galerie`/`cv_galerie` (HTML, nach `cv_foto_3`); angelegt in `after_install`
+  und `after_migrate` nach den Feldern aus 1.1.
+- 1.3 Workflow: Übergang „Termin vereinbaren“ (Neu → Termin, Workflow „Lead Anfrage“ aus 1.4)
+  wird beim Anlegen des Termins ausgeführt.
+- Security-Review 1.3/1.5: Event Private mit Freigabe an Meister/Büro, nur Lead-Verweis und
+  PLZ/Ort im Event; `cv_termin` nur über `termin_anlegen` (Lead-`validate`), fremde Events
+  werden weder abgesagt noch angezeigt; Galerie löst File-Datensätze nur am eigenen Dokument
+  auf und lässt nur Datei-URLs der Site zu.
+
 ### Sicherheit (Review Epic 0)
 
 - E-1: `letter_head.owner_line` wird als fester Text in den Briefkopf-Quelltext
