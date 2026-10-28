@@ -299,11 +299,15 @@ class TestKatalogImport(IntegrationTestCase):
 			for spalte in header:
 				tabelle, _, name = spalte.rpartition(".")
 				export_fields.setdefault(tabelle or doctype, []).append(name)
-			vorlage = Exporter(doctype, export_fields=export_fields, export_data=False).get_csv_array()[0]
+			exporter = Exporter(doctype, export_fields=export_fields, export_data=False)
+			vorlage = exporter.get_csv_array()[0]
 			self.assertEqual(len(vorlage), len(header), f"{datei}: {vorlage}")
-			self.assertEqual(
-				sorted(feld(doctype, s) for s in header), sorted(feld(doctype, s) for s in vorlage), datei
-			)
+			# Felder der Vorlagen-Spalten (Beschriftungen sind übersetzt, die Felder nicht)
+			vorlagen_felder = [
+				(df.child_table_df.fieldname if df.is_child_table_field else None, df.fieldname)
+				for df in exporter.fields
+			]
+			self.assertEqual(sorted(feld(doctype, s) for s in header), sorted(vorlagen_felder), datei)
 
 	def test_pflichtfelder(self):
 		meta = frappe.get_meta("Item")
@@ -489,9 +493,15 @@ class TestKatalogImport(IntegrationTestCase):
 			for z in angebot.items
 		)
 		self.assertEqual(flt(hk, 2), ANGEBOT_HK)
-		if angebot.taxes:  # Standard-Steuervorlage der Firma (Site-Template): 19 %
-			self.assertEqual(flt(angebot.total_taxes_and_charges), ANGEBOT_UST)
-			self.assertEqual(flt(angebot.grand_total), flt(ANGEBOT_NETTO + ANGEBOT_UST, 2))
+		# Standard-Steuervorlage der Firma (Site-Template): Zeile USt 19 % mit 515,58
+		steuern = [(z.account_head, flt(z.rate), flt(z.tax_amount)) for z in angebot.taxes]
+		if steuern:
+			ust19 = [z for z in steuern if z[1] == 19]
+			self.assertEqual(
+				[z[2] for z in ust19],
+				[ANGEBOT_UST],
+				f"{steuern} {[(z.item_code, z.item_tax_template) for z in angebot.items]}",
+			)
 
 	def test_uebersicht(self):
 		zeilen_ = {z["item_code"]: z for z in uebersicht(firma=FIRMA)}
