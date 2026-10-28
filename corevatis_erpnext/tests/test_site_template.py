@@ -120,6 +120,52 @@ class TestSiteTemplateConfig(UnitTestCase):
 			load_config(template="huelshoff", config_file="/tmp/x.json")
 
 
+INJECTION = (
+	'{{ frappe.db.set_value("Company", doc.company, "phone_no", "PWNED") }}'
+	'{% set _x = frappe.db.set_value("Company", doc.company, "website", "pwned.invalid") %}'
+	"{# Kommentar #}<b>Fett</b> & Co"
+)
+
+
+class TestJinjaLiteral(UnitTestCase):
+	"""Review E-1: Konfigurationswerte im Briefkopf-Quelltext sind fester Text."""
+
+	def test_no_jinja_delimiters_no_markup(self):
+		from corevatis_erpnext.setup.site_template import jinja_literal_html
+
+		out = jinja_literal_html(INJECTION)
+		for token in ("{", "}", "<b>", "</b>"):
+			self.assertNotIn(token, out)
+		self.assertIn("&#123;&#123; frappe.db.set_value(", out)
+		self.assertIn("&lt;b&gt;Fett&lt;/b&gt; &amp; Co", out)
+		self.assertEqual(jinja_literal_html(None), "")
+		self.assertEqual(jinja_literal_html("Inhaber: Max Mustermann"), "Inhaber: Max Mustermann")
+
+	def test_renders_unchanged_text(self):
+		from corevatis_erpnext.setup.site_template import jinja_literal_html
+
+		source = f"<td>{jinja_literal_html(INJECTION)}</td>"
+		self.assertEqual(frappe.render_template(source, {}), source)
+
+
+class TestTemplateContract(UnitTestCase):
+	"""Review C-3: Vertrag mit ``corevatis.setup.onboard`` (ruft per Name, ohne Import).
+
+	Gegenstück zu ``corevatis/tests/test_template_contract.py``: Signaturen und Rückgabe."""
+
+	def test_signatures(self):
+		import inspect
+
+		from corevatis_erpnext.setup import list_templates
+
+		inspect.signature(apply_site_template).bind(config={}, commit=False)
+		inspect.signature(list_templates).bind()
+		names = list_templates()
+		self.assertIsInstance(names, list)
+		self.assertIn("_standard", names)
+		self.assertTrue(all(isinstance(n, str) for n in names))
+
+
 class TestSiteTemplate(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
@@ -197,6 +243,43 @@ class TestSiteTemplate(IntegrationTestCase):
 		self.assertEqual(frappe.db.get_value("Letter Head", {"is_default": 1}), name)
 		self.assertNotIn("PLATZHALTER", footer)
 		self.assertNotIn("$owner_line", footer)
+
+	def test_owner_line_is_literal_text_not_jinja(self):
+		"""Review E-1: Jinja im owner_line wird beim Druck nicht ausgeführt."""
+		config = {
+			"extends": "_standard",
+			"company": {
+				"company_name": "_Test Corevatis Briefkopf",
+				"abbr": "_TBK",
+				"chart_of_accounts": "SKR03",
+			},
+			"letter_head": {"letter_head_name": "_Test CV Briefkopf", "owner_line": INJECTION},
+		}
+		report = apply_site_template(config=config, commit=False)
+		self.assertIn("_Test CV Briefkopf", " ".join(report["changes"]))
+		company = "_Test Corevatis Briefkopf"
+		footer = frappe.db.get_value("Letter Head", "_Test CV Briefkopf", "footer")
+		self.assertNotIn("$owner_line", footer)
+		self.assertIn("&#123;&#123; frappe.db.set_value(", footer)
+		self.assertNotIn('{{ frappe.db.set_value("Company"', footer)
+		self.assertNotIn("{% set _x", footer)
+		self.assertNotIn("<b>Fett</b>", footer)
+
+		# Rendern wie beim Druck (Letter-Head-Footer wird mit doc gerendert)
+		before = frappe.db.get_value("Company", company, ["phone_no", "website"], as_dict=True)
+		rendered = frappe.render_template(footer, {"doc": frappe._dict(company=company)})
+		after = frappe.db.get_value("Company", company, ["phone_no", "website"], as_dict=True)
+		self.assertEqual(before, after, "Jinja aus der Konfiguration wurde ausgeführt")
+		self.assertNotEqual(after.phone_no, "PWNED")
+		self.assertIn("&#123;&#123; frappe.db.set_value(", rendered)
+		self.assertIn("&lt;b&gt;Fett&lt;/b&gt;", rendered)
+		self.assertIn("_Test Corevatis Briefkopf", rendered)  # restliche Fußzeile rendert normal
+
+	def test_template_result_contract(self):
+		"""Review C-3: Rückgabe, die corevatis.setup.onboard auswertet."""
+		report = apply_site_template(config={"extends": "huelshoff"}, commit=False)
+		for key in ("changes", "warnings", "skipped"):
+			self.assertIsInstance(report.get(key), list, key)
 
 	def test_print_formats_if_installed(self):
 		if not frappe.db.exists("Print Format", "Angebot"):
