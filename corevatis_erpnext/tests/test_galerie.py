@@ -121,10 +121,15 @@ class TestGalerie(IntegrationTestCase):
 		)
 
 	def test_ist_bild(self):
-		self.assertTrue(galerie.ist_bild("FOTO.JPEG"))
-		self.assertTrue(galerie.ist_bild(None, "/api/method/x?key=1&file_name=a.webp"))
-		self.assertFalse(galerie.ist_bild("plan.pdf"))
-		self.assertFalse(galerie.ist_bild("ohne-endung"))
+		self.assertTrue(galerie.ist_bild("/private/files/FOTO.JPEG"))
+		self.assertTrue(
+			galerie.ist_bild(
+				"/api/method/frappe_s3_attachment.controller.generate_file?key=1&file_name=a.webp"
+			)
+		)
+		self.assertFalse(galerie.ist_bild("/files/plan.pdf"))
+		self.assertFalse(galerie.ist_bild("/files/ohne-endung"))
+		self.assertFalse(galerie.ist_bild("/files/a.png", "SVG"))
 
 	def test_ohne_leserecht(self):
 		frappe.set_user(OHNE_RECHT)
@@ -173,3 +178,42 @@ class TestGalerie(IntegrationTestCase):
 			self.assertNotIn(url, [b["file_url"] for b in galerie.get_bilder("Lead", self.lead.name)])
 		finally:
 			df.permlevel = alt
+
+	def test_svg_nicht_in_der_galerie(self):
+		# E-11: SVG würde über „Original öffnen“ inline auf der Site-Origin geladen (Stored XSS)
+		svg = _datei(
+			self.lead,
+			"skizze.svg",
+			b'<svg xmlns="http://www.w3.org/2000/svg"><rect width="4" height="4"/></svg>',
+		)
+		frappe.set_user(LESER)
+		namen = [b["file_name"] for b in galerie.get_bilder("Lead", self.lead.name)]
+		self.assertNotIn(svg.file_name, namen)
+		self.assertIn("keller-1.png", namen)
+		for name in ("x.svg", "x.SVG", "x.bmp", "x.avif", "x.heif"):
+			self.assertFalse(galerie.ist_bild(f"/private/files/{name}"), name)
+		for name in ("x.jpg", "x.JPEG", "x.png", "x.gif", "x.webp", "x.heic"):
+			self.assertTrue(galerie.ist_bild(f"/private/files/{name}"), name)
+		# Dateiname .jpg, Ziel-URL .svg (Endung nur im Query-String) → nicht angezeigt
+		frappe.set_user("Administrator")
+		getarnt = _datei(self.lead, "getarnt.jpg", _png((1, 2, 3)))
+		frappe.db.set_value("File", getarnt.name, "file_url", "/private/files/skizze.svg?x=.jpg")
+		self.assertFalse(galerie.ist_bild("/private/files/skizze.svg?x=.jpg"))
+		self.assertFalse(galerie.ist_bild("/private/files/skizze.svg#.jpg"))
+		self.assertFalse(
+			galerie.ist_bild(
+				"/api/method/frappe_s3_attachment.controller.generate_file?key=a.jpg&file_name=b.svg"
+			)
+		)
+		frappe.set_user(LESER)
+		bilder = galerie.get_bilder("Lead", self.lead.name)
+		self.assertNotIn("getarnt.jpg", [b["file_name"] for b in bilder])
+		self.assertFalse([b for b in bilder if ".svg" in b["file_url"]])
+		# gleiche Liste im Client („Original öffnen“ nur für diese Typen)
+		with open(
+			frappe.get_app_path("corevatis_erpnext", "public", "js", "galerie.js"), encoding="utf-8"
+		) as f:
+			js = f.read()
+		self.assertIn('new Set(["jpg", "jpeg", "png", "gif", "webp", "heic"])', js)
+		self.assertIn("return BILD_ENDUNGEN.has(endung_ziel(bild.file_url));", js)
+		self.assertEqual(galerie.BILD_ENDUNGEN, {"jpg", "jpeg", "png", "gif", "webp", "heic"})
