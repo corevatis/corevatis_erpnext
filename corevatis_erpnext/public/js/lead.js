@@ -24,7 +24,50 @@
 		}
 	}
 
-	const handlers = {};
+	// 1.4: „Als verloren markieren“ fragt den Verlustgrund ab, bevor der Workflow
+	// weiterschaltet (serverseitig Pflicht: anfrage.lead.validate_verlustgrund).
+	const ACTION_VERLOREN = "Als verloren markieren";
+
+	function ask_verlustgrund(frm) {
+		if (frm.selected_workflow_action !== ACTION_VERLOREN || frm.doc.cv_verlustgrund) {
+			return;
+		}
+		const options = frappe.meta.get_docfield("Lead", "cv_verlustgrund", frm.doc.name).options;
+		// Workflow friert die Oberfläche vor diesem Trigger ein; für den Dialog lösen
+		frappe.dom.unfreeze();
+		return new Promise((resolve) => {
+			let submitted = false;
+			const dialog = frappe.prompt(
+				[
+					{
+						fieldname: "cv_verlustgrund",
+						fieldtype: "Select",
+						label: __("Loss Reason"),
+						options: options,
+						reqd: 1,
+					},
+				],
+				(values) => {
+					submitted = true;
+					frappe.dom.freeze();
+					frappe.db
+						.set_value("Lead", frm.doc.name, "cv_verlustgrund", values.cv_verlustgrund)
+						.then(() => resolve())
+						.catch(() => frappe.dom.unfreeze());
+				},
+				__("Loss Reason"),
+				__("Mark as lost")
+			);
+			// Abbrechen: Aktion verwerfen (Promise bleibt offen, nichts wird gespeichert)
+			dialog.onhide = () => {
+				if (!submitted) {
+					frm.selected_workflow_action = null;
+				}
+			};
+		});
+	}
+
+	const handlers = { before_workflow_action: ask_verlustgrund };
 	for (const [fieldname] of SYMPTOME) {
 		handlers[fieldname] = rebuild;
 	}

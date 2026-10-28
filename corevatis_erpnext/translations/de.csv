@@ -22,3 +22,7 @@ Photos,Fotos
 Photo 1,Foto 1
 Photo 2,Foto 2
 Photo 3,Foto 3
+Inquiry Status,Anfragestatus
+Loss Reason,Verlustgrund
+Please select a loss reason before marking the inquiry as lost.,"Bitte vor „Als verloren markieren“ einen Verlustgrund auswählen."
+Mark as lost,Als verloren markieren

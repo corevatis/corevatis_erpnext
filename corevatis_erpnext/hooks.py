@@ -23,7 +23,8 @@ after_migrate = ["corevatis_erpnext.setup.install.after_migrate"]
 
 # Desk-Formulare
 # --------------
-# lead.js: Symptom-Checkboxen schreiben live in cv_symptome (1.1)
+# lead.js: Symptom-Checkboxen schreiben live in cv_symptome (1.1), Verlustgrund-Dialog
+# vor der Workflow-Aktion „Als verloren markieren“ (1.4)
 doctype_js = {
 	"Lead": [
 		"public/js/lead.js",
@@ -35,9 +36,13 @@ doctype_js = {
 # Gutschriften (Sales Invoice mit is_return) bekommen den Rückgabe-Nummernkreis aus
 # dem Site-Template (z. B. GS-.YYYY.-), solange die Standardserie gewählt ist.
 doc_events = {
-	# Prozess 1 (Epic 1): Symptom-Checkboxen und cv_symptome abgleichen
+	# Prozess 1 (Epic 1): Symptom-Checkboxen und cv_symptome abgleichen (1.1),
+	# „Verloren“ nur mit Verlustgrund (1.4)
 	"Lead": {
-		"validate": "corevatis_erpnext.anfrage.lead.sync_symptome",
+		"validate": [
+			"corevatis_erpnext.anfrage.lead.sync_symptome",
+			"corevatis_erpnext.anfrage.lead.validate_verlustgrund",
+		],
 	},
 	"Sales Invoice": {
 		"before_insert": "corevatis_erpnext.setup.naming.set_return_naming_series",
