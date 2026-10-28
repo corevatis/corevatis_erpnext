@@ -6,6 +6,12 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (Epic 2)
+
+- 2.1: `Lead.cv_objekt` (Link auf `Objekt` aus `corevatis`) im Abschnitt „Anfrage“ nach
+  `cv_objekt_adresse`. Entsteht nur, wenn `corevatis` installiert ist (after_install/after_migrate
+  und `after_app_install`), `before_app_uninstall` von `corevatis` entfernt es (`vor_ort.lead_objekt`).
+
 ### Geändert (Review Epic 1)
 
 - E-1: Email Template „Terminbestätigung Besichtigung“ ist keine Fixture mehr (Frappe überschrieb es
