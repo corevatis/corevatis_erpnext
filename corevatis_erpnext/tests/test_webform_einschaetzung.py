@@ -25,10 +25,14 @@ LEAD_FELDER = (
 	"cv_objekttyp",
 	"cv_bauteil",
 	"cv_symptome",
+	"cv_symptom_schimmel",
 	"cv_dringlichkeit",
 	"cv_objekt_adresse",
+	"cv_beschreibung",
 	"cv_quelle",
+	*ez.FOTO_FELDER,
 )
+BESCHREIBUNG = "Feuchte Flecken im Keller seit dem Frühjahr.\nRiecht muffig."
 
 
 def _request(method: str, path: str, **kwargs):
@@ -117,8 +121,9 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 			"cv_objekttyp": "EFH",
 			"cv_bauteil": "Keller innen",
 			"cv_dringlichkeit": "Dringend",
-			"cv_symptome": ez.symptom_options()[:2],
-			"cv_beschreibung": "Feuchte Flecken im Keller <b>seit</b> dem Frühjahr.\nRiecht muffig.",
+			"cv_symptom_schimmel": 1,
+			"cv_symptom_geruch": 1,
+			"cv_beschreibung": BESCHREIBUNG,
 			"cv_datenschutz": 1,
 			"cv_hp": "",
 			"cv_fotos": [
@@ -202,19 +207,12 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 		self.assertEqual(lead.cv_bauteil, "Keller innen")
 		self.assertEqual(lead.cv_dringlichkeit, "Dringend")
 		self.assertIn("Münster", lead.cv_objekt_adresse)
-		symptome = lead.get("cv_symptome")
-		text = (
-			"\n".join(str(r.as_dict().get(k)) for r in symptome for k in r.as_dict())
-			if isinstance(symptome, list)
-			else symptome
-		)
-		for symptom in data["cv_symptome"]:
-			self.assertIn(symptom, text)
-
-		# Beschreibung als CRM-Notiz, HTML maskiert
-		self.assertEqual(len(lead.notes), 1)
-		self.assertIn("&lt;b&gt;seit&lt;/b&gt;", lead.notes[0].note)
-		self.assertNotIn("<b>", lead.notes[0].note)
+		self.assertEqual(lead.cv_beschreibung, BESCHREIBUNG)
+		# cv_symptome baut der 1.1-Hook aus den Checkboxen
+		self.assertEqual(lead.cv_symptom_schimmel, 1)
+		self.assertEqual(lead.cv_symptom_geruch, 1)
+		self.assertEqual(lead.cv_symptom_feuchte_waende, 0)
+		self.assertEqual((lead.cv_symptome or "").splitlines(), ["Schimmel", "Geruch"])
 
 		files = frappe.get_all(
 			"File",
@@ -279,10 +277,18 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 		self.assertNotEqual(response.status_code, 200)
 		self.assertEqual(self.leads(data["email_id"]), [])
 
-	def test_symptom_required(self):
-		data = self.payload(cv_symptome=[])
+	def test_text_length_limit(self):
+		data = self.payload(cv_beschreibung="x" * (ez.MAX_BESCHREIBUNG + 1))
 		self.assertEqual(self.submit(data).status_code, 417)
 		self.assertEqual(self.leads(data["email_id"]), [])
+
+	def test_optional_fields(self):
+		data = self.payload(
+			cv_fotos=[], cv_objekttyp="", cv_bauteil="", cv_symptom_schimmel=0, cv_symptom_geruch=0
+		)
+		data.pop("mobile_no")
+		self.assertEqual(self.submit(data).status_code, 200)
+		self.assertEqual(len(self.leads(data["email_id"])), 1)
 
 	def test_photo_type_and_count(self):
 		html = _dataurl("image/jpeg", b"<html><script>alert(1)</script></html>")

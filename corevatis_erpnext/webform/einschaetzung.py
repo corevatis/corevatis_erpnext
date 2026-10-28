@@ -7,8 +7,9 @@ Ablauf einer Einsendung (``POST /api/method/frappe.website.doctype.web_form.web_
 2. Für dieses Formular: Rate-Limit je Client-IP, Honeypot (gefüllt → scheinbarer Erfolg,
    kein Lead), Datenschutz-Zustimmung (Pflicht), Fotos prüfen (JPEG/PNG/HEIC nach
    Dateiinhalt, je höchstens 10 MiB, höchstens 3).
-3. Frappes ``accept`` legt den Lead an (Web-Form-Felder, Pflichtfelder, Select-Werte);
-   ``before_insert_lead`` setzt Quelle, Symptome, Beschreibung (CRM-Notiz).
+3. Frappes ``accept`` legt den Lead an (Web-Form-Felder inkl. der Symptom-Checkboxen
+   ``cv_symptom_*`` aus 1.1, Pflichtfelder, Select-Werte); ``before_insert_lead`` setzt
+   ``utm_source`` und ``cv_quelle``. ``cv_symptome`` baut der 1.1-Hook ``sync_symptome``.
 4. Die Fotos werden danach als **private** ``File`` am Lead angelegt (``is_private=1``).
    Mit ``frappe_s3_attachment`` lädt dessen ``File.after_insert`` sie in den Bucket.
 
@@ -33,7 +34,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import cint, cstr, escape_html, now_datetime
+from frappe.utils import cint, cstr, escape_html
 
 WEB_FORM = "kostenlose-einschaetzung"
 ROUTE = "kostenlose-einschaetzung"
@@ -46,8 +47,6 @@ UTM_SOURCE = "Website"
 KEY_HONEYPOT = "cv_hp"
 KEY_DATENSCHUTZ = "cv_datenschutz"
 KEY_FOTOS = "cv_fotos"
-KEY_SYMPTOME = "cv_symptome"
-KEY_BESCHREIBUNG = "cv_beschreibung"
 
 MAX_FOTOS = 3
 MAX_FOTO_BYTES = 10 * 1024 * 1024
@@ -56,17 +55,6 @@ FOTO_FELDER = ("cv_foto_1", "cv_foto_2", "cv_foto_3")
 
 RATE_LIMIT = 10
 RATE_WINDOW = 3600
-
-# Fallback, falls ``Lead.cv_symptome`` (Aufgabe 1.1) keine Optionen mitbringt
-SYMPTOME = (
-	"Feuchte Wände",
-	"Schimmel",
-	"Salzausblühungen",
-	"Wasser nach Regen",
-	"Abplatzender Putz/Farbe",
-	"Muffiger Geruch",
-	"Sonstiges",
-)
 
 _DATAURL = re.compile(r"^data:(?P<mime>[\w.+/-]*)(?:;[\w.+=-]+)*;base64,(?P<b64>[A-Za-z0-9+/=]+)$")
 _HEIF_BRANDS = {b"heic", b"heix", b"hevc", b"hevx", b"heim", b"heis", b"mif1", b"msf1"}
@@ -112,18 +100,12 @@ def accept_einschaetzung(data: str | dict):
 		)
 
 	fotos = parse_fotos(payload.get(KEY_FOTOS))
-	symptome = clean_symptome(payload.get(KEY_SYMPTOME))
-	if not symptome:
-		frappe.throw(_("Bitte wählen Sie mindestens ein Symptom aus (notfalls „Sonstiges“)."))
-	extras = frappe._dict(
-		symptome=symptome,
-		beschreibung=clean_beschreibung(payload.get(KEY_BESCHREIBUNG)),
-	)
-	for key in (KEY_HONEYPOT, KEY_DATENSCHUTZ, KEY_FOTOS, KEY_SYMPTOME, KEY_BESCHREIBUNG):
+	check_text_lengths(payload)
+	for key in (KEY_HONEYPOT, KEY_DATENSCHUTZ, KEY_FOTOS, *FOTO_FELDER, "image"):
 		payload.pop(key, None)
 
 	frappe_accept = frappe.get_attr(FRAPPE_ACCEPT)
-	frappe.flags.cv_einschaetzung = extras
+	frappe.flags.cv_einschaetzung = True
 	try:
 		lead = frappe_accept(web_form=WEB_FORM, data=json.dumps(payload), web_form_request_key=None)
 	except frappe.DuplicateEntryError:
@@ -294,69 +276,17 @@ def attach_fotos(lead, fotos: list[tuple[str, bytes]]):
 
 
 # ---------------------------------------------------------------------------
-# Symptome, Beschreibung
+# Lead
 # ---------------------------------------------------------------------------
 
-
-def symptom_field():
-	return frappe.get_meta("Lead").get_field("cv_symptome")
-
-
-def _symptom_link(df):
-	"""Für Table MultiSelect: (Kind-DocType, Link-Feld, Ziel-DocType) oder None."""
-	if not df or df.fieldtype != "Table MultiSelect" or not df.options:
-		return None
-	child = frappe.get_meta(df.options)
-	link = next((f for f in child.fields if f.fieldtype == "Link"), None)
-	return (df.options, link.fieldname, link.options) if link else None
+# Freitextfelder: Längengrenze gegen Missbrauch (Small Text hat in der DB kein Limit)
+MAX_LAENGE = {"cv_beschreibung": MAX_BESCHREIBUNG, "cv_objekt_adresse": 500, "lead_name": 140}
 
 
-def symptom_options() -> list[str]:
-	"""Auswahl für das Formular: Optionen von ``Lead.cv_symptome`` (Select-Zeilen bzw. Einträge
-	des Link-Ziels bei Table MultiSelect), sonst ``SYMPTOME``."""
-	df = symptom_field()
-	if df and df.fieldtype == "Select" and df.options:
-		return [o for o in df.options.split("\n") if o.strip()]
-	link = _symptom_link(df)
-	if link:
-		names = frappe.get_all(link[2], pluck="name", order_by="name asc", limit=50)
-		if names:
-			return names
-	return list(SYMPTOME)
-
-
-def clean_symptome(value) -> list[str]:
-	if not value:
-		return []
-	if isinstance(value, str):
-		value = [value]
-	if not isinstance(value, list):
-		return []
-	allowed = symptom_options()
-	return [s for s in allowed if s in {cstr(v) for v in value}]
-
-
-def clean_beschreibung(value) -> str:
-	text = cstr(value).replace("\r\n", "\n").strip()
-	if len(text) > MAX_BESCHREIBUNG:
-		frappe.throw(_("Die Beschreibung ist zu lang (höchstens {0} Zeichen).").format(MAX_BESCHREIBUNG))
-	return text
-
-
-def _set_symptome(doc, symptome: list[str]):
-	if not symptome:
-		return
-	df = symptom_field()
-	if not df:
-		return
-	link = _symptom_link(df)
-	if link:
-		_child, fieldname, _target = link
-		doc.set(df.fieldname, [{fieldname: s} for s in symptome])
-	elif df.fieldtype in ("Small Text", "Text", "Long Text", "Data"):
-		doc.set(df.fieldname, "\n".join(symptome))
-	elif df.fieldtype == "Select":
-		doc.set(df.fieldname, symptome[0])
+def check_text_lengths(payload):
+	for fieldname, limit in MAX_LAENGE.items():
+		if len(cstr(payload.get(fieldname))) > limit:
+			frappe.throw(_("Eine Eingabe ist zu lang (höchstens {0} Zeichen).").format(limit))
 
 
 def ensure_utm_source() -> str:
@@ -372,21 +302,11 @@ def ensure_utm_source() -> str:
 
 def before_insert_lead(doc, method=None):
 	"""``doc_events`` Lead ``before_insert``: nur bei Einsendungen dieses Formulars."""
-	extras = frappe.flags.get("cv_einschaetzung")
-	if not extras:
+	if not frappe.flags.get("cv_einschaetzung"):
 		return
 	doc.utm_source = ensure_utm_source()
 	if doc.meta.has_field("cv_quelle"):
 		doc.cv_quelle = QUELLE
-	_set_symptome(doc, extras.symptome)
-	if extras.beschreibung:
-		doc.append(
-			"notes",
-			{
-				"note": "<p>" + escape_html(extras.beschreibung).replace("\n", "<br>") + "</p>",
-				"added_on": now_datetime(),
-			},
-		)
 	# ERPNext legt den Kontakt an und speichert ihn in after_insert erneut (link_to_contact);
 	# als Gast fehlt dafür das Schreibrecht.
 	contact = getattr(doc, "contact_doc", None)
@@ -447,28 +367,6 @@ def page_context(context):
 			df["options"] = HTML_FELDER[fieldname]()
 
 
-def _html_symptome() -> str:
-	boxes = "".join(
-		'<label class="cv-check"><input type="checkbox" name="cv_symptom" value="{0}"> {0}</label>'.format(
-			escape_html(s)
-		)
-		for s in symptom_options()
-	)
-	return (
-		'<div class="form-group cv-symptome"><label class="control-label">Symptome</label>'
-		f'<div class="cv-check-group">{boxes}</div>'
-		'<p class="help-box small text-muted">Mehrfachauswahl möglich</p></div>'
-	)
-
-
-def _html_beschreibung() -> str:
-	return (
-		'<div class="form-group"><label class="control-label" for="cv_beschreibung">Beschreibung</label>'
-		f'<textarea id="cv_beschreibung" class="form-control" rows="5" maxlength="{MAX_BESCHREIBUNG}" '
-		'placeholder="Was ist Ihnen aufgefallen? Seit wann? Wo genau?"></textarea></div>'
-	)
-
-
 def _html_fotos() -> str:
 	return (
 		'<div class="form-group cv-fotos"><label class="control-label" for="cv_fotos_input">'
@@ -501,8 +399,6 @@ def _html_honeypot() -> str:
 
 
 HTML_FELDER = {
-	"cv_symptome_html": _html_symptome,
-	"cv_beschreibung_html": _html_beschreibung,
 	"cv_fotos_html": _html_fotos,
 	"cv_datenschutz_html": _html_datenschutz,
 	"cv_hp_html": _html_honeypot,

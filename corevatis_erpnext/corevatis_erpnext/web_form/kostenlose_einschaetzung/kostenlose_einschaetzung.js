@@ -2,7 +2,7 @@
 // Achtung: Frappe rendert diese Datei als Jinja-Template - keine doppelten geschweiften
 // Klammern und keine Klammer-Prozent-/Klammer-Raute-Folgen verwenden.
 //
-// Ergänzt das Standardformular um Symptome, Beschreibung, Fotos (Base64 im accept-Aufruf,
+// Ergänzt das Standardformular um Fotos (Base64 im accept-Aufruf,
 // kein upload_file für Gäste), Datenschutz-Zustimmung und Honeypot. Die Prüfung erfolgt
 // zusätzlich serverseitig (corevatis_erpnext.webform.einschaetzung).
 // Im iframe meldet die Seite ihre Höhe per postMessage an die einbettende Seite.
@@ -149,18 +149,6 @@ frappe.ready(function () {
 		let ok = true;
 		$(".cv-datenschutz-fehler").text("");
 
-		const symptome = $('input[name="cv_symptom"]:checked')
-			.map(function () {
-				return this.value;
-			})
-			.get();
-		if (!symptome.length) {
-			ok = false;
-			$(".cv-symptome").addClass("has-error");
-		} else {
-			$(".cv-symptome").removeClass("has-error");
-		}
-
 		const datenschutz = $("#cv_datenschutz").is(":checked");
 		if (!datenschutz) {
 			ok = false;
@@ -179,8 +167,6 @@ frappe.ready(function () {
 			$fotoFehler.text(__("Die Fotos sind zusammen zu groß. Bitte ein Foto entfernen."));
 		}
 
-		wf.doc.cv_symptome = symptome;
-		wf.doc.cv_beschreibung = $("#cv_beschreibung").val() || "";
 		wf.doc.cv_datenschutz = datenschutz ? 1 : 0;
 		wf.doc.cv_hp = $("#cv_hp").val() || "";
 		wf.doc.cv_fotos = fotos.map(function (foto) {

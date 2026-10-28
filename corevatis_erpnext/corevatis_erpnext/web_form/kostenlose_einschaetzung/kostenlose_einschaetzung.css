@@ -9,12 +9,6 @@
 	overflow: hidden;
 }
 
-.cv-check-group {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
-	gap: 0.25rem 1rem;
-}
-
 .cv-check {
 	display: flex;
 	gap: 0.5rem;
@@ -26,11 +20,6 @@
 .cv-check input[type="checkbox"] {
 	margin-top: 0.2rem;
 	flex: none;
-}
-
-.cv-symptome.has-error .control-label,
-.cv-symptome.has-error .cv-check {
-	color: var(--red-600, #c0392b);
 }
 
 .cv-foto-liste {
