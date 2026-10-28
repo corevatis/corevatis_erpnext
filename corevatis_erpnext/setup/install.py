@@ -31,6 +31,10 @@ def after_install() -> None:
 	ensure_lead_objekt_field()
 	# Item: Gewerk, Verfahren, Leistungsregel (2.2)
 	ensure_item_fields()
+	# Katalog (2.3): Kostenkomponente der Workstation „Montage“ (kein Data Import möglich)
+	from corevatis_erpnext.katalog.importer import ensure_grundlagen
+
+	ensure_grundlagen()
 
 
 def after_migrate() -> None:
@@ -53,3 +57,7 @@ def after_migrate() -> None:
 	ensure_lead_objekt_field()
 	# Item: Gewerk, Verfahren, Leistungsregel (2.2)
 	ensure_item_fields()
+	# Katalog (2.3): Kostenkomponente „Lohn Montage“ für die Workstation-Vorlage
+	from corevatis_erpnext.katalog.importer import ensure_grundlagen
+
+	ensure_grundlagen()

@@ -21,6 +21,25 @@ Eigene Vorlage: JSON mit `"extends": "_standard"` und `company` (Name, Kürzel,
 `chart_of_accounts` SKR03/SKR04), Aufruf mit `{"config_file": "/absoluter/pfad.json"}`.
 Idempotent; ein zweiter Lauf meldet `"changes": []`.
 
+## Leistungskatalog
+
+```bash
+bench --site <site> execute corevatis_erpnext.katalog.importieren --kwargs '{"firma": "Hülshoff Sanierungstechnik"}'
+bench --site <site> execute corevatis_erpnext.katalog.uebersicht --kwargs '{"firma": "Hülshoff Sanierungstechnik"}'
+```
+
+Paket `katalog/daten/abdichtung/` (Aufgabe 2.3): acht Data-Import-Vorlagen (CSV, Feldnamen als
+Spaltenköpfe) für UOM, Item Group, Price List, Workstation, Operation, Item, Item Price und
+BOM (Kostenkomponente „Lohn Montage“ legt die App selbst an) – im Desk über **Data Import** in der Reihenfolge der
+Dateinamen einspielbar (BOM mit „Submit After Import“) oder per Importer. 48
+Leistungspositionen (46 mit Stückliste: Material zu `Standard-Einkauf` + Operation „Montage“
+in min/Einheit), 32 Materialien, Preisliste `Standard-Verkauf`. Alle Preise und Zeiten sind
+gekennzeichnete Annahmen (`ANNAHME 2.3`), bis Hülshoffs Angebote vorliegen. Der Importer ist
+idempotent und überschreibt abweichende Datensätze (z. B. im Desk geänderte Preise) nur mit
+`"force": true`; Stücklisten bekommen dann eine neue Standard-Version. Herstellkosten rechnet
+ERPNext in der Stückliste, die Angebotskalkulation folgt in `corevatis` (4.1). Doku:
+`docs/2.3-leistungskatalog.md` im Repo Handwerker.
+
 ## Web Form „Kostenlose Einschätzung“
 
 Route `/kostenlose-einschaetzung/new` (Gast, kein Login): Anfrage → Lead mit bis zu
@@ -107,6 +126,7 @@ corevatis_erpnext/
   hooks.py              required_apps = ["erpnext"], after_install, override accept (Web Form)
   webform/              Web Form „Kostenlose Einschätzung“ (Aufgabe 1.2)
   setup/                Site-Template (Aufgabe 0.4): site_template.py, config.py, templates/*.json
+  katalog/              Leistungskatalog (2.3): importer.py, daten/<paket>/*.csv (Data-Import-Vorlagen)
   crm/                  Lead: Termin + Terminbestätigung (1.3), Foto-Galerie get_bilder (1.5),
                         Custom Fields cv_termin/cv_galerie (setup.py)
   crm/vorlagen/         Email Template „Terminbestätigung Besichtigung“ (Quelle für email_vorlagen.py)

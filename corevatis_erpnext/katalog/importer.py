@@ -39,12 +39,11 @@ DATEIEN = (
 	("UOM", "01_uom.csv"),
 	("Item Group", "02_item_group.csv"),
 	("Price List", "03_price_list.csv"),
-	("Workstation Operating Component", "04_workstation_operating_component.csv"),
-	("Workstation", "05_workstation.csv"),
-	("Operation", "06_operation.csv"),
-	("Item", "07_item.csv"),
-	("Item Price", "08_item_price.csv"),
-	("BOM", "09_bom.csv"),
+	("Workstation", "04_workstation.csv"),
+	("Operation", "05_operation.csv"),
+	("Item", "06_item.csv"),
+	("Item Price", "07_item_price.csv"),
+	("BOM", "08_bom.csv"),
 )
 
 # Schlüsselfeld je Doctype (Name des Datensatzes); Item Price und BOM werden gesucht
@@ -52,7 +51,6 @@ SCHLUESSEL = {
 	"UOM": "uom_name",
 	"Item Group": "item_group_name",
 	"Price List": "price_list_name",
-	"Workstation Operating Component": "component_name",
 	"Workstation": "workstation_name",
 	"Operation": "name",
 	"Item": "item_code",
@@ -65,6 +63,10 @@ NICHT_VERGLEICHEN = {
 	"Operation": {"description"},
 	"Item Price": {"reference", "note"},
 }
+
+# Kostenkomponenten der Workstation: Doctype ohne „Allow Import“ (kein Data Import möglich),
+# deshalb legt die App sie selbst an (after_install/after_migrate und vor jedem Import)
+KOSTENKOMPONENTEN = ("Lohn Montage",)
 
 # Kopffelder der Stückliste, die der Abgleich prüft (Kindtabellen: siehe _bom_signatur)
 BOM_KOPF = ("quantity", "with_operations", "rm_cost_as_per", "buying_price_list", "currency")
@@ -204,6 +206,7 @@ def importieren(firma=None, paket="abdichtung", force=False, commit=True) -> dic
 	bericht = Bericht(paket, firma, force)
 	bericht.warnings.extend(warnings)
 
+	bericht.changes.extend(ensure_grundlagen())
 	_fehlende_einheiten(daten, bericht)
 	for doctype, _datei in DATEIEN:
 		if doctype == "BOM":
@@ -228,6 +231,18 @@ def _firma(firma: str | None, boms: list[dict]) -> str:
 	if not firma or not frappe.db.exists("Company", firma):
 		frappe.throw(f"Firma {firma!r} existiert nicht - Parameter firma angeben")
 	return firma
+
+
+def ensure_grundlagen() -> list[str]:
+	"""Kundenneutrale Voraussetzungen der Vorlagen, die Data Import nicht anlegen kann."""
+	angelegt = []
+	for name in KOSTENKOMPONENTEN:
+		if not frappe.db.exists("Workstation Operating Component", name):
+			frappe.get_doc({"doctype": "Workstation Operating Component", "component_name": name}).insert(
+				ignore_permissions=True
+			)
+			angelegt.append(f"Workstation Operating Component {name} angelegt")
+	return angelegt
 
 
 def _fehlende_einheiten(daten: dict, bericht: Bericht) -> None:

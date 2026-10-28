@@ -2,7 +2,8 @@
 Datenpaket (2.3).
 
 Ein Paket (``daten/<paket>/``) besteht aus Data-Import-Vorlagen (CSV) für UOM, Item Group,
-Price List, Workstation Operating Component, Workstation, Operation, Item, Item Price und BOM.
+Price List, Workstation, Operation, Item, Item Price und BOM. Die Kostenkomponente der
+Workstation („Lohn Montage“) legt die App bei Installation/Migrate an (Doctype ohne Data Import).
 Dieselben Dateien lassen sich im Desk über **Data Import** einspielen (Reihenfolge = Dateiname)
 oder per Importer (Onboarding 0.7, ``bench execute``)::
 

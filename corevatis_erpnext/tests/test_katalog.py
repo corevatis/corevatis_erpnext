@@ -67,7 +67,7 @@ def boms_aus_vorlage() -> dict[str, dict]:
 	"""BOM-CSV zu {item: {"minuten": .., "material": [(code, menge, uom)]}}."""
 	out: dict[str, dict] = {}
 	aktuell = None
-	for z in zeilen("09_bom.csv"):
+	for z in zeilen("08_bom.csv"):
 		if z["item"]:
 			aktuell = out.setdefault(z["item"], {"minuten": None, "material": [], "kopf": z})
 		if z["items.item_code"]:
@@ -80,7 +80,7 @@ def boms_aus_vorlage() -> dict[str, dict]:
 def preise(liste: str) -> dict[str, Decimal]:
 	return {
 		z["item_code"]: Decimal(z["price_list_rate"])
-		for z in zeilen("08_item_price.csv")
+		for z in zeilen("07_item_price.csv")
 		if z["price_list"] == liste
 	}
 
@@ -103,7 +103,7 @@ class TestKatalogVorlagen(UnitTestCase):
 	"""Vorlagen ohne Datenbank: Umfang, Konsistenz, Schnittstellenwerte, Zahlenformat."""
 
 	def setUp(self):
-		self.items = {z["item_code"]: z for z in zeilen("07_item.csv")}
+		self.items = {z["item_code"]: z for z in zeilen("06_item.csv")}
 		self.boms = boms_aus_vorlage()
 		self.vk = preise(VERKAUF)
 		self.ek = preise(EINKAUF)
@@ -144,7 +144,7 @@ class TestKatalogVorlagen(UnitTestCase):
 					z["is_stock_item"], "1", f"{code}: Material muss Lagerartikel sein (BOM-Kosten)"
 				)
 				self.assertIn(code, self.ek, f"{code}: Einkaufspreis fehlt")
-		for z in zeilen("08_item_price.csv"):
+		for z in zeilen("07_item_price.csv"):
 			self.assertEqual(z["uom"], self.items[z["item_code"]]["stock_uom"], z["item_code"])
 			self.assertEqual(z["reference"], "ANNAHME 2.3", z["item_code"])
 
@@ -187,9 +187,9 @@ class TestKatalogVorlagen(UnitTestCase):
 			self.skipTest("Frappe ohne _parse_number")
 		formate = [NumberFormat.from_string(f) for f in ("#.###,##", "#,###.##")]
 		spalten = {
-			"08_item_price.csv": ("price_list_rate",),
-			"09_bom.csv": ("items.qty", "operations.time_in_mins", "quantity"),
-			"05_workstation.csv": ("workstation_costs.operating_cost",),
+			"07_item_price.csv": ("price_list_rate",),
+			"08_bom.csv": ("items.qty", "operations.time_in_mins", "quantity"),
+			"04_workstation.csv": ("workstation_costs.operating_cost",),
 		}
 		for datei, felder in spalten.items():
 			for z in zeilen(datei):
@@ -279,8 +279,8 @@ class TestKatalogImport(IntegrationTestCase):
 			self.assertEqual(ergebnis.status, "Success", f"{datei}: {ergebnis}")
 			self.assertFalse(ergebnis.fehler, datei)
 			self.assertIn(ergebnis.warnings or "", ("", "[]"), datei)
-		self.assertEqual(self.data_imports["09_bom.csv"].payload_count, 46)
-		self.assertEqual(self.data_imports["07_item.csv"].payload_count, 80)
+		self.assertEqual(self.data_imports["08_bom.csv"].payload_count, 46)
+		self.assertEqual(self.data_imports["06_item.csv"].payload_count, 80)
 
 	def test_vorlagen_spalten_wie_template_download(self):
 		"""Jede Spalte entspricht einer Spalte der Data-Import-Vorlage aus dem Desk (Exporter)."""
@@ -312,7 +312,7 @@ class TestKatalogImport(IntegrationTestCase):
 		for feld, werte in (("cv_gewerk", GEWERKE), ("cv_verfahren", VERFAHREN)):
 			optionen = [o for o in (meta.get_field(feld).options or "").split("\n") if o]
 			self.assertEqual(set(werte) - set(optionen), set(), feld)
-		for z in zeilen("07_item.csv"):
+		for z in zeilen("06_item.csv"):
 			item = frappe.db.get_value(
 				"Item", z["item_code"], ["item_group", "stock_uom", "is_stock_item", *CV_FELDER], as_dict=True
 			)
@@ -328,6 +328,8 @@ class TestKatalogImport(IntegrationTestCase):
 			frappe.db.get_value("Item Group", "Innenabdichtung", "parent_item_group"), "Leistungen Abdichtung"
 		)
 		self.assertEqual(flt(frappe.db.get_value("Workstation", "Montage", "hour_rate")), float(STUNDENSATZ))
+		# Kostenkomponente legt die App an (Doctype ohne Data Import)
+		self.assertTrue(frappe.db.exists("Workstation Operating Component", "Lohn Montage"))
 
 	# ------------------------------------------------------------------ Importer
 
@@ -338,9 +340,9 @@ class TestKatalogImport(IntegrationTestCase):
 			self.assertEqual(ergebnis["changes"], [])
 			self.assertEqual(ergebnis["skipped"], [])
 			self.assertEqual(ergebnis["warnings"], [])
-			# 8 UOM + 9 Item Group + 2 Price List + 1 Komponente + 1 Workstation + 1 Operation
+			# 8 UOM + 9 Item Group + 2 Price List + 1 Workstation + 1 Operation
 			# + 80 Item + 80 Item Price + 46 BOM
-			self.assertEqual(ergebnis["unveraendert"], 228)
+			self.assertEqual(ergebnis["unveraendert"], 227)
 
 	def test_importer_legt_fehlendes_an(self):
 		with self.savepoint():
