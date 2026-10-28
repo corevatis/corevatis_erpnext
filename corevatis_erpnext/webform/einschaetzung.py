@@ -31,6 +31,7 @@ site_config-Schlüssel (alle optional):
 import base64
 import binascii
 import hashlib
+import io
 import ipaddress
 import json
 import re
@@ -54,6 +55,7 @@ KEY_FOTOS = "cv_fotos"
 MAX_FOTOS = 3
 MAX_FOTO_BYTES = 10 * 1024 * 1024
 MAX_BESCHREIBUNG = 5000
+MAX_PIXEL = 60_000_000
 FOTO_FELDER = ("cv_foto_1", "cv_foto_2", "cv_foto_3")
 
 RATE_LIMIT = 10
@@ -252,6 +254,22 @@ def foto_typ(content: bytes) -> str | None:
 	return None
 
 
+def bild_lesbar(content: bytes) -> bool:
+	"""JPEG/PNG mit Pillow prüfen (Frappe öffnet JPEGs beim Speichern zum Entfernen der
+	EXIF-Daten; ein kaputtes Bild würde sonst als 500 enden). Schützt auch vor
+	Dekompressionsbomben (Pillow ``MAX_IMAGE_PIXELS``) und Bildern über 60 Megapixel.
+	HEIC kann Pillow ohne Zusatzmodul nicht lesen - dort nur die Signatur."""
+	from PIL import Image
+
+	try:
+		with Image.open(io.BytesIO(content)) as image:
+			width, height = image.size
+			image.verify()
+	except Exception:
+		return False
+	return 0 < width * height <= MAX_PIXEL
+
+
 def parse_fotos(value) -> list[tuple[str, bytes]]:
 	"""``[{"name": ..., "data": "data:image/jpeg;base64,..."}]`` → ``[(dateiname, inhalt)]``.
 
@@ -283,6 +301,8 @@ def parse_fotos(value) -> list[tuple[str, bytes]]:
 		typ = foto_typ(content)
 		if not typ:
 			frappe.throw(_("Bitte nur Fotos im Format JPG, PNG oder HEIC hochladen."))
+		if typ != "heic" and not bild_lesbar(content):
+			frappe.throw(_("Ein Foto ist beschädigt oder zu groß. Bitte wählen Sie ein anderes."))
 		digest = hashlib.sha256(content).hexdigest()
 		if digest in seen:
 			continue

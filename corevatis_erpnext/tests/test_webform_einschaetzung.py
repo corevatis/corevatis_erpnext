@@ -51,6 +51,11 @@ def _request(method: str, path: str, **kwargs):
 	return result["response"]
 
 
+def _ohne_assets():
+	"""Die CI baut keine Assets (``bench init --skip-assets``): ``assets.json`` fehlt."""
+	return patch("frappe.utils.get_assets_json", return_value={})
+
+
 def _ip() -> str:
 	return (
 		f"198.51.100.{random.randint(1, 254)}"
@@ -63,12 +68,21 @@ def _dataurl(mime: str, content: bytes) -> str:
 	return f"data:{mime};base64,{base64.b64encode(content).decode()}"
 
 
+def _bild(fmt: str) -> bytes:
+	"""Echtes, zufälliges 16x16-Bild (Frappe öffnet JPEGs beim Speichern mit Pillow)."""
+	from PIL import Image
+
+	buf = io.BytesIO()
+	Image.frombytes("RGB", (16, 16), os.urandom(16 * 16 * 3)).save(buf, format=fmt)
+	return buf.getvalue()
+
+
 def _jpg() -> bytes:
-	return b"\xff\xd8\xff\xe0\x00\x10JFIF\x00" + os.urandom(2048)
+	return _bild("JPEG")
 
 
 def _png() -> bytes:
-	return b"\x89PNG\r\n\x1a\n" + os.urandom(2048)
+	return _bild("PNG")
 
 
 def _heic() -> bytes:
@@ -292,10 +306,12 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 
 	def test_photo_type_and_count(self):
 		html = _dataurl("image/jpeg", b"<html><script>alert(1)</script></html>")
+		kaputt = _dataurl("image/jpeg", b"\xff\xd8\xff\xe0\x00\x10JFIF\x00" + os.urandom(512))
 		gif = _dataurl("image/gif", b"GIF89a" + os.urandom(64))
 		for fotos in (
 			[{"name": "x.jpg", "data": html}],
 			[{"name": "x.gif", "data": gif}],
+			[{"name": "kaputt.jpg", "data": kaputt}],
 			[{"name": "x.jpg", "data": "kein-dataurl"}],
 			[{"name": f"{i}.jpg", "data": _dataurl("image/jpeg", _jpg())} for i in range(4)],
 		):
@@ -444,7 +460,8 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 	# --- Seite ------------------------------------------------------------
 
 	def test_page_renders_for_guest(self):
-		response = _request("get", f"/{ez.ROUTE}/new?embed=1")
+		with _ohne_assets():
+			response = _request("get", f"/{ez.ROUTE}/new?embed=1")
 		self.assertEqual(response.status_code, 200, response.get_data(as_text=True)[:1000])
 		html = response.get_data(as_text=True)
 		self.assertIn("cv_fotos_input", html)
@@ -452,9 +469,11 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 		self.assertIn("Anfrage senden", html)
 
 	def test_frame_ancestors_only_when_configured(self):
-		response = _request("get", f"/{ez.ROUTE}/new")
+		with _ohne_assets():
+			response = _request("get", f"/{ez.ROUTE}/new")
+		self.assertEqual(response.status_code, 200)
 		self.assertNotIn("frame-ancestors", response.headers.get("Content-Security-Policy", ""))
-		with patch.object(ez, "embedding_origins", return_value=["https://www.example.de"]):
+		with _ohne_assets(), patch.object(ez, "embedding_origins", return_value=["https://www.example.de"]):
 			response = _request("get", f"/{ez.ROUTE}/new?embed=1")
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(
