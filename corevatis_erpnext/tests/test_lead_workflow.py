@@ -130,6 +130,22 @@ class TestLeadWorkflow(IntegrationTestCase):
 		with self.assertRaises(WorkflowTransitionError):
 			self._apply(MEISTER_USER, lead, ACTION_WIEDER_OEFFNEN)
 		self.assertEqual(self._apply(BUERO_USER, lead, ACTION_WIEDER_OEFFNEN).cv_status, "Neu")
+		# alter Grund gehört zum abgeschlossenen Verlust: beim Wiederöffnen geleert
+		self.assertFalse(frappe.db.get_value("Lead", lead, "cv_verlustgrund"))
+		# erneut verloren nur mit neuem Grund
+		with self.assertRaises(frappe.MandatoryError):
+			self._apply(BUERO_USER, lead, ACTION_VERLOREN)
+
+	def test_verlustgrund_vor_der_aktion_bleibt(self):
+		# Desk-Dialog/REST setzen den Grund vor „Als verloren markieren“ (Zustand noch offen)
+		lead = self._lead().name
+		frappe.set_user(BUERO_USER)
+		doc = frappe.get_doc("Lead", lead)
+		doc.cv_verlustgrund = "Preis"
+		doc.save()
+		frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("Lead", lead, "cv_verlustgrund"), "Preis")
+		self.assertEqual(self._apply(BUERO_USER, lead, ACTION_VERLOREN).cv_verlustgrund, "Preis")
 
 	def test_idempotent(self):
 		before = frappe.db.get_value("Workflow", WORKFLOW_NAME, "modified")
