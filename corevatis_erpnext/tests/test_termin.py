@@ -57,7 +57,7 @@ class TestTermin(IntegrationTestCase):
 		args.update(kwargs)
 		return termin.termin_anlegen(**args)
 
-	def test_fixture_email_template(self):
+	def test_email_template(self):
 		template = frappe.get_doc("Email Template", termin.EMAIL_TEMPLATE)
 		self.assertEqual(template.reference_doctype, "Lead")
 		for platzhalter in ("kunde", "datum", "uhrzeit", "meister", "objekt_adresse", "firma"):
@@ -332,3 +332,51 @@ class TestTermin(IntegrationTestCase):
 		self.assertEqual(
 			termin.objekt_adresse(frappe.get_doc("Lead", self.lead.name)), "Am Hang 3\n48155 Münster"
 		)
+
+	# --- Review Epic 1 ---------------------------------------------------
+
+	def test_ungueltiger_beginn_und_dauer_417(self):
+		# E-7: nicht lesbarer Beginn → ValidationError (HTTP 417) statt ParserError (500)
+		for beginn in ("morgen früh", "2030-13-45 99:99", "   "):
+			with self.assertRaises(frappe.ValidationError, msg=beginn):
+				self._anlegen(beginn=beginn)
+		# Dauer ohne Zahl nicht still als 60 Minuten
+		for dauer in ("eine Stunde", "1,5", True):
+			with self.assertRaises(frappe.ValidationError, msg=repr(dauer)):
+				self._anlegen(dauer=dauer)
+		self.assertTrue(self._anlegen(dauer="")["event"])
+
+	def test_verschieben_ueber_save_mit_hooks(self):
+		# E-3: alter Termin über Event.save() - Hooks (Google-Sync) und Version laufen
+		erster = self._anlegen()["event"]
+		with patch(
+			"frappe.integrations.doctype.google_calendar.google_calendar.update_event_in_google_calendar"
+		) as google:
+			zweiter = self._anlegen(beginn="2030-03-12 14:00:00")
+		self.assertEqual(zweiter["abgesagt"], erster)
+		abgesagt = [c.args[0] for c in google.call_args_list if c.args and c.args[0].name == erster]
+		self.assertTrue(abgesagt, google.call_args_list)
+		self.assertEqual(abgesagt[-1].status, "Cancelled")
+		self.assertTrue(
+			frappe.db.exists("Version", {"ref_doctype": "Event", "docname": erster}),
+			"Absage ohne Version (db.set_value?)",
+		)
+
+	def test_google_sync_nur_mit_opt_in(self):
+		# E-4: Standard aus, auch wenn der Meister einen Google-Kalender verbunden hat
+		event = frappe._dict(sync_with_google_calendar=0, google_calendar=None)
+		with patch.object(termin, "google_kalender", return_value="Kalender Meister"):
+			with patch.dict(frappe.local.conf, {termin.CONF_GOOGLE_SYNC: None}):
+				termin._google_calendar(event, MEISTER)
+			self.assertFalse(event.sync_with_google_calendar)
+			with patch.dict(frappe.local.conf, {termin.CONF_GOOGLE_SYNC: 1}):
+				termin._google_calendar(event, MEISTER)
+		self.assertEqual((event.sync_with_google_calendar, event.google_calendar), (1, "Kalender Meister"))
+
+	def test_meister_label_im_dialog_escaped(self):
+		# E-5: Frappe rendert Select-Labels als HTML - User.full_name escapen
+		quelle = frappe.get_app_path("corevatis_erpnext", "public", "js", "lead_termin.js")
+		with open(quelle, encoding="utf-8") as f:
+			js = f.read()
+		self.assertIn("label: frappe.utils.escape_html(m.full_name || m.name)", js)
+		self.assertNotIn("label: m.full_name", js)

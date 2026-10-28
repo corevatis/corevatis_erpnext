@@ -13,13 +13,18 @@ Ablauf (Button „Termin anlegen“ am Lead, ``public/js/lead_termin.js``):
 2. Ist ein aktiver Lead-Workflow (Aufgabe 1.4) vorhanden und erlaubt er dem Benutzer
    einen Übergang in einen Zustand „Termin…“, wird dieser ausgeführt.
 3. Die Kundenbestätigung entsteht aus dem Email Template
-   „Terminbestätigung Besichtigung“ (Fixture) und wird mit ``frappe.sendmail`` in die
-   Email Queue gelegt. Im MVP gibt es kein SMTP: ohne ausgehendes E-Mail-Konto bleibt
+   „Terminbestätigung Besichtigung“ (``crm.email_vorlagen``, Desk-Änderungen bleiben
+   erhalten) und wird mit ``frappe.sendmail`` in die Email Queue gelegt. Im MVP gibt es kein SMTP: ohne ausgehendes E-Mail-Konto bleibt
    der Eintrag „Not Sent“; der gerenderte Text steht zusätzlich zum Kopieren bereit
    (WhatsApp/Telefon).
 
 Rechte: Rollen Büro oder Meister (System Manager/Administrator ebenfalls) und
 Schreibrecht auf den Lead.
+
+Google Calendar: Der Termin wird nur mit dem Google-Kalender des Meisters synchronisiert,
+wenn die Site das ausdrücklich erlaubt (site_config ``cv_termin_google_sync: 1``, Standard
+aus) - Betreff (Kundenname) und PLZ/Ort gingen sonst ohne Entscheidung der Site an Google
+(Datenschutz, Review Epic 1 E-4).
 """
 
 import html
@@ -39,6 +44,7 @@ EMAIL_TEMPLATE = "Terminbestätigung Besichtigung"
 FELD_TERMIN = "cv_termin"
 FELD_OBJEKT_ADRESSE = "cv_objekt_adresse"  # Aufgabe 1.1
 DAUER_MIN, DAUER_MAX = 15, 12 * 60
+CONF_GOOGLE_SYNC = "cv_termin_google_sync"
 
 WOCHENTAGE = ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
 
@@ -94,10 +100,8 @@ def termin_anlegen(
 	doc = frappe.get_doc("Lead", lead)
 	doc.check_permission("write")
 
-	start = get_datetime(beginn) if beginn else None
-	if not start:
-		frappe.throw(_("Bitte Datum und Uhrzeit des Termins angeben."))
-	minuten = cint(dauer) or 60
+	start = _beginn(beginn)
+	minuten = _dauer(dauer)
 	if not DAUER_MIN <= minuten <= DAUER_MAX:
 		frappe.throw(_("Die Dauer muss zwischen {0} und {1} Minuten liegen.").format(DAUER_MIN, DAUER_MAX))
 	if meister not in {m["name"] for m in _meister()}:
@@ -398,7 +402,10 @@ def status_nach_termin(lead: str) -> tuple[str | None, str | None]:
 		del frappe.local.message_log[meldungen:]
 		return None, _("Lead-Workflow: kein Status gesetzt, Übergang nach „Termin“ übersprungen.")
 
-	ziel = next(
+	from corevatis_erpnext.anfrage.workflow import ACTION_TERMIN
+
+	# Aktion aus der Workflow-Definition dieser App; Namenspräfix nur als Rückfall (E-8)
+	ziel = next((t for t in uebergaenge if t.get("action") == ACTION_TERMIN), None) or next(
 		(t for t in uebergaenge if (t.get("next_state") or "").strip().lower().startswith("termin")), None
 	)
 	if not ziel:
@@ -419,6 +426,33 @@ def status_nach_termin(lead: str) -> tuple[str | None, str | None]:
 # --- intern ---------------------------------------------------------------------------------
 
 
+def _beginn(beginn):
+	"""Beginn als datetime; nicht lesbarer Text → verständliche Meldung (417) statt 500."""
+	if not beginn or not str(beginn).strip():
+		frappe.throw(_("Bitte Datum und Uhrzeit des Termins angeben."))
+	try:
+		start = get_datetime(beginn)
+	except (ValueError, TypeError, OverflowError):
+		start = None
+	if not start:
+		frappe.throw(
+			_("„{0}“ ist kein gültiges Datum mit Uhrzeit (erwartet z. B. 2030-03-05 09:30).").format(
+				escape_html(str(beginn)[:40])
+			)
+		)
+	return start
+
+
+def _dauer(dauer) -> int:
+	"""Dauer in Minuten; leer → 60, kein ganzzahliger Wert → Meldung (nicht still 60)."""
+	if dauer is None or (isinstance(dauer, str) and not dauer.strip()):
+		return 60
+	text = str(dauer).strip()
+	if isinstance(dauer, bool) or not text.lstrip("-").isdigit():
+		frappe.throw(_("Die Dauer muss in ganzen Minuten angegeben werden."))
+	return int(text)
+
+
 def _meister() -> list[dict]:
 	users = frappe.get_all(
 		"Has Role", filters={"role": ROLLE_MEISTER, "parenttype": "User"}, pluck="parent", distinct=True
@@ -433,13 +467,26 @@ def _meister() -> list[dict]:
 	)
 
 
-def _google_calendar(event, meister: str) -> None:
-	"""Mit dem Google-Kalender des Meisters synchronisieren, falls er einen verbunden hat."""
+def google_sync_erlaubt() -> bool:
+	"""Opt-in der Site (site_config ``cv_termin_google_sync``), Standard aus."""
+	return bool(cint(frappe.conf.get(CONF_GOOGLE_SYNC)))
+
+
+def google_kalender(meister: str) -> str | None:
+	"""Aktiver Google-Kalender des Meisters mit „Push“, sonst ``None``."""
 	if not frappe.db.table_exists("Google Calendar"):
-		return
-	kalender = frappe.db.get_value(
+		return None
+	return frappe.db.get_value(
 		"Google Calendar", {"user": meister, "enable": 1, "push_to_google_calendar": 1}, "name"
 	)
+
+
+def _google_calendar(event, meister: str) -> None:
+	"""Mit dem Google-Kalender des Meisters synchronisieren - nur mit Opt-in der Site und wenn
+	der Meister einen Kalender mit „Push“ verbunden hat."""
+	if not google_sync_erlaubt():
+		return
+	kalender = google_kalender(meister)
 	if kalender:
 		event.sync_with_google_calendar = 1
 		event.google_calendar = kalender
@@ -452,14 +499,16 @@ def _alten_termin_absagen(doc, neu: str) -> str | None:
 		return None
 	if frappe.db.get_value("Event", alt, "status") != "Open":
 		return None
-	frappe.has_permission("Event", "write", doc=alt, throw=True)
-	frappe.db.set_value("Event", alt, "status", "Cancelled")
+	# Über save(): Rechteprüfung, Version, modified und die Event-Hooks (u. a. Google-Sync
+	# ``update_event_in_google_calendar``) laufen - der alte Termin verschwindet auch dort (E-3)
+	event = frappe.get_doc("Event", alt)
+	event.check_permission("write")
+	event.status = "Cancelled"
+	event.save()
 	from frappe.desk.form.assign_to import clear
 
 	clear("Event", alt, ignore_permissions=True)
-	frappe.get_doc("Event", alt).add_comment(
-		"Info", _("Abgesagt: neuer Besichtigungstermin {0} für {1}.").format(neu, doc.name)
-	)
+	event.add_comment("Info", _("Abgesagt: neuer Besichtigungstermin {0} für {1}.").format(neu, doc.name))
 	return alt
 
 
