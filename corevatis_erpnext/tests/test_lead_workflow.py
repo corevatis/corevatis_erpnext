@@ -161,3 +161,42 @@ class TestLeadWorkflow(IntegrationTestCase):
 		self.assertEqual([c.column_name for c in board.columns], list(ANFRAGE_STATUS))
 		ws = frappe.get_doc("Workspace", "Anfragen")
 		self.assertTrue(any(s.doc_view == "Kanban" and s.kanban_board == "Anfragen" for s in ws.shortcuts))
+
+	def test_verloren_markieren_grund_und_uebergang_zusammen(self):
+		# E-13: Desk-Dialog speichert Grund und Übergang in einem Zug (ein save)
+		from corevatis_erpnext.anfrage.lead import als_verloren_markieren
+
+		lead = self._lead().name
+		frappe.set_user(BUERO_USER)
+		doc = als_verloren_markieren(lead, "Wettbewerber")
+		frappe.set_user("Administrator")
+		self.assertEqual((doc["cv_status"], doc["cv_verlustgrund"]), ("Verloren", "Wettbewerber"))
+		self.assertEqual(
+			frappe.db.get_value("Lead", lead, ["cv_status", "cv_verlustgrund"]), ("Verloren", "Wettbewerber")
+		)
+
+	def test_verloren_markieren_fehlschlag_hinterlaesst_keinen_grund(self):
+		from corevatis_erpnext.anfrage.lead import als_verloren_markieren
+
+		ohne_fachrolle = "cv-test-vertrieb-wf@example.com"
+		if not frappe.db.exists("User", ohne_fachrolle):
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": ohne_fachrolle,
+					"first_name": "Vertrieb",
+					"send_welcome_email": 0,
+					"roles": [{"role": "Sales User"}],
+				}
+			).insert(ignore_permissions=True)
+		lead = self._lead().name
+		frappe.set_user(ohne_fachrolle)
+		with self.assertRaises(WorkflowTransitionError):
+			als_verloren_markieren(lead, "Preis")
+		frappe.set_user(BUERO_USER)
+		with self.assertRaises(frappe.MandatoryError):
+			als_verloren_markieren(lead, "kein gültiger Grund")
+		frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("Lead", lead, "cv_status"), "Neu")
+		self.assertFalse(frappe.db.get_value("Lead", lead, "cv_verlustgrund"))
+		self.assertFalse(frappe.flags.get("cv_verlustgrund"))
