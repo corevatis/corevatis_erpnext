@@ -23,11 +23,9 @@ after_migrate = ["corevatis_erpnext.setup.install.after_migrate"]
 
 # Fixtures
 # --------
-# Email Template der Terminbestätigung (1.3). Wird bei install/migrate aus der App
-# eingespielt; Textänderungen gehören deshalb in die App, nicht in die Site.
-fixtures = [
-	{"dt": "Email Template", "filters": [["name", "in", ["Terminbestätigung Besichtigung"]]]},
-]
+# Keine. Das Email Template der Terminbestätigung (1.3) war bis 0.2 eine Fixture und wurde
+# bei jedem migrate überschrieben; jetzt legt crm.email_vorlagen.ensure_email_templates es
+# in after_install/after_migrate an und behält Änderungen aus dem Desk (Review Epic 1, E-1).
 
 # Desk-Formulare
 # --------------

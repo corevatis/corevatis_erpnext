@@ -18,6 +18,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import get_test_client
 
+from corevatis_erpnext.tests._helpers import make_lead
 from corevatis_erpnext.webform import einschaetzung as ez
 
 ACCEPT_URL = "/api/method/frappe.website.doctype.web_form.web_form.accept"
@@ -197,9 +198,24 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 
 	def test_setup(self):
 		self.assertTrue(frappe.db.exists("UTM Source", "Website"))
-		self.assertEqual(
-			frappe.db.get_single_value("CRM Settings", "allow_lead_duplication_based_on_emails"), 1
-		)
+		# E-2: die site-weite Einstellung bleibt aus (ERPNext-Standard), auch nach dem Patch
+		ez.setup()
+		from corevatis_erpnext.patches.v0_3 import lead_dubletten_pruefung
+
+		frappe.db.set_single_value("CRM Settings", "allow_lead_duplication_based_on_emails", 1)
+		lead_dubletten_pruefung.execute()
+		self.assertFalse(frappe.db.get_single_value("CRM Settings", "allow_lead_duplication_based_on_emails"))
+
+	def test_dublettenpruefung_desk_bleibt(self):
+		# E-2: Desk/Import/E-Mail-Leads prüfen Dubletten weiter
+		email = f"desk-{uuid.uuid4().hex[:12]}@example.com"
+		self.emails.append(email)
+		# Lead im Test-Thread nicht offen lassen: die Namensserie bliebe gesperrt, und die
+		# HTTP-Einsendungen der folgenden Tests (eigene Verbindung) warteten darauf
+		self.addCleanup(frappe.db.rollback)
+		make_lead(first_name="Desk", email_id=email)
+		with self.assertRaises(frappe.DuplicateEntryError):
+			make_lead(first_name="Desk 2", email_id=email)
 
 	# --- Einsendung -------------------------------------------------------
 
@@ -268,7 +284,9 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 			"File", {"attached_to_name": name, "attached_to_doctype": "Lead"}, "file_url"
 		)
 		response = _request("get", file_url)
-		self.assertIn(response.status_code, (302, 401, 403, 404), file_url)
+		# T-1: ausdrücklich verweigert - kein Redirect zur Anmeldung, kein 404
+		self.assertIn(response.status_code, (401, 403), file_url)
+		self.assertNotIn("image/", response.headers.get("Content-Type", ""))
 
 	def test_honeypot_creates_no_lead(self):
 		data = self.payload(cv_hp="https://spam.example")
@@ -350,12 +368,132 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 		frappe.db.rollback()
 		self.assertEqual(frappe.db.get_value("Lead", name, "lead_name"), "Erika Mustermann")
 
-	def test_duplicate_email_allowed(self):
-		data = self.payload()
+	def _contacts(self, email: str) -> int:
+		return len(
+			frappe.get_all(
+				"Contact Email", filters={"email_id": email, "parenttype": "Contact"}, pluck="parent"
+			)
+		)
+
+	def test_bekannte_email_haengt_an_offenen_lead(self):
+		# E-2: zweite Anfrage derselben Adresse → kein neuer Lead/Contact, Kommentar + Fotos am Lead
+		data = self.payload(cv_fotos=[{"name": "a.jpg", "data": _dataurl("image/jpeg", _jpg())}])
 		self.assertEqual(self.submit(data).status_code, 200)
-		again = self.payload(email_id=data["email_id"])
+		[name] = self.leads(data["email_id"])
+		self.assertEqual(self._contacts(data["email_id"]), 1)
+		status_vorher = frappe.db.get_value("Lead", name, ["cv_status", "status"])
+
+		again = self.payload(
+			email_id=data["email_id"].upper(),
+			lead_name="Erika M.",
+			cv_beschreibung="Jetzt auch <b>Risse</b> in der Garage.",
+			cv_symptom_feuchte_waende=1,
+			cv_fotos=[
+				{"name": "b.png", "data": _dataurl("image/png", _png())},
+				{"name": "c.jpg", "data": _dataurl("image/jpeg", _jpg())},
+			],
+		)
+		self.emails.append(again["email_id"])
+		response = self.submit(again)
+		self.assertEqual(response.status_code, 200, response.get_data(as_text=True))
+		self.assertEqual(response.json["message"], {"doctype": "Lead"})  # gleiche Antwort wie neu
+
+		self.assertEqual(self.leads(data["email_id"]), [name])
+		self.assertEqual(self._contacts(data["email_id"]), 1)
+		lead = frappe.get_doc("Lead", name)
+		self.assertEqual((lead.cv_status, lead.status), tuple(status_vorher))
+		self.assertEqual(lead.lead_name, "Erika Mustermann")  # Felder unverändert
+		self.assertEqual(lead.cv_beschreibung, BESCHREIBUNG)
+		files = frappe.get_all(
+			"File",
+			filters={"attached_to_doctype": "Lead", "attached_to_name": name},
+			fields=["file_name", "is_private", "attached_to_field"],
+		)
+		self.assertEqual(len(files), 3)
+		self.assertTrue(all(f.is_private for f in files))
+		# cv_foto_1 bleibt beim ersten Foto, die neuen füllen nur leere Felder
+		self.assertEqual(sorted(filter(None, (f.attached_to_field for f in files))), list(ez.FOTO_FELDER))
+		kommentare = frappe.get_all(
+			"Comment",
+			filters={"reference_doctype": "Lead", "reference_name": name, "comment_type": "Comment"},
+			pluck="content",
+		)
+		self.assertEqual(len(kommentare), 1)
+		self.assertIn("Weitere Anfrage", kommentare[0])
+		self.assertIn("Jetzt auch &lt;b&gt;Risse&lt;/b&gt; in der Garage.", kommentare[0])
+		self.assertNotIn("<b>Risse", kommentare[0])
+		self.assertIn("Erika M.", kommentare[0])
+		self.assertIn("Feuchte Wände", kommentare[0])
+		self.assertIn("2 Foto(s)", kommentare[0])
+
+	def test_bekannte_email_pflichtfelder(self):
+		data = self.payload(cv_fotos=[])
+		self.assertEqual(self.submit(data).status_code, 200)
+		[name] = self.leads(data["email_id"])
+		again = self.payload(email_id=data["email_id"], cv_objekt_adresse="", cv_fotos=[])
+		self.assertEqual(self.submit(again).status_code, 417)
+		self.assertFalse(
+			frappe.db.exists(
+				"Comment", {"reference_doctype": "Lead", "reference_name": name, "comment_type": "Comment"}
+			)
+		)
+
+	def test_abgeschlossener_lead_neue_anfrage(self):
+		# E-2: kein offener Lead (Verloren) → neuer Lead trotz Dublettenprüfung
+		data = self.payload(cv_fotos=[])
+		self.assertEqual(self.submit(data).status_code, 200)
+		[erster] = self.leads(data["email_id"])
+		frappe.db.set_value("Lead", erster, {"cv_status": "Verloren", "cv_verlustgrund": "Preis"})
+		frappe.db.commit()
+		again = self.payload(email_id=data["email_id"], cv_fotos=[])
 		self.assertEqual(self.submit(again).status_code, 200)
-		self.assertEqual(len(self.leads(data["email_id"])), 2)
+		leads = self.leads(data["email_id"])
+		self.assertEqual(len(leads), 2)
+		self.assertEqual(frappe.db.get_value("Lead", erster, "cv_status"), "Verloren")
+		self.assertFalse(frappe.db.get_single_value("CRM Settings", "allow_lead_duplication_based_on_emails"))
+
+	def test_offener_lead(self):
+		self.assertIsNone(ez.offener_lead(""))
+		self.assertIsNone(ez.offener_lead(f"unbekannt-{uuid.uuid4().hex[:8]}@example.com"))
+
+	def test_anhang_kommentar_mit_endgueltiger_url(self):
+		# E-10: frappe_s3_attachment schreibt file_url in File.after_insert um; der Anhang-Eintrag
+		# im Verlauf muss die endgültige URL tragen (vorher /private/files/... → 403)
+		from frappe.core.doctype.file.file import File
+
+		self.addCleanup(frappe.db.rollback)  # Namensserie freigeben (siehe oben)
+		lead = make_lead()
+		original = File.after_insert
+
+		def after_insert_mit_s3(doc):
+			original(doc)
+			neu = (
+				"/api/method/frappe_s3_attachment.controller.generate_file"
+				f"?key=Lead%2F{doc.name}&file_name={doc.file_name}"
+			)
+			frappe.db.set_value("File", doc.name, "file_url", neu, update_modified=False)
+			doc.file_url = neu
+
+		with patch.object(File, "after_insert", after_insert_mit_s3):
+			ez.attach_fotos(lead, [("foto-1.jpg", _jpg())])
+		kommentare = frappe.get_all(
+			"Comment",
+			filters={"reference_doctype": "Lead", "reference_name": lead.name, "comment_type": "Attachment"},
+			pluck="content",
+		)
+		self.assertEqual(len(kommentare), 1, kommentare)
+		self.assertIn("/api/method/frappe_s3_attachment.controller.generate_file", kommentare[0])
+		self.assertNotIn("/private/files/", kommentare[0])
+		self.assertIn("foto-1.jpg", kommentare[0])
+		# ohne S3 entsteht der Eintrag weiterhin (mit der lokalen URL)
+		ez.attach_fotos(lead, [("foto-2.png", _png())])
+		self.assertEqual(
+			frappe.db.count(
+				"Comment",
+				{"reference_doctype": "Lead", "reference_name": lead.name, "comment_type": "Attachment"},
+			),
+			2,
+		)
 
 	def _reset_limits(self, *buckets):
 		for bucket in buckets:
@@ -420,6 +558,20 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 			blocked = self.payload(cv_fotos=[])
 			self.assertEqual(self.submit(blocked, ip="192.0.2.103").status_code, 429)
 			self.assertEqual(self.leads(blocked["email_id"]), [])
+		self._reset_limits("global")
+
+	def test_global_limit_vor_fotopruefung(self):
+		# E-9: bei globaler Sperre keine Foto-Dekodierung/Pillow-Prüfung mehr
+		ip = "192.0.2.130"
+		self._reset_limits("global", f"ip:{ip}")
+		frappe.cache.incrby(frappe.cache.make_key(f"cv:webform:{ez.WEB_FORM}:global"), 2)
+		with (
+			patch.object(ez, "rate_limit_config", return_value=(100, 60, 2)),
+			patch.object(ez, "parse_fotos", side_effect=AssertionError("Fotos trotz Sperre geprüft")),
+		):
+			blocked = self.payload()
+			self.assertEqual(self.submit(blocked, ip=ip).status_code, 429)
+		self.assertEqual(self.leads(blocked["email_id"]), [])
 		self._reset_limits("global")
 
 	def test_blocked_ip_does_not_touch_global_counter(self):

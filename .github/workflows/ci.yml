@@ -23,14 +23,17 @@ env:
   NODE_VERSION: "24"
   RUFF_VERSION: "0.14.10"
   IMPORT_LINTER_VERSION: "2.15"
+  # Werkzeuge der Test-Bench gepinnt (Review Epic 1, T-3); Actions per Commit-SHA
+  FRAPPE_BENCH_VERSION: "5.31.1"
+  PIP_LICENSES_VERSION: "5.5.5"
 
 jobs:
   lint:
     name: Lint (ruff, import-linter)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: ruff check / format --check
@@ -64,13 +67,13 @@ jobs:
           - 3306:3306
         options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval=5s --health-timeout=2s --health-retries=20
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -81,7 +84,7 @@ jobs:
           echo "erpnext=$(git ls-remote https://github.com/frappe/erpnext "refs/heads/${ERPNEXT_BRANCH}" | cut -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pip / yarn
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.cache/pip
@@ -94,7 +97,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq mariadb-client
-          pip install frappe-bench pip-licenses
+          pip install "frappe-bench==${FRAPPE_BENCH_VERSION}" "pip-licenses==${PIP_LICENSES_VERSION}"
           yarn config set cache-folder ~/.cache/yarn
 
       - name: bench init (Frappe ${{ env.FRAPPE_BRANCH }})
@@ -151,7 +154,7 @@ jobs:
           python .github/helper/licenses.py --python ~/frappe-bench/env/bin/python --app corevatis_erpnext \
             --version "$version" --out THIRD_PARTY_LICENSES.md
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: third-party-licenses

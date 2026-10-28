@@ -101,7 +101,9 @@ frappe.provide("corevatis_erpnext.termin");
 					fieldtype: "Select",
 					fieldname: "meister",
 					label: __("Meister"),
-					options: meister.map((m) => ({ value: m.name, label: m.full_name || m.name })),
+					// Frappe rendert Select-Labels als HTML (frappe.ui.form.add_options → .html()):
+					// Benutzernamen escapen (Review Epic 1, E-5)
+					options: meister.map((m) => ({ value: m.name, label: frappe.utils.escape_html(m.full_name || m.name) })),
 					default: meister.length === 1 ? meister[0].name : (meister.find((m) => m.name === frappe.session.user) || {}).name,
 					reqd: 1,
 				},

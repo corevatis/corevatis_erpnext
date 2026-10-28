@@ -75,6 +75,10 @@ def validate_verlustgrund(doc, method=None) -> None:
 	gehört zum abgeschlossenen Verlust, und der Desk-Dialog fragt bei einem erneuten
 	„Als verloren markieren“ nur, wenn kein Grund gesetzt ist.
 	"""
+	vorgabe = frappe.flags.get("cv_verlustgrund")
+	if vorgabe and vorgabe.get("lead") == doc.name and doc.get("cv_status") == STATUS_VERLOREN:
+		# aus als_verloren_markieren: Grund im selben save wie der Workflow-Übergang
+		doc.cv_verlustgrund = vorgabe["grund"]
 	before = doc.get_doc_before_save() if not doc.is_new() else None
 	if (
 		before
@@ -89,3 +93,35 @@ def validate_verlustgrund(doc, method=None) -> None:
 			frappe.MandatoryError,
 			title=_("Loss Reason"),
 		)
+
+
+@frappe.whitelist(methods=["POST"])
+def als_verloren_markieren(lead: str, verlustgrund: str) -> dict:
+	"""Desk-Dialog „Als verloren markieren“ (1.4): Verlustgrund und Workflow-Übergang in **einem**
+	Speichervorgang (Review Epic 1, E-13).
+
+	Vorher setzte der Dialog den Grund per ``frappe.db.set_value`` und rief danach die
+	Workflow-Aktion auf - schlug die fehl, blieb der Grund am offenen Lead stehen, und der
+	nächste Versuch fragte nicht mehr. ``apply_workflow`` lädt den Lead neu aus der Datenbank;
+	der Grund wird deshalb über ``frappe.flags`` an ``validate_verlustgrund`` übergeben und dort
+	im selben ``save`` gesetzt (eine Version, ein ``modified``). Schlägt der Übergang fehl
+	(Rolle, Zustand), wird nichts gespeichert.
+	"""
+	from frappe.model.workflow import apply_workflow
+
+	from corevatis_erpnext.anfrage.workflow import ACTION_VERLOREN
+
+	doc = frappe.get_doc("Lead", lead)
+	doc.check_permission("write")
+	optionen = [
+		o for o in (frappe.get_meta("Lead").get_options("cv_verlustgrund") or "").split("\n") if o.strip()
+	]
+	if not verlustgrund or verlustgrund not in optionen:
+		frappe.throw(
+			_("Please select a loss reason before marking the inquiry as lost."), frappe.MandatoryError
+		)
+	frappe.flags.cv_verlustgrund = {"lead": doc.name, "grund": verlustgrund}
+	try:
+		return apply_workflow(doc, ACTION_VERLOREN).as_dict()
+	finally:
+		frappe.flags.cv_verlustgrund = None

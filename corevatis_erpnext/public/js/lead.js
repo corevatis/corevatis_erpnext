@@ -24,8 +24,10 @@
 		}
 	}
 
-	// 1.4: „Als verloren markieren“ fragt den Verlustgrund ab, bevor der Workflow
-	// weiterschaltet (serverseitig Pflicht: anfrage.lead.validate_verlustgrund).
+	// 1.4: „Als verloren markieren“ fragt den Verlustgrund ab (serverseitig Pflicht:
+	// anfrage.lead.validate_verlustgrund). Grund und Workflow-Übergang speichert
+	// anfrage.lead.als_verloren_markieren in einem Zug - nichts wird vorab gesetzt, ein
+	// fehlgeschlagener Übergang hinterlässt keinen Grund am offenen Lead (Review Epic 1, E-13).
 	const ACTION_VERLOREN = "Als verloren markieren";
 
 	function ask_verlustgrund(frm) {
@@ -35,7 +37,9 @@
 		const options = frappe.meta.get_docfield("Lead", "cv_verlustgrund", frm.doc.name).options;
 		// Workflow friert die Oberfläche vor diesem Trigger ein; für den Dialog lösen
 		frappe.dom.unfreeze();
-		return new Promise((resolve) => {
+		// Das Promise bleibt offen: Frappes eigenes apply_workflow läuft nicht, der Übergang
+		// geschieht im Server-Aufruf unten (oder beim Abbrechen gar nicht).
+		return new Promise(() => {
 			let submitted = false;
 			const dialog = frappe.prompt(
 				[
@@ -50,15 +54,25 @@
 				(values) => {
 					submitted = true;
 					frappe.dom.freeze();
-					frappe.db
-						.set_value("Lead", frm.doc.name, "cv_verlustgrund", values.cv_verlustgrund)
-						.then(() => resolve())
-						.catch(() => frappe.dom.unfreeze());
+					frappe
+						.xcall("corevatis_erpnext.anfrage.lead.als_verloren_markieren", {
+							lead: frm.doc.name,
+							verlustgrund: values.cv_verlustgrund,
+						})
+						.then((doc) => {
+							frappe.model.sync(doc);
+							frm.refresh();
+							frm.script_manager.trigger("after_workflow_action");
+						})
+						.finally(() => {
+							frm.selected_workflow_action = null;
+							frappe.dom.unfreeze();
+						});
 				},
 				__("Loss Reason"),
 				__("Mark as lost")
 			);
-			// Abbrechen: Aktion verwerfen (Promise bleibt offen, nichts wird gespeichert)
+			// Abbrechen: Aktion verwerfen, nichts wird gespeichert
 			dialog.onhide = () => {
 				if (!submitted) {
 					frm.selected_workflow_action = null;

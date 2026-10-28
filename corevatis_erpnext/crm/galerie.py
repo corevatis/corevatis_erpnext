@@ -25,7 +25,9 @@ from urllib.parse import parse_qs, unquote, urlparse
 import frappe
 from frappe import _
 
-BILD_ENDUNGEN = {"jpg", "jpeg", "png", "gif", "webp", "bmp", "avif", "heic", "heif", "svg"}
+# Nur Rastertypen ohne aktiven Inhalt: kein SVG (würde über „Original öffnen“ inline auf der
+# Site-Origin geladen - Stored XSS, Review Epic 1 E-11). Gleiche Liste in public/js/galerie.js.
+BILD_ENDUNGEN = {"jpg", "jpeg", "png", "gif", "webp", "heic"}
 ANHANG_FELDTYPEN = ("Attach", "Attach Image")
 # Allowlist: Galerie nur an diesen Doctypes (Objekt kommt mit 2.1)
 GALERIE_DOCTYPES = ("Lead", "Objekt")
@@ -50,7 +52,7 @@ def get_bilder(doctype: str, name: str) -> list[dict]:
 	dateien = frappe.get_all(
 		"File",
 		filters={"attached_to_doctype": doctype, "attached_to_name": name, "is_folder": 0},
-		fields=["name", "file_name", "file_url", "thumbnail_url", "is_private", "creation"],
+		fields=["name", "file_name", "file_url", "thumbnail_url", "is_private", "creation", "file_type"],
 		order_by="creation asc, name asc",
 	)
 	nach_url = {d.file_url: d for d in dateien if d.file_url}
@@ -94,9 +96,11 @@ def _feldwerte(doc) -> list[tuple[str, str]]:
 def _eintrag(bilder: dict, url: str | None, datei, quelle: str, fallback_creation=None) -> None:
 	if not _url_erlaubt(url):
 		return
-	file_name = (datei and datei.file_name) or _dateiname_aus_url(url)
-	if not ist_bild(file_name, url):
+	# Bild oder nicht entscheidet die Ziel-URL (was der Browser bei „Original öffnen“ lädt),
+	# nicht der angezeigte Dateiname - zusätzlich der Typ der File-Zeile (E-11)
+	if not ist_bild(url, datei and datei.file_type):
 		return
+	file_name = (datei and datei.file_name) or _dateiname_aus_url(url)
 	if url in bilder:
 		# Feldwert zu einem schon gelisteten Anhang: Feldbezeichnung ist aussagekräftiger
 		if quelle != _("Anhang"):
@@ -134,9 +138,27 @@ def _dateiname_aus_url(url: str) -> str:
 	return name or os.path.basename(teile.path)
 
 
-def ist_bild(file_name: str | None, url: str | None = None) -> bool:
-	for kandidat in (file_name, url and _dateiname_aus_url(url)):
-		if kandidat and "." in kandidat:
-			if kandidat.rsplit(".", 1)[1].lower() in BILD_ENDUNGEN:
-				return True
-	return False
+S3_DOWNLOAD = "/api/method/frappe_s3_attachment."
+
+
+def endung_ziel(url: str | None) -> str:
+	"""Endung der Datei, die unter ``url`` ausgeliefert wird: Pfad ohne Query/Fragment; beim
+	S3-Download (``generate_file``) der Parameter ``file_name``, nach dem der Fork Typ und
+	inline/attachment wählt."""
+	if not url:
+		return ""
+	teile = urlparse(url)
+	pfad = unquote(teile.path)
+	if pfad.startswith(S3_DOWNLOAD):
+		name = (parse_qs(teile.query).get("file_name") or [""])[0]
+	else:
+		name = os.path.basename(pfad)
+	return name.rsplit(".", 1)[1].lower() if "." in name else ""
+
+
+def ist_bild(url: str | None, file_type: str | None = None) -> bool:
+	"""Bild nur, wenn die Ziel-URL eine erlaubte Endung hat und - falls bekannt - auch der Typ
+	der File-Zeile; der angezeigte Dateiname zählt nicht (``foto.jpg`` → ``x.svg`` bleibt draußen)."""
+	if endung_ziel(url) not in BILD_ENDUNGEN:
+		return False
+	return not file_type or file_type.lower() in BILD_ENDUNGEN

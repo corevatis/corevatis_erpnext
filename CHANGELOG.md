@@ -6,6 +6,34 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Geändert (Review Epic 1)
+
+- E-1: Email Template „Terminbestätigung Besichtigung“ ist keine Fixture mehr (Frappe überschrieb es
+  bei jedem `migrate`). `crm.email_vorlagen.ensure_email_templates` (after_install/after_migrate)
+  legt es an und aktualisiert es nur, solange die Site-Kopie unverändert ist; Desk-Änderungen
+  bleiben, `force=True` bzw. `cv_email_template_force_sync` holt die ausgelieferte Fassung zurück.
+- E-2: „Lead-Dubletten per E-Mail erlauben“ wird nicht mehr site-weit gesetzt; Patch
+  `v0_3.lead_dubletten_pruefung` schaltet die Einstellung auf bestehenden Sites wieder aus. Web Form:
+  Anfrage mit bekannter E-Mail-Adresse → Kommentar mit den neuen Angaben und Fotos als Anhänge am
+  offenen Lead (Status unverändert, kein neuer Contact); ohne offenen Lead neuer Lead. Erfolgstext
+  ergänzt.
+- E-3: „Termin verschieben“ sagt den alten Termin über `Event.save()` ab (Version, `modified`,
+  Event-Hooks inkl. Google-Sync) statt `frappe.db.set_value`.
+- E-4: Google-Calendar-Sync nur mit Opt-in der Site (`cv_termin_google_sync`), Standard aus.
+- E-5: Meister-Auswahl im Termin-Dialog escaped (`frappe.utils.escape_html`).
+- E-7: nicht lesbarer Terminbeginn bzw. Dauer ohne Zahl → Meldung (417) statt 500 bzw. stiller 60 min.
+- E-8: Workflow-Übergang nach dem Termin über die Aktion „Termin vereinbaren“ (Präfix nur Rückfall).
+- E-9: globale Sperre des Web Forms vor dem Dekodieren/Prüfen der Fotos.
+- E-10: Anhang-Eintrag im Lead-Verlauf erst nach dem Upload (mit `frappe_s3_attachment` die
+  endgültige URL statt `/private/files/…` → 403).
+- E-11: Galerie nur JPG/PNG/GIF/WebP/HEIC, kein SVG; entschieden wird an der Ziel-URL (Pfad ohne
+  Query/Fragment, beim S3-Download `file_name`) und am Typ der File-Zeile, nicht am angezeigten
+  Dateinamen; „Original öffnen“ nur für diese Typen.
+- E-13: „Als verloren markieren“ speichert Grund und Übergang gemeinsam
+  (`anfrage.lead.als_verloren_markieren`), kein Vorab-`set_value`.
+- T-1/T-3: Gast-Test für private Fotos verlangt 401/403; Actions per Commit-SHA, `frappe-bench`
+  und `pip-licenses` per Version gepinnt, Dependabot für Actions.
+
 ### Hinzugefügt (Epic 1)
 
 - 1.2 Einbettung: Das Formular meldet im iframe die Inhaltshöhe statt der iframe-Höhe (Befund mvp-test:
@@ -22,10 +50,10 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   Route noch keine Web Page liegt (vorhandene Seiten bleiben unangetastet).
 - 1.3 Termin am Lead: Button „Termin anlegen“ (Datum/Uhrzeit, Dauer, Meister, Notiz) legt ein
   `Event` an (Private mit Freigabe an Meister und Büro, Kategorie Meeting, Lead als Teilnehmer, Zuweisung an den Meister,
-  Google-Calendar-Sync, falls der Meister einen Kalender verbunden hat), setzt `Lead.cv_termin`,
+  Google-Calendar-Sync, falls der Meister einen Kalender verbunden hat – seit Review Epic 1 nur mit Opt-in), setzt `Lead.cv_termin`,
   sagt einen vorherigen offenen Termin ab und führt – falls ein Lead-Workflow aktiv ist – den
   Übergang nach „Termin…“ aus. Kundenbestätigung aus dem Email Template
-  „Terminbestätigung Besichtigung“ (Fixture) in die Email Queue (ohne E-Mail-Konto „Not Sent“,
+  „Terminbestätigung Besichtigung“ (bis Review Epic 1 als Fixture) in die Email Queue (ohne E-Mail-Konto „Not Sent“,
   kein Versand), Button „Bestätigung anzeigen/kopieren“ (Text kopieren, als Textdatei
   speichern, erneut in die Warteschlange). Whitelist `corevatis_erpnext.crm.termin.*`, Rollen
   Büro/Meister.
@@ -56,14 +84,14 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 - Web Form „Kostenlose Einschätzung“ (Aufgabe 1.2, Route `/kostenlose-einschaetzung`):
   Gast-Anfrage → Lead (`utm_source` „Website“, `cv_quelle` „Web Form“, Symptome,
-  Beschreibung als CRM-Notiz) mit bis zu 3 Fotos (JPG/PNG/HEIC nach Inhalt, je ≤ 10 MiB)
+  Beschreibung im Feld `cv_beschreibung`) mit bis zu 3 Fotos (JPG/PNG/HEIC nach Inhalt, je ≤ 10 MiB)
   als **private** Dateien am Lead (mit `frappe_s3_attachment` im Bucket). `accept` per
   `override_whitelisted_methods` (andere Web Forms unverändert): Honeypot, Pflicht-
   Zustimmung Datenschutz, Rate-Limit je Client-IP (nur Frappes `request_ip`, per `ipaddress` geprüft; `cv_webform_rate_limit`/`_window`) und global je Formular (`cv_webform_rate_limit_global`, 100 angenommene je Stunde),
   `upload_file` bleibt für Gäste gesperrt. Einbettung per iframe (`?embed=1`, Höhe per
   `postMessage`), `frame-ancestors` nur für dieses Formular aus
   `cv_webform_embedding_domains`. Patch `v0_2.webform_einschaetzung`: UTM Source
-  „Website“, Lead-Dubletten per E-Mail erlaubt.
+  „Website“ (setzte bis Review Epic 1 auch „Lead-Dubletten per E-Mail erlauben“, siehe E-2).
 - `corevatis_erpnext.setup.list_templates()` (Allowlist der Vorlagen für das
   Onboarding, Aufgabe 0.7); Vorlagennamen nur noch `^[_a-z0-9-]{1,64}$`, kein Pfad
   außerhalb von `templates/` (Härtung gegen Pfad-Traversal über `extends`/`template`).

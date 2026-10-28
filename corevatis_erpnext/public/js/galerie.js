@@ -56,6 +56,35 @@ frappe.provide("corevatis_erpnext");
 		return node;
 	}
 
+	// Gleiche Liste wie crm/galerie.py BILD_ENDUNGEN: kein SVG (aktiver Inhalt auf der
+	// Site-Origin), „Original öffnen“ nur für diese Typen (Review Epic 1, E-11)
+	const BILD_ENDUNGEN = new Set(["jpg", "jpeg", "png", "gif", "webp", "heic"]);
+
+	// Entscheidend ist nur die Ziel-URL (Pfad ohne Query/Fragment; beim S3-Download der
+	// Parameter file_name, nach dem der Server Typ und inline/attachment wählt) - nicht der
+	// angezeigte Dateiname. Gleiche Regel wie crm/galerie.py endung_ziel.
+	function endung_ziel(file_url) {
+		let url;
+		try {
+			url = new URL(String(file_url || ""), window.location.origin);
+		} catch (e) {
+			return "";
+		}
+		if (url.origin !== window.location.origin) return "";
+		let name = decodeURIComponent(url.pathname);
+		if (name.startsWith("/api/method/frappe_s3_attachment.")) {
+			name = url.searchParams.get("file_name") || "";
+		} else {
+			name = name.split("/").pop();
+		}
+		const teile = name.split(".");
+		return teile.length > 1 ? teile.pop().toLowerCase() : "";
+	}
+
+	function erlaubt(bild) {
+		return BILD_ENDUNGEN.has(endung_ziel(bild.file_url));
+	}
+
 	function datum(bild) {
 		return bild.creation ? frappe.datetime.str_to_user(bild.creation) : "";
 	}
@@ -100,7 +129,13 @@ frappe.provide("corevatis_erpnext");
 			const bild = bilder[index];
 			img.src = bild.file_url;
 			img.alt = bild.file_name || "";
-			original.href = bild.file_url;
+			if (erlaubt(bild)) {
+				original.href = bild.file_url;
+				original.hidden = false;
+			} else {
+				original.removeAttribute("href");
+				original.hidden = true;
+			}
 			text.textContent = `${index + 1} / ${bilder.length} · ${unterschrift(bild)}`;
 		}
 		function schliessen() {
@@ -139,7 +174,8 @@ frappe.provide("corevatis_erpnext");
 		zu.focus();
 	}
 
-	function zeichnen(container, bilder) {
+	function zeichnen(container, alle) {
+		const bilder = alle.filter(erlaubt);
 		container.replaceChildren();
 		const wrap = el("div", { class: "cv-galerie" });
 		if (!bilder.length) {
