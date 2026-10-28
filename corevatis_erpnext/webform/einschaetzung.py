@@ -64,6 +64,7 @@ RATE_LIMIT_GLOBAL = 100
 
 _DATAURL = re.compile(r"^data:(?P<mime>[\w.+/-]*)(?:;[\w.+=-]+)*;base64,(?P<b64>[A-Za-z0-9+/=]+)$")
 _HEIF_BRANDS = {b"heic", b"heix", b"hevc", b"hevx", b"heim", b"heis", b"mif1", b"msf1"}
+_EMBED_TEXT_SPLIT = re.compile(r"[\s,;\[\]'\"]+")
 _EMBED_ORIGIN = re.compile(
 	r"^https?://(\*\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*(:\d{1,5})?$"
 )
@@ -404,7 +405,9 @@ def datenschutz_url() -> str:
 def embedding_origins() -> list[str]:
 	value = frappe.local.conf.get("cv_webform_embedding_domains") or []
 	if isinstance(value, str):
-		value = value.split()
+		# Text: Leerzeichen/Komma-getrennt oder eine als Text abgelegte Liste - Press' Site Config
+		# speichert Werte als Text (z. B. "['http://localhost:8080']", Befund mvp-test)
+		value = [o for o in _EMBED_TEXT_SPLIT.split(value) if o]
 	return [o.rstrip("/").lower() for o in value if _EMBED_ORIGIN.match(cstr(o).rstrip("/").lower())]
 
 

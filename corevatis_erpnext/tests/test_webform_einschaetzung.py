@@ -499,6 +499,24 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 				["https://www.example.de", "https://*.example.org", "http://localhost:8080"],
 			)
 
+	def test_embedding_origins_as_text(self):
+		# Press' Site Config legt Listen als Text ab (Befund mvp-test)
+		for value in (
+			"['http://localhost:8080', 'https://www.example.de/']",
+			'["http://localhost:8080", "https://www.example.de"]',
+			"http://localhost:8080 https://www.example.de",
+			"http://localhost:8080,https://www.example.de",
+		):
+			with patch.dict(frappe.local.conf, {"cv_webform_embedding_domains": value}):
+				self.assertEqual(ez.embedding_origins(), ["http://localhost:8080", "https://www.example.de"])
+		with patch.dict(
+			frappe.local.conf,
+			{
+				"cv_webform_embedding_domains": "https://evil.example; script-src * 'unsafe-inline' javascript:x"
+			},
+		):
+			self.assertEqual(ez.embedding_origins(), ["https://evil.example"])
+
 	def test_datenschutz_url(self):
 		for value, expected in (
 			("https://www.example.de/datenschutz", "https://www.example.de/datenschutz"),
