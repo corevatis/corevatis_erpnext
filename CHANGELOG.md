@@ -24,6 +24,9 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 - 2.3: `corevatis_erpnext.katalog.importieren(firma, paket, force)`: idempotenter Import derselben
   CSV-Dateien (Onboarding 0.7), ohne `force` kein Überschreiben abweichender Datensätze;
   `uebersicht` (Kosten/Preise lesen), `list_pakete`.
+- 2.3: Vorlage `00_leistungsregel.csv` mit fünf allgemeinen Leistungsregeln (je Regelart, Standardparameter);
+  nur eingespielt, wenn `corevatis` (Doctype `Leistungsregel`) installiert ist, damit `Item.validate`
+  (2.2) die Regelnamen der Positionen findet.
 - 2.3: CI-Katalog-Prüfung per `bench execute` nach den Tests (0 Änderungen nach dem Data Import).
 
 ### Geändert (Review Epic 1)

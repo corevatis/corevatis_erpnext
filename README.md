@@ -28,7 +28,8 @@ bench --site <site> execute corevatis_erpnext.katalog.importieren --kwargs '{"fi
 bench --site <site> execute corevatis_erpnext.katalog.uebersicht --kwargs '{"firma": "Hülshoff Sanierungstechnik"}'
 ```
 
-Paket `katalog/daten/abdichtung/` (Aufgabe 2.3): acht Data-Import-Vorlagen (CSV, Feldnamen als
+Paket `katalog/daten/abdichtung/` (Aufgabe 2.3): `00_leistungsregel.csv` (fünf allgemeine
+Leistungsregeln, nur mit installiertem `corevatis`) und acht Data-Import-Vorlagen (CSV, Feldnamen als
 Spaltenköpfe) für UOM, Item Group, Price List, Workstation, Operation, Item, Item Price und
 BOM (Kostenkomponente „Lohn Montage“ legt die App selbst an) – im Desk über **Data Import** in der Reihenfolge der
 Dateinamen einspielbar (BOM mit „Submit After Import“) oder per Importer. 48

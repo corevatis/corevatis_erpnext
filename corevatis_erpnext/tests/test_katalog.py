@@ -148,6 +148,22 @@ class TestKatalogVorlagen(UnitTestCase):
 			self.assertEqual(z["uom"], self.items[z["item_code"]]["stock_uom"], z["item_code"])
 			self.assertEqual(z["reference"], "ANNAHME 2.3", z["item_code"])
 
+	def test_leistungsregeln(self):
+		"""Jede an einer Leistung genannte Regel steht in der Regel-Vorlage (für Sites mit corevatis)."""
+		regeln = {z["regel_name"]: z for z in zeilen("00_leistungsregel.csv")}
+		self.assertEqual(set(regeln), set(REGELN))
+		genutzt = {z["cv_leistungsregel"] for z in self.items.values() if z["cv_leistungsregel"]}
+		self.assertLessEqual(genutzt, set(regeln))
+		regelarten = {
+			"wandflaeche_netto": "Wandfläche netto bis Höhe",
+			"laufmeter": "Laufmeter",
+			"grabvolumen": "m³ Grabvolumen",
+			"stueck": "Stück",
+			"pauschale": "Pauschale",
+		}
+		for name, z in regeln.items():
+			self.assertEqual(z["regelart"], regelarten[name])
+
 	def test_stuecklisten_konsistent(self):
 		for item, bom in self.boms.items():
 			self.assertEqual(self.items[item]["is_sales_item"], "1", item)
@@ -210,7 +226,11 @@ class TestKatalogImport(IntegrationTestCase):
 		if not frappe.db.exists("Company", FIRMA):
 			raise AssertionError(f"Firma {FIRMA} fehlt - Site-Template huelshoff vor den Tests anwenden (CI)")
 		if not frappe.db.exists("Item", "IA-05"):
-			cls.data_imports = {datei: cls._data_import(doctype, datei) for doctype, datei in DATEIEN}
+			cls.data_imports = {
+				datei: cls._data_import(doctype, datei)
+				for doctype, datei in DATEIEN
+				if frappe.db.exists("DocType", doctype)  # Leistungsregel nur mit corevatis
+			}
 
 	@classmethod
 	def _data_import(cls, doctype: str, datei: str) -> frappe._dict:
@@ -294,6 +314,8 @@ class TestKatalogImport(IntegrationTestCase):
 			return (tabelle, df.fieldname)
 
 		for doctype, datei in DATEIEN:
+			if not frappe.db.exists("DocType", doctype):
+				continue
 			header, _rows = lese_csv(paket_dir(PAKET) / datei)
 			export_fields: dict[str, list[str]] = {}
 			for spalte in header:
@@ -344,6 +366,8 @@ class TestKatalogImport(IntegrationTestCase):
 			self.assertEqual(ergebnis["changes"], [])
 			self.assertEqual(ergebnis["skipped"], [])
 			self.assertEqual(ergebnis["warnings"], [])
+			if not frappe.db.exists("DocType", "Leistungsregel"):
+				self.assertEqual(len(ergebnis["optional_uebersprungen"]), 1)
 			# 8 UOM + 9 Item Group + 2 Price List + 1 Workstation + 1 Operation
 			# + 80 Item + 80 Item Price + 46 BOM
 			self.assertEqual(ergebnis["unveraendert"], 227)

@@ -36,6 +36,7 @@ PAKET_RE = re.compile(r"^[a-z0-9_-]{1,64}$")
 
 # Reihenfolge = Abhängigkeiten (wie die Nummern der Dateinamen für den Data Import im Desk)
 DATEIEN = (
+	("Leistungsregel", "00_leistungsregel.csv"),
 	("UOM", "01_uom.csv"),
 	("Item Group", "02_item_group.csv"),
 	("Price List", "03_price_list.csv"),
@@ -46,8 +47,14 @@ DATEIEN = (
 	("BOM", "08_bom.csv"),
 )
 
+# Doctypes aus der Kern-App corevatis (nur per Name, kein Import - Lizenzgrenze): die Vorlage
+# wird nur eingespielt, wenn der Doctype auf der Site existiert. Ist corevatis installiert,
+# prüft Item.validate (2.2), dass cv_leistungsregel eine vorhandene Leistungsregel nennt.
+OPTIONAL = {"Leistungsregel"}
+
 # Schlüsselfeld je Doctype (Name des Datensatzes); Item Price und BOM werden gesucht
 SCHLUESSEL = {
+	"Leistungsregel": "regel_name",
 	"UOM": "uom_name",
 	"Item Group": "item_group_name",
 	"Price List": "price_list_name",
@@ -58,6 +65,7 @@ SCHLUESSEL = {
 
 # Felder, die nur informieren (Annahme-Hinweise) und beim Abgleich nicht zählen
 NICHT_VERGLEICHEN = {
+	"Leistungsregel": {"beschreibung"},
 	"UOM": {"description"},
 	"Workstation": {"description"},
 	"Operation": {"description"},
@@ -82,6 +90,7 @@ class Bericht:
 		self.skipped: list[str] = []
 		self.warnings: list[str] = []
 		self.unveraendert = 0
+		self.optional: list[str] = []
 		self.kosten_geaendert = False
 
 	def as_dict(self) -> dict:
@@ -93,6 +102,7 @@ class Bericht:
 			"skipped": self.skipped,
 			"warnings": self.warnings,
 			"unveraendert": self.unveraendert,
+			"optional_uebersprungen": self.optional,
 		}
 
 
@@ -127,6 +137,9 @@ def lese_paket(paket: str, warnings: list[str] | None = None) -> dict[str, list[
 	verzeichnis = paket_dir(paket)
 	out = {}
 	for doctype, datei in DATEIEN:
+		if doctype in OPTIONAL and not frappe.db.exists("DocType", doctype):
+			out[doctype] = []
+			continue
 		header, rows = lese_csv(verzeichnis / datei)
 		out[doctype] = zu_datensaetzen(doctype, header, rows, warnings)
 	return out
@@ -206,6 +219,11 @@ def importieren(firma=None, paket="abdichtung", force=False, commit=True) -> dic
 	bericht = Bericht(paket, firma, force)
 	bericht.warnings.extend(warnings)
 
+	bericht.optional = [
+		f"{doctype} ({datei}): Doctype nicht installiert"
+		for doctype, datei in DATEIEN
+		if doctype in OPTIONAL and not frappe.db.exists("DocType", doctype)
+	]
 	bericht.changes.extend(ensure_grundlagen())
 	_fehlende_einheiten(daten, bericht)
 	for doctype, _datei in DATEIEN:
