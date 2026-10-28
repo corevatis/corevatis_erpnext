@@ -19,7 +19,8 @@ Gäste gesperrt, Dateien kommen nur über dieses Formular (Base64 im ``accept``-
 site_config-Schlüssel (alle optional):
     cv_webform_rate_limit         Einsendungen je IP und Zeitfenster, Standard 10 (0 = aus)
     cv_webform_rate_window        Zeitfenster in Sekunden, Standard 3600
-    cv_webform_rate_limit_global  Einsendungen je Zeitfenster insgesamt, Standard 60 (0 = aus)
+    cv_webform_rate_limit_global  angenommene Einsendungen je Zeitfenster insgesamt, Standard 100
+                                  (0 = aus)
     cv_webform_embedding_domains  erlaubte Einbettungs-Origins (Liste oder durch Leerzeichen
                                   getrennt), z. B. ["https://www.example.de"]; setzt
                                   ``Content-Security-Policy: frame-ancestors`` nur für dieses
@@ -57,7 +58,7 @@ FOTO_FELDER = ("cv_foto_1", "cv_foto_2", "cv_foto_3")
 
 RATE_LIMIT = 10
 RATE_WINDOW = 3600
-RATE_LIMIT_GLOBAL = 60
+RATE_LIMIT_GLOBAL = 100
 
 _DATAURL = re.compile(r"^data:(?P<mime>[\w.+/-]*)(?:;[\w.+=-]+)*;base64,(?P<b64>[A-Za-z0-9+/=]+)$")
 _HEIF_BRANDS = {b"heic", b"heix", b"hevc", b"hevx", b"heim", b"heis", b"mif1", b"msf1"}
@@ -104,6 +105,7 @@ def accept_einschaetzung(data: str | dict):
 
 	fotos = parse_fotos(payload.get(KEY_FOTOS))
 	check_text_lengths(payload)
+	check_global_limit()
 	for key in (KEY_HONEYPOT, KEY_DATENSCHUTZ, KEY_FOTOS, *FOTO_FELDER, "image"):
 		payload.pop(key, None)
 
@@ -123,6 +125,7 @@ def accept_einschaetzung(data: str | dict):
 	finally:
 		frappe.flags.cv_einschaetzung = None
 
+	count_global()
 	attach_fotos(lead, fotos)
 	lead.add_comment(
 		"Info",
@@ -177,37 +180,60 @@ def rate_limit_config() -> tuple[int, int, int]:
 	)
 
 
+def _key(bucket: str):
+	return frappe.cache.make_key(f"cv:webform:{WEB_FORM}:{bucket}")
+
+
 def _count(bucket: str, window: int) -> int:
-	key = frappe.cache.make_key(f"cv:webform:{WEB_FORM}:{bucket}")
+	key = _key(bucket)
 	count = frappe.cache.incrby(key, 1)
 	if count == 1:
 		frappe.cache.expire(key, window)
 	return count
 
 
+def _rate_limit_error():
+	frappe.throw(
+		_("Zu viele Anfragen. Bitte versuchen Sie es später erneut oder rufen Sie uns an."),
+		frappe.RateLimitExceededError,
+	)
+
+
 def check_rate_limit():
-	"""Rate-Limit (zusätzlich zu Frappes eigenem Limit auf ``accept``: 10 je Minute):
-
-	- je Client-IP höchstens ``cv_webform_rate_limit`` Einsendungen im Zeitfenster,
-	- ohne gültige IP ein gemeinsamer Bucket „unbekannt“ mit einem Drittel des Limits,
-	- global je Formular höchstens ``cv_webform_rate_limit_global`` (Rückfallschranke).
-
-	Zählt jeden Versuch, auch abgewiesene. 0 schaltet die jeweilige Grenze ab."""
+	"""Limit je Client-IP (zusätzlich zu Frappes eigenem Limit auf ``accept``: 10 je Minute):
+	höchstens ``cv_webform_rate_limit`` Versuche im Zeitfenster, ohne gültige IP ein gemeinsamer
+	Bucket „unbekannt“ mit einem Drittel des Limits. Zählt jeden Versuch, auch abgewiesene,
+	und lehnt sofort ab - der globale Zähler wird dabei nicht berührt. 0 = aus."""
 	if not getattr(frappe.local, "request", None):
 		return
-	limit, window, limit_global = rate_limit_config()
-	exceeded = False
-	if limit > 0:
-		ip = client_ip()
-		bucket_limit = limit if ip else max(1, limit // 3)
-		exceeded = _count(f"ip:{ip or 'unbekannt'}", window) > bucket_limit
+	limit, window, _global = rate_limit_config()
+	if limit <= 0:
+		return
+	ip = client_ip()
+	bucket_limit = limit if ip else max(1, limit // 3)
+	if _count(f"ip:{ip or 'unbekannt'}", window) > bucket_limit:
+		_rate_limit_error()
+
+
+def check_global_limit():
+	"""Rückfallschranke je Formular: höchstens ``cv_webform_rate_limit_global`` angenommene
+	Einsendungen im Zeitfenster. Wird erst nach IP-Limit, Honeypot, Datenschutz und
+	Fotoprüfung aufgerufen; gezählt wird nur eine tatsächlich angelegte Anfrage
+	(``count_global``) - abgewiesene Versuche einer IP können das Formular so nicht für alle
+	sperren."""
+	if not getattr(frappe.local, "request", None):
+		return
+	_limit, _window, limit_global = rate_limit_config()
+	if limit_global > 0 and cint(frappe.cache.get(_key("global"))) >= limit_global:
+		_rate_limit_error()
+
+
+def count_global():
+	if not getattr(frappe.local, "request", None):
+		return
+	_limit, window, limit_global = rate_limit_config()
 	if limit_global > 0:
-		exceeded = _count("global", window) > limit_global or exceeded
-	if exceeded:
-		frappe.throw(
-			_("Zu viele Anfragen. Bitte versuchen Sie es später erneut oder rufen Sie uns an."),
-			frappe.RateLimitExceededError,
-		)
+		_count("global", window)
 
 
 # ---------------------------------------------------------------------------

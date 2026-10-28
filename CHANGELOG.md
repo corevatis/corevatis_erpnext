@@ -22,7 +22,7 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   Beschreibung als CRM-Notiz) mit bis zu 3 Fotos (JPG/PNG/HEIC nach Inhalt, je ≤ 10 MiB)
   als **private** Dateien am Lead (mit `frappe_s3_attachment` im Bucket). `accept` per
   `override_whitelisted_methods` (andere Web Forms unverändert): Honeypot, Pflicht-
-  Zustimmung Datenschutz, Rate-Limit je Client-IP (nur Frappes `request_ip`, per `ipaddress` geprüft; `cv_webform_rate_limit`/`_window`) und global je Formular (`cv_webform_rate_limit_global`, 60/h),
+  Zustimmung Datenschutz, Rate-Limit je Client-IP (nur Frappes `request_ip`, per `ipaddress` geprüft; `cv_webform_rate_limit`/`_window`) und global je Formular (`cv_webform_rate_limit_global`, 100 angenommene je Stunde),
   `upload_file` bleibt für Gäste gesperrt. Einbettung per iframe (`?embed=1`, Höhe per
   `postMessage`), `frame-ancestors` nur für dieses Formular aus
   `cv_webform_embedding_domains`. Patch `v0_2.webform_einschaetzung`: UTM Source

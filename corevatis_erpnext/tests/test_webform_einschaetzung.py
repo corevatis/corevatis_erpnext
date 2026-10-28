@@ -389,12 +389,34 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 			with patch.object(frappe.local, "request_ip", value, create=True):
 				self.assertEqual(ez.client_ip(), expected)
 
+	def _global_count(self) -> int:
+		return int(frappe.cache.get(frappe.cache.make_key(f"cv:webform:{ez.WEB_FORM}:global")) or 0)
+
 	def test_rate_limit_global(self):
 		self._reset_limits("global", "ip:192.0.2.101", "ip:192.0.2.102", "ip:192.0.2.103")
 		with patch.object(ez, "rate_limit_config", return_value=(100, 60, 2)):
 			self.assertEqual(self.submit(self.payload(cv_fotos=[]), ip="192.0.2.101").status_code, 200)
+			# abgewiesene Einsendungen (Datenschutz, Honeypot) zählen nicht global
+			self.assertEqual(self.submit(self.payload(cv_datenschutz=0), ip="192.0.2.102").status_code, 417)
+			self.assertEqual(self.submit(self.payload(cv_hp="x"), ip="192.0.2.102").status_code, 200)
+			self.assertEqual(self._global_count(), 1)
 			self.assertEqual(self.submit(self.payload(cv_fotos=[]), ip="192.0.2.102").status_code, 200)
-			self.assertEqual(self.submit(self.payload(cv_fotos=[]), ip="192.0.2.103").status_code, 429)
+			blocked = self.payload(cv_fotos=[])
+			self.assertEqual(self.submit(blocked, ip="192.0.2.103").status_code, 429)
+			self.assertEqual(self.leads(blocked["email_id"]), [])
+		self._reset_limits("global")
+
+	def test_blocked_ip_does_not_touch_global_counter(self):
+		ip = "192.0.2.120"
+		self._reset_limits("global", f"ip:{ip}")
+		with patch.object(ez, "rate_limit_config", return_value=(1, 60, 1000)):
+			self.assertEqual(self.submit(self.payload(cv_fotos=[]), ip=ip).status_code, 200)
+			self.assertEqual(self._global_count(), 1)
+			body = {"web_form": ez.WEB_FORM, "data": json.dumps(self.payload(cv_fotos=[]))}
+			for _ in range(50):
+				response = _request("post", ACCEPT_URL, json=body, headers={"X-Forwarded-For": ip})
+				self.assertEqual(response.status_code, 429)
+			self.assertEqual(self._global_count(), 1)
 		self._reset_limits("global")
 
 	def test_guest_upload_file_stays_forbidden(self):
