@@ -6,6 +6,16 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Geändert (Review Epic 2)
+
+- D-1: Bodenabdichtung im Katalog: IA-08 „Innenabdichtung Boden mineralische Dichtschlämme
+  2-lagig“ und IA-09 „… sulfatbeständige Dichtschlämme 3-lagig, drückendes Wasser“ (m², Stückliste,
+  Preis, `ANNAHME 2.3`) mit `cv_leistungsregel` `bodenflaeche`; neue allgemeine Regel
+  `bodenflaeche` (Regelart „Bodenfläche“, braucht `corevatis` mit dieser Regelart) in
+  `00_leistungsregel.csv`. Katalog jetzt 50 Leistungen, 48 Stücklisten. Hohlkehle innen
+  Wand/Boden gab es schon (IA-04, `laufmeter`).
+- D-3: README: Desk-Dialog Data Import nur für System Manager.
+
 ### Hinzugefügt (Epic 2)
 
 - 2.1: `Lead.cv_objekt` (Link auf `Objekt` aus `corevatis`) im Abschnitt „Anfrage“ nach
