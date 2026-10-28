@@ -24,7 +24,9 @@
 		"default_sales_template": "Lieferung oder sonstige Leistung im Inland",
 		"default_purchase_template": "Lieferung aus dem Inland",
 		"default_item_tax_template": "19 %",
-		"item_tax_templates": ["19 %", "7 %", "0 %"]
+		"item_tax_templates": ["19 %", "7 %", "0 %"],
+		"_add_taxes_from_item_tax_template": "Accounts Settings: 0 = das Formular ergänzt keine Steuerzeilen aus der Artikelsteuervorlage. Die deutschen Vorlagen (19 %/7 %) tragen den Satz auch für Vorsteuer-, EU- und § 13b-Konten; mit 1 entstünden im Desk bis zu sechs zusätzliche 19-%-Zeilen je Angebot/Rechnung. Maßgeblich sind die Zeilen der Verkaufs-/Einkaufsvorlage.",
+		"add_taxes_from_item_tax_template": 0
 	},
 	"naming_series": {
 		"Quotation": {"series": "ANG-.YYYY.-"},

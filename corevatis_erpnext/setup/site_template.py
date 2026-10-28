@@ -356,6 +356,13 @@ def _ensure_taxes(cfg: dict, company: str, report: Report) -> None:
 		setup_taxes_and_charges(company, cfg["company"]["country"])
 		report.change("Steuern", "Steuervorlagen aus ERPNext (country_wise_tax.json) angelegt")
 
+	if "add_taxes_from_item_tax_template" in spec:
+		wanted = cint(spec["add_taxes_from_item_tax_template"])
+		current = cint(frappe.db.get_single_value("Accounts Settings", "add_taxes_from_item_tax_template"))
+		if current != wanted:
+			frappe.db.set_single_value("Accounts Settings", "add_taxes_from_item_tax_template", wanted)
+			report.change("Steuern", f"Accounts Settings add_taxes_from_item_tax_template={wanted}")
+
 	for doctype, title in (
 		("Sales Taxes and Charges Template", spec.get("default_sales_template")),
 		("Purchase Taxes and Charges Template", spec.get("default_purchase_template")),
@@ -810,6 +817,13 @@ def _verify(cfg: dict) -> dict:
 					"Item Tax Template Detail", {"parent": name, "tax_type": accounts[key]}, "tax_rate"
 				)
 				check(f"{name}: {numbers[key]} = {rate} %", got is not None and float(got) == rate, str(got))
+		if "add_taxes_from_item_tax_template" in taxes:
+			got = cint(frappe.db.get_single_value("Accounts Settings", "add_taxes_from_item_tax_template"))
+			check(
+				"Accounts Settings add_taxes_from_item_tax_template",
+				got == cint(taxes["add_taxes_from_item_tax_template"]),
+				str(got),
+			)
 		default_title = taxes.get("default_item_tax_template")
 		if default_title:
 			template = frappe.db.get_value("Item Tax Template", {"company": company, "title": default_title})
