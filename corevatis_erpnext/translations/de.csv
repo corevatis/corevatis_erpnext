@@ -1,2 +1,24 @@
 Corevatis ERPNext,Corevatis ERPNext
 ERPNext adapter for Corevatis,ERPNext-Adapter für Corevatis
+Inquiry,Anfrage
+Problem Description,Problembeschreibung
+Property Address,Objektadresse
+"Address of the property, if different from the customer address","Adresse des Objekts, falls abweichend von der Kundenadresse"
+Urgency,Dringlichkeit
+Inquiry Source,Quelle der Anfrage
+"e.g. Web Form, Telefon, WhatsApp, Empfehlung, Google","z. B. Web Form, Telefon, WhatsApp, Empfehlung, Google"
+Trade Checklist,Gewerke-Checkliste
+Property Type,Objekttyp
+Building Component,Bauteil
+Symptoms,Symptome
+Damp Walls,feuchte Wände
+Mould,Schimmel
+Salt Efflorescence,Salzausblühungen
+Water after Rain,Wasser nach Regen
+Musty Odour,Geruch
+Other Symptom,Sonstiges
+"One symptom per line; filled from the checkboxes, free text allowed","Ein Symptom je Zeile; wird aus den Checkboxen gefüllt, Freitext möglich"
+Photos,Fotos
+Photo 1,Foto 1
+Photo 2,Foto 2
+Photo 3,Foto 3
