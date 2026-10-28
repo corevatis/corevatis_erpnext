@@ -69,6 +69,18 @@ class TestTermin(IntegrationTestCase):
 		self.assertEqual((df.fieldtype, df.options), ("Link", "Event"))
 		self.assertEqual(frappe.get_meta("Lead").get_field("cv_galerie").fieldtype, "HTML")
 
+	def test_ort_nur_plz_und_ort(self):
+		# Befund mvp-test: einzeilige Adresse aus dem Web Form landete komplett im Event
+		for adresse, ort in (
+			("Testweg 1, 48143 Münster", "48143 Münster"),
+			("Kellerweg 5\n48143 Münster", "48143 Münster"),
+			("Kellerweg 5, 48143 Münster, Hinterhaus", "48143 Münster"),
+			("Kellerweg 5, Münster", "Münster"),
+			("Münster", "Münster"),
+			("", ""),
+		):
+			self.assertEqual(termin._ort(adresse), ort, adresse)
+
 	def test_event_angelegt_und_verknuepft(self):
 		result = self._anlegen()
 		event = frappe.get_doc("Event", result["event"])
