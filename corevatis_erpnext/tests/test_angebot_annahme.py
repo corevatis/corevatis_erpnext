@@ -122,6 +122,10 @@ class TestAngebotAnnahme(IntegrationTestCase):
 			self.assertEqual(len(auftrag.taxes), len(self.angebot.taxes))
 			self.assertEqual(flt(auftrag.total_taxes_and_charges), 95.0)
 		self.assertEqual(auftrag.cv_titel, "Kellerabdichtung Musterfrau")
+		# Nachprüfung mvp-test: Anfrage am Angebot und im Spiegel am Auftrag, obwohl ERPNext das
+		# Angebot beim Anlegen des Kunden schon umgestellt hat (Customer.update_lead_status)
+		self.assertEqual(frappe.db.get_value("Quotation", self.angebot.name, "cv_lead"), self.lead.name)
+		self.assertEqual(auftrag.cv_lead, self.lead.name)
 
 		# Projekt
 		projekt = frappe.get_doc("Project", r["projekt"])
