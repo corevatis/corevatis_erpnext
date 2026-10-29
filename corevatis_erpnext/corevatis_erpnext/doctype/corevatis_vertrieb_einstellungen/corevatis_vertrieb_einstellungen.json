@@ -1,0 +1,139 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-29 08:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "nachfassen_section",
+  "nachfass_aktiv",
+  "nachfass_tage",
+  "nachfass_zyklen",
+  "nachfass_abgelaufene",
+  "column_break_zuweisung",
+  "nachfass_zuweisung",
+  "nachfass_benutzer",
+  "mail_section",
+  "nachfass_mail_aktiv",
+  "nachfass_email_template"
+ ],
+ "fields": [
+  {
+   "fieldname": "nachfassen_section",
+   "fieldtype": "Section Break",
+   "label": "Quotation Follow-up"
+  },
+  {
+   "fieldname": "nachfass_aktiv",
+   "fieldtype": "Check",
+   "label": "Automatic Follow-up",
+   "default": "1",
+   "description": "Daily job: creates a follow-up task for submitted, open quotations without answer."
+  },
+  {
+   "fieldname": "nachfass_tage",
+   "fieldtype": "Int",
+   "label": "Follow-up after (Days)",
+   "default": "7",
+   "non_negative": 1,
+   "description": "Days after the quotation date (and after the previous follow-up task was closed)."
+  },
+  {
+   "fieldname": "nachfass_zyklen",
+   "fieldtype": "Int",
+   "label": "Maximum Follow-ups per Quotation",
+   "default": "2",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "nachfass_abgelaufene",
+   "fieldtype": "Check",
+   "label": "Also Expired Quotations",
+   "default": "0",
+   "description": "Also follow up quotations whose validity (Valid Till) has passed."
+  },
+  {
+   "fieldname": "column_break_zuweisung",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "nachfass_zuweisung",
+   "fieldtype": "Select",
+   "label": "Assign Follow-up to",
+   "options": "Rolle Büro\nBenutzer",
+   "default": "Rolle Büro",
+   "description": "Rolle Büro: the creator of the quotation if they have the role Büro, otherwise all active users with the role Büro."
+  },
+  {
+   "fieldname": "nachfass_benutzer",
+   "fieldtype": "Link",
+   "label": "Follow-up User",
+   "options": "User",
+   "depends_on": "eval:doc.nachfass_zuweisung=='Benutzer'",
+   "mandatory_depends_on": "eval:doc.nachfass_zuweisung=='Benutzer'"
+  },
+  {
+   "fieldname": "mail_section",
+   "fieldtype": "Section Break",
+   "label": "Follow-up Email"
+  },
+  {
+   "fieldname": "nachfass_mail_aktiv",
+   "fieldtype": "Check",
+   "label": "Queue Follow-up Email",
+   "default": "0",
+   "description": "Puts a follow-up email to the quotation contact into the email queue. Without an outgoing email account nothing is sent (status Not Sent)."
+  },
+  {
+   "fieldname": "nachfass_email_template",
+   "fieldtype": "Link",
+   "label": "Email Template",
+   "options": "Email Template",
+   "depends_on": "eval:doc.nachfass_mail_aktiv",
+   "description": "Empty: “Angebot Nachfassen”"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-29 08:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Corevatis Vertrieb Einstellungen",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "email": 0,
+   "print": 0,
+   "share": 0
+  },
+  {
+   "role": "Büro",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "email": 0,
+   "print": 0,
+   "share": 0
+  },
+  {
+   "role": "Meister",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "email": 0,
+   "print": 0,
+   "share": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "description": "Settings for quotation acceptance and follow-up (Corevatis)"
+}

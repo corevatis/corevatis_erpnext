@@ -38,7 +38,7 @@ class TestEmailVorlagen(IntegrationTestCase):
 		self.assertEqual(template.reference_doctype, "Lead")
 		self.assertEqual(template.subject, self._quelle()["subject"])
 		# zweiter Lauf: nichts zu tun
-		self.assertEqual(ev.ensure_email_templates()["unchanged"], [termin.EMAIL_TEMPLATE])
+		self.assertEqual(ev.ensure_email_templates()["unchanged"], [q["name"] for q in ev.quellen()])
 
 	def test_desk_aenderung_ueberlebt_migrate(self):
 		ev.ensure_email_templates(force=True)
@@ -70,7 +70,7 @@ class TestEmailVorlagen(IntegrationTestCase):
 		quelle = dict(self._quelle(), subject="Geänderter Betreff {{ datum }}")
 		with patch.object(ev, "quellen", return_value=[quelle]):
 			self.assertEqual(ev.ensure_email_templates()["update"], [termin.EMAIL_TEMPLATE])
-			self.assertEqual(ev.ensure_email_templates()["unchanged"], [termin.EMAIL_TEMPLATE])
+			self.assertEqual(ev.ensure_email_templates()["unchanged"], [q["name"] for q in ev.quellen()])
 		self.assertEqual(
 			frappe.db.get_value("Email Template", termin.EMAIL_TEMPLATE, "subject"), quelle["subject"]
 		)

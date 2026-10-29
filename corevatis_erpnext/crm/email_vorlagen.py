@@ -1,4 +1,4 @@
-"""Email Templates der App (Terminbestätigung 1.3) - anlegen und pflegen, ohne Desk-Änderungen
+"""Email Templates der App (Terminbestätigung 1.3, Angebot Nachfassen 4.5) - anlegen und pflegen, ohne Desk-Änderungen
 zu überschreiben (Review Epic 1, E-1).
 
 Bis 0.2 kam die Vorlage als Fixture: Frappe spielt Fixtures bei **jedem** ``migrate`` mit
@@ -30,7 +30,8 @@ from pathlib import Path
 import frappe
 
 VORLAGEN_DIR = Path(__file__).resolve().parent / "vorlagen"
-VORLAGEN = ("terminbestaetigung_besichtigung.json",)
+# Terminbestätigung (1.3), Nachfassen von Angeboten (4.5)
+VORLAGEN = ("terminbestaetigung_besichtigung.json", "angebot_nachfassen.json")
 FELDER = ("reference_doctype", "subject", "use_html", "response", "response_html")
 STATE_PREFIX = "corevatis_erpnext:email_template:"
 FORCE_CONF_KEY = "cv_email_template_force_sync"
