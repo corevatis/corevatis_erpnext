@@ -26,7 +26,7 @@ from frappe import _
 from frappe.utils import add_days, flt, get_datetime, getdate
 
 from corevatis_erpnext.planung import bauablauf
-from corevatis_erpnext.planung.auftrag import auftrag_laden, pruefe_rolle
+from corevatis_erpnext.planung.auftrag import auftrag_laden, pruefe_rolle, pruefe_schreibrechte
 from corevatis_erpnext.planung.einstellungen import einstellungen
 from corevatis_erpnext.planung.positionen import positionen
 
@@ -160,8 +160,11 @@ def freie_tage(firma: str, start) -> set:
 	}
 
 
-def arbeitspakete_anlegen(auftrag, projekt: str, e=None) -> dict:
-	"""Tasks je Verfahren anlegen (ohne Rechte- und Sperrprüfung - Aufrufer: Hook, Whitelist)."""
+def arbeitspakete_anlegen(auftrag, projekt: str, e=None, ignore_permissions: bool = True) -> dict:
+	"""Tasks je Verfahren anlegen (ohne Rollen- und Sperrprüfung - Aufrufer: Hook, Whitelist).
+
+	``ignore_permissions`` nur im Submit-Hook; die Whitelist legt mit den Rechten des Benutzers an.
+	"""
 	e = e or einstellungen()
 	hinweise: list[str] = []
 	vorhanden = bestehende_arbeitspakete(auftrag.name)
@@ -231,7 +234,7 @@ def arbeitspakete_anlegen(auftrag, projekt: str, e=None) -> dict:
 				"depends_on": [{"task": vorher}] if vorher else [],
 			}
 		)
-		task.flags.ignore_permissions = True
+		task.flags.ignore_permissions = ignore_permissions
 		task.insert()
 		namen.append(task.name)
 		vorher = task.name
@@ -281,6 +284,7 @@ def tasks_erzeugen(sales_order: str | None = None, project: str | None = None) -
 	auftrag, projekt = auftrag_laden(sales_order, project, hinweise)
 	if not auftrag or not projekt:
 		return _ergebnis(auftrag, projekt, [], False, hinweise)
-	ergebnis = arbeitspakete_anlegen(auftrag, projekt)
+	pruefe_schreibrechte(projekt, "Task")
+	ergebnis = arbeitspakete_anlegen(auftrag, projekt, ignore_permissions=False)
 	ergebnis["hinweise"] = hinweise + ergebnis["hinweise"]
 	return ergebnis

@@ -33,6 +33,7 @@ FIRMA = "Hülshoff Sanierungstechnik"
 BUERO = "cv-planung-buero@example.com"
 MEISTER = "cv-planung-meister@example.com"
 MONTEUR = "cv-planung-monteur@example.com"
+BUERO_NUR = "cv-planung-buero-nur@example.com"
 TRENNER = " \u2013 "
 
 # Montageminuten je Einheit (Stückliste 2.3) x Menge (Testaufmaß 4.1)
@@ -90,7 +91,8 @@ class TestPlanung(IntegrationTestCase):
 		from corevatis_erpnext.planung.felder import ensure_planung_felder
 
 		ensure_planung_felder()
-		make_user(BUERO, "Büro Planung", ["Büro", "Sales User", "Projects User"])
+		make_user(BUERO, "Büro Planung", ["Büro", "Sales User", "Projects User", "Stock User"])
+		make_user(BUERO_NUR, "Büro ohne Zusatzrollen", ["Büro"])
 		make_user(MEISTER, "Meister Planung", ["Meister", "Projects Manager"])
 		make_user(MONTEUR, "Monteur Planung", ["Monteur"])
 
@@ -373,6 +375,54 @@ class TestPlanung(IntegrationTestCase):
 				methode(sales_order=r["auftrag"])
 		frappe.set_user("Administrator")
 		self.assertEqual(frappe.db.count("Task", {"cv_auftrag": r["auftrag"]}), 4)
+
+	def test_schreibrechte_fuer_buttons(self):
+		"""Security-Review: Buttons/Whitelist legen mit den Rechten des Benutzers an - Rolle Büro ohne
+		Task-Anlegerecht → 403, ohne Material-Request-Recht (kein Stock User) → 403."""
+		frappe.db.set_single_value(
+			EINSTELLUNGEN, {"arbeitspakete_automatisch": 0, "materialbedarf_automatisch": 0}
+		)
+		r = self.auftrag()
+		rechte = frappe.get_all(
+			"Custom DocPerm", filters={"parent": "Task", "role": "Büro", "permlevel": 0}, pluck="name"
+		)
+		self.assertTrue(rechte, "Site-Template: Büro hat Rechte an Task")
+		for name in rechte:
+			frappe.db.set_value("Custom DocPerm", name, "create", 0)
+		frappe.clear_cache(doctype="Task")
+		self.addCleanup(frappe.clear_cache, doctype="Task")
+		frappe.set_user(BUERO_NUR)
+		for methode in (planung.tasks_erzeugen, planung.materialbedarf_erzeugen):
+			with self.subTest(methode=methode.__name__), self.assertRaises(frappe.PermissionError):
+				methode(sales_order=r["auftrag"])
+		frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.count("Task", {"cv_auftrag": r["auftrag"]}), 0)
+		self.assertEqual(frappe.db.count("Material Request", {"cv_auftrag": r["auftrag"]}), 0)
+		# mit Rechten (Projects User, Stock User): angelegt, Besitzer ist der Benutzer
+		frappe.set_user(BUERO)
+		t = planung.tasks_erzeugen(sales_order=r["auftrag"])
+		m = planung.materialbedarf_erzeugen(sales_order=r["auftrag"])
+		self.assertTrue(t["neu"] and m["neu"])
+		self.assertEqual(frappe.db.get_value("Material Request", m["material_request"], "owner"), BUERO)
+
+	def test_fremdes_projekt_zum_auftrag(self):
+		r = self.auftrag()
+		fremd = frappe.get_doc(
+			{
+				"doctype": "Project",
+				"project_name": f"Fremd {frappe.generate_hash(length=6)}",
+				"company": FIRMA,
+			}
+		).insert()
+		frappe.set_user(BUERO)
+		for methode in (planung.tasks_erzeugen, planung.materialbedarf_erzeugen):
+			with self.subTest(methode=methode.__name__), self.assertRaises(planung.auftrag.PlanungFehler):
+				methode(sales_order=r["auftrag"], project=fremd.name)
+		frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.count("Task", {"project": fremd.name}), 0)
+		# passendes Projekt zusammen mit dem Auftrag ist erlaubt
+		frappe.set_user(BUERO)
+		self.assertFalse(planung.tasks_erzeugen(sales_order=r["auftrag"], project=r["projekt"])["neu"])
 
 	def test_ohne_projekt_nur_hinweis_und_ohne_stueckliste(self):
 		_angebot.ensure_artikel()

@@ -27,7 +27,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, getdate, today
 
-from corevatis_erpnext.planung.auftrag import PlanungFehler, auftrag_laden, pruefe_rolle
+from corevatis_erpnext.planung.auftrag import PlanungFehler, auftrag_laden, pruefe_rolle, pruefe_schreibrechte
 from corevatis_erpnext.planung.einstellungen import TYP_UMLAGERUNG, einstellungen
 from corevatis_erpnext.planung.positionen import positionen
 
@@ -92,8 +92,11 @@ def bestand(item_code: str, lager_name: str) -> float:
 	return flt(frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": lager_name}, "projected_qty"))
 
 
-def materialbedarf_anlegen(auftrag, projekt: str, e=None) -> dict:
-	"""Material Request (Entwurf) anlegen (ohne Rechte- und Sperrprüfung - Aufrufer: Hook, Whitelist)."""
+def materialbedarf_anlegen(auftrag, projekt: str, e=None, ignore_permissions: bool = True) -> dict:
+	"""Material Request (Entwurf) anlegen (ohne Rollen- und Sperrprüfung - Aufrufer: Hook, Whitelist).
+
+	``ignore_permissions`` nur im Submit-Hook; die Whitelist legt mit den Rechten des Benutzers an.
+	"""
 	e = e or einstellungen()
 	hinweise: list[str] = []
 	vorhanden = bestehender_materialbedarf(auftrag.name)
@@ -171,7 +174,7 @@ def materialbedarf_anlegen(auftrag, projekt: str, e=None) -> dict:
 			"items": items,
 		}
 	)
-	mr.flags.ignore_permissions = True
+	mr.flags.ignore_permissions = ignore_permissions
 	mr.insert()
 	return _ergebnis(auftrag, projekt, mr.name, True, zeilen, hinweise)
 
@@ -219,6 +222,7 @@ def materialbedarf_erzeugen(sales_order: str | None = None, project: str | None 
 	auftrag, projekt = auftrag_laden(sales_order, project, hinweise)
 	if not auftrag or not projekt:
 		return _ergebnis(auftrag, projekt, None, False, [], hinweise)
-	ergebnis = materialbedarf_anlegen(auftrag, projekt)
+	pruefe_schreibrechte(projekt, "Material Request")
+	ergebnis = materialbedarf_anlegen(auftrag, projekt, ignore_permissions=False)
 	ergebnis["hinweise"] = hinweise + ergebnis["hinweise"]
 	return ergebnis

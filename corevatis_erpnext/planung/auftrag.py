@@ -77,7 +77,17 @@ def auftrag_laden(sales_order: str | None, project: str | None, hinweise: list[s
 			).format(auftrag.name),
 			PlanungFehler,
 		)
-	projekt = project or projekt_zum_auftrag(auftrag)
+	projekt = projekt_zum_auftrag(auftrag)
+	if (
+		project
+		and project != projekt
+		and frappe.db.get_value("Project", project, "sales_order") != auftrag.name
+	):
+		# Security-Review: kein fremdes Projekt zum Auftrag
+		frappe.throw(
+			_("Projekt {0} gehört nicht zum Auftrag {1}.").format(project, auftrag.name), PlanungFehler
+		)
+	projekt = project or projekt
 	if not projekt:
 		hinweise.append(
 			_("Auftrag {0} hat kein Projekt - bitte zuerst ein Projekt anlegen (Angebot annehmen).").format(
@@ -85,3 +95,11 @@ def auftrag_laden(sales_order: str | None, project: str | None, hinweise: list[s
 			)
 		)
 	return auftrag, projekt
+
+
+def pruefe_schreibrechte(projekt: str, doctype: str) -> None:
+	"""Buttons/Whitelist (Security-Review): Schreibrecht am Projekt (Termine, Projektende) und
+	Anlegerecht für die neuen Belege. Am Auftrag wird nichts geändert - Leserecht genügt dort
+	(Meister liest Aufträge nur, Rollenmatrix 0.4). Der Submit-Hook prüft nicht (kontrollierter Weg)."""
+	frappe.has_permission("Project", "write", projekt, throw=True)
+	frappe.has_permission(doctype, "create", throw=True)
