@@ -361,8 +361,9 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		self.assertEqual(len(texte), seiten)
 		alles = "\n".join(texte)
 		self.assertNotIn("None", alles)
-		self.assertIn(f"Seite 1 von {seiten}", texte[0].replace("\n", " "))
-		self.assertIn(f"Seite {seiten} von {seiten}", texte[-1].replace("\n", " "))
+		# „Seite x von y“ auf jeder Seite (Fußzeile; Text kommt mit Umbrüchen aus dem PDF)
+		for nr, text in enumerate(texte, start=1):
+			self.assertIn(f"Seite {nr} von {seiten}", " ".join(text.split()))
 		self.assertIn(doc.get_formatted("net_total"), alles)
 		self.assertIn(doc.get_formatted("grand_total"), alles)
 		self.assertIn(doc.taxes[0].get_formatted("tax_amount"), alles)
@@ -380,7 +381,7 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 	def test_kurz_eine_seite(self):
 		# kurzes Angebot (Feuchtemessung): kurze Vorbemerkung und Gewährleistung
 		doc = self.angebot(
-			[self.position("AL-01", 1), self.position("AL-03", 4)],
+			[self.position("AL-03", 4)],
 			cv_vorbemerkung="<p>Sehr geehrte Frau Feucht, wie besprochen bieten wir Ihnen an:</p>",
 			cv_garantiehinweis="Gewährleistung nach den gesetzlichen Bestimmungen (§ 634a BGB).",
 		)
