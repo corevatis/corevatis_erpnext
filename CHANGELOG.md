@@ -6,6 +6,24 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Neu (4.3, Angebotsdruck)
+
+- Textbausteine (Terms and Conditions, `angebot.textbausteine`, create-if-missing in
+  `after_install`/`after_migrate` und im Site-Template): „Angebot Standard“ (Zahlungsbedingungen,
+  Gültigkeit), „Abdichtung Standard“ (Vorbemerkung), „Gewährleistung Abdichtung“
+  (Garantiehinweis). Inhalt ist eine fachliche Annahme, kein Rechtsrat. Eine unveränderte
+  „Angebot Standard“ in der Fassung aus 4.1 (dort Vorbemerkung) wird ersetzt.
+- Quotation `before_insert`: leere `tc_name`/`terms` (Zahlungsbedingungen der Firma),
+  `cv_vorbemerkung`, `cv_garantiehinweis` aus den Bausteinen; der Generator (4.1) nutzt
+  dieselben Bausteine.
+- Quotation `before_validate`: `cv_eventualposition`/`cv_alternativposition` setzen
+  `is_alternative` (nicht in Summe und Steuer, wie im Druck ausgewiesen).
+- Site-Template: `print_formats_replace` (eigene Formate, die ein Kundentemplate ablösen darf),
+  Abschnitt `angebot` (`default_selling_terms` der Firma); Hülshoff: Standardformat Quotation
+  „Angebot Corevatis“ (erpnext_druckformate ≥ `ae3b4ae`). `verify_site_template` prüft beides.
+- Tests: Druck „Angebot Corevatis“ mit 1, 2 und 6 Seiten (wkhtmltopdf), Summen, Seitenzahlen,
+  kein „None“, Maskierung; CI mit wkhtmltopdf 0.12.6 und Muster-PDFs als Artefakt.
+
 ### Hinzugefügt (4.1, Angebot aus dem Aufmaß)
 
 - Custom Fields am Angebot (`angebot.felder`, idempotent in `after_install`/`after_migrate`):
