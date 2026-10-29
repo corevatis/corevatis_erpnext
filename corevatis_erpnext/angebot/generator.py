@@ -30,6 +30,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, cint, flt, nowdate
 
+from corevatis_erpnext.angebot import textbausteine
 from corevatis_erpnext.angebot.felder import MODULE
 
 # Vertrag mit corevatis (Doctype-Namen, Fassade) - geprüft in corevatis/tests/test_erpnext_contract.py
@@ -53,22 +54,9 @@ LEISTUNG_SCHLUESSEL = (
 ROLLEN = ("Büro", "Meister", "System Manager")
 STEUERVORLAGE = "Umsatzsteuer 19 %"
 PREISLISTE = "Standard-Verkauf"
-TEXTBAUSTEIN = "Angebot Standard"
 PLATZHALTER_KUNDE = "Interessent"
 GUELTIGKEIT_TAGE = 30
 DATA_LAENGE = 140
-
-VORBEMERKUNG = (
-	"<p>Sehr geehrte Damen und Herren,</p>"
-	"<p>vielen Dank für Ihre Anfrage und die Gelegenheit zur Besichtigung. Auf Grundlage unseres "
-	"Aufmaßes vor Ort bieten wir Ihnen die nachstehenden Leistungen an. Mengen sind nach Aufmaß "
-	"ermittelt; abgerechnet wird nach tatsächlich ausgeführter Menge.</p>"
-)
-GARANTIEHINWEIS = (
-	"Die Abdichtungsarbeiten führen wir nach den Verarbeitungsrichtlinien des Systemherstellers "
-	"aus. Es gilt die gesetzliche Gewährleistung; Eventual- und Alternativpositionen werden nur "
-	"nach gesonderter Beauftragung ausgeführt."
-)
 
 
 class AngebotFehler(frappe.ValidationError):
@@ -292,18 +280,9 @@ def _steuervorlage(firma: str) -> str | None:
 
 
 def ensure_textbaustein() -> str:
-	"""Terms and Conditions „Angebot Standard“ (Vorbemerkung) anlegen, falls sie fehlt."""
-	if not frappe.db.exists("Terms and Conditions", TEXTBAUSTEIN):
-		frappe.get_doc(
-			{
-				"doctype": "Terms and Conditions",
-				"title": TEXTBAUSTEIN,
-				"terms": VORBEMERKUNG,
-				"selling": 1,
-				"buying": 0,
-			}
-		).insert(ignore_permissions=True)
-	return TEXTBAUSTEIN
+	"""Textbausteine des Angebots (4.3) anlegen, falls sie fehlen; Rückgabe: Name der Vorbemerkung."""
+	textbausteine.ensure_textbausteine()
+	return textbausteine.VORBEMERKUNG_STANDARD
 
 
 def _titel(aufmass, positionen: list[dict]) -> str:
@@ -374,10 +353,9 @@ def angebot_fuellen(doc, aufmass, kalkulation: dict, quotation_to: str, party: s
 	)
 	if frappe.db.exists("Price List", PREISLISTE):
 		doc.selling_price_list = PREISLISTE
-	if not doc.get("cv_vorbemerkung"):
-		doc.cv_vorbemerkung = frappe.db.get_value("Terms and Conditions", ensure_textbaustein(), "terms")
-	if not doc.get("cv_garantiehinweis"):
-		doc.cv_garantiehinweis = GARANTIEHINWEIS
+	# Vorbemerkung und Garantiehinweis aus den Textbausteinen (4.3), wie beim Anlegen im Desk
+	ensure_textbaustein()
+	textbausteine.texte_einsetzen(doc)
 	doc.set("items", [])
 	for p in kalkulation["positionen"]:
 		doc.append("items", _zeile(p))

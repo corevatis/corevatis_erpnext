@@ -221,6 +221,14 @@ class TestTextbausteine(AngebotsdruckBasis):
 		finally:
 			frappe.db.set_value("Terms and Conditions", doc.name, "terms", alt)
 
+	def test_alte_fassung_angebot_standard_wird_ersetzt(self):
+		# 4.1 hatte „Angebot Standard“ als Vorbemerkung angelegt
+		name = tb.ANGEBOT_STANDARD
+		frappe.db.set_value("Terms and Conditions", name, "terms", tb.ALTE_FASSUNGEN[name])
+		self.assertEqual(tb.ensure_textbausteine(), [name])
+		self.assertIn("Zahlungsbedingungen", frappe.db.get_value("Terms and Conditions", name, "terms"))
+		self.assertEqual(tb.ensure_textbausteine(), [])
+
 	def test_firma_hat_zahlungsbedingungen(self):
 		self.assertEqual(
 			frappe.db.get_value("Company", self.company, "default_selling_terms"), tb.ANGEBOT_STANDARD

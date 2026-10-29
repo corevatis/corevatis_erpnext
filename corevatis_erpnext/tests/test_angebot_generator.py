@@ -20,7 +20,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, flt, getdate, nowdate
 
-from corevatis_erpnext.angebot import generator
+from corevatis_erpnext.angebot import generator, textbausteine
 from corevatis_erpnext.katalog.importer import importieren
 from corevatis_erpnext.tests._helpers import make_lead, make_user
 
@@ -217,8 +217,12 @@ class TestAngebotGenerator(IntegrationTestCase):
 		self.assertIn("Testweg 4, 48143 Münster", q.cv_titel)
 		self.assertIn("Innenabdichtung", q.cv_titel)
 		self.assertIn("Aufmaßes vor Ort", q.cv_vorbemerkung)
-		self.assertEqual(frappe.db.get_value("Terms and Conditions", generator.TEXTBAUSTEIN, "selling"), 1)
-		self.assertEqual(q.cv_garantiehinweis, generator.GARANTIEHINWEIS)
+		# Textbausteine aus 4.3: Vorbemerkung „Abdichtung Standard“, Garantie „Gewährleistung Abdichtung“
+		self.assertEqual(
+			frappe.db.get_value("Terms and Conditions", textbausteine.VORBEMERKUNG_STANDARD, "selling"), 1
+		)
+		self.assertIn("§ 634a BGB", q.cv_garantiehinweis)
+		self.assertEqual(q.tc_name, textbausteine.ANGEBOT_STANDARD)
 		self.assertEqual(json.loads(q.cv_kalkulation_json)["summen"]["netto"], "4009.12")
 		# Positions-Felder
 		ia05 = next(z for z in q.items if z.item_code == "IA-05")

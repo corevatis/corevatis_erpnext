@@ -50,11 +50,31 @@ def baustein_text(datei: str) -> str:
 	return text
 
 
+# Erste Fassung aus dem Generator 4.1: „Angebot Standard“ war dort die Vorbemerkung. Ab 4.3 ist
+# „Angebot Standard“ der Baustein für Zahlungsbedingungen (Company.default_selling_terms), die
+# Vorbemerkung heißt „Abdichtung Standard“. Eine unveränderte Kopie dieser Fassung wird ersetzt.
+ALTE_FASSUNGEN = {
+	ANGEBOT_STANDARD: (
+		"<p>Sehr geehrte Damen und Herren,</p>"
+		"<p>vielen Dank für Ihre Anfrage und die Gelegenheit zur Besichtigung. Auf Grundlage unseres "
+		"Aufmaßes vor Ort bieten wir Ihnen die nachstehenden Leistungen an. Mengen sind nach Aufmaß "
+		"ermittelt; abgerechnet wird nach tatsächlich ausgeführter Menge.</p>"
+	),
+}
+
+
 def ensure_textbausteine() -> list[str]:
-	"""Fehlende Bausteine anlegen (idempotent, vorhandene bleiben unverändert)."""
+	"""Fehlende Bausteine anlegen (idempotent). Vorhandene bleiben unverändert - außer einer
+	unveränderten alten Fassung aus ``ALTE_FASSUNGEN``. Rückgabe: angelegte/ersetzte Titel."""
 	angelegt = []
 	for titel, datei in TEXTBAUSTEINE.items():
 		if frappe.db.exists("Terms and Conditions", titel):
+			alt = ALTE_FASSUNGEN.get(titel)
+			if alt and cstr(frappe.db.get_value("Terms and Conditions", titel, "terms")).strip() == alt:
+				doc = frappe.get_doc("Terms and Conditions", titel)
+				doc.terms = baustein_text(datei)
+				doc.save(ignore_permissions=True)
+				angelegt.append(titel)
 			continue
 		frappe.get_doc(
 			{
@@ -93,6 +113,12 @@ def standard_texte(doc, method=None) -> None:
 			doc.tc_name = standard
 			doc.terms = text
 
+	texte_einsetzen(doc)
+
+
+def texte_einsetzen(doc) -> None:
+	"""Leere ``cv_vorbemerkung``/``cv_garantiehinweis`` aus den Bausteinen füllen (auch vom
+	Generator 4.1 genutzt)."""
 	meta = frappe.get_meta(doc.doctype)
 	if (
 		meta.has_field("cv_vorbemerkung")
