@@ -425,7 +425,9 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 			lambda n: self.angebot(self.positionen_mittel(n), cv_titel="Kellerabdichtung von innen"),
 			2,
 			"mittel",
-			1,
+			# ab 0 Wandpositionen: letzte Position und Zwischensumme rücken zusammen auf die
+			# Folgeseite (P-2), das Angebot wird dadurch eher eine Seite länger
+			0,
 			20,
 		)
 		self.pruefe(doc, 2, texte)
