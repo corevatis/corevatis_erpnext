@@ -31,6 +31,10 @@ def after_install() -> None:
 	ensure_lead_objekt_field()
 	# Item: Gewerk, Verfahren, Leistungsregel (2.2)
 	ensure_item_fields()
+	# Angebot (4.1): Felder an Quotation/Quotation Item (Aufmaß, Objekt, Kalkulation, Herkunft)
+	from corevatis_erpnext.angebot.felder import ensure_angebot_felder
+
+	ensure_angebot_felder()
 	# Katalog (2.3): Kostenkomponente der Workstation „Montage“ (kein Data Import möglich)
 	from corevatis_erpnext.katalog.importer import ensure_grundlagen
 
@@ -57,6 +61,10 @@ def after_migrate() -> None:
 	ensure_lead_objekt_field()
 	# Item: Gewerk, Verfahren, Leistungsregel (2.2)
 	ensure_item_fields()
+	# Angebot (4.1): Felder an Quotation/Quotation Item
+	from corevatis_erpnext.angebot.felder import ensure_angebot_felder
+
+	ensure_angebot_felder()
 	# Katalog (2.3): Kostenkomponente „Lohn Montage“ für die Workstation-Vorlage
 	from corevatis_erpnext.katalog.importer import ensure_grundlagen
 

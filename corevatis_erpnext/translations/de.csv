@@ -40,3 +40,30 @@ Quantity rule {0} does not exist.,Leistungsregel {0} existiert nicht.
 Unknown quantity rule,Unbekannte Leistungsregel
 Not permitted to use quantity rules.,Keine Berechtigung für Leistungsregeln.
 Get Items From,Positionen übernehmen aus
+Corevatis Offer,Corevatis-Angebot
+Offer Title,Angebotstitel
+"Heading of the offer, e.g. object and remediation method","Überschrift des Angebots, z. B. Objekt und Verfahren"
+Remediation Property,Objekt
+Name of the Objekt (Corevatis),Name des Objekts (Corevatis)
+Source Measurement,Aufmaß
+Name of the Aufmaß (Corevatis) the offer was generated from,"Name des Aufmaßes (Corevatis), aus dem das Angebot erzeugt wurde"
+Costing Scheme,Kalkulationsschema
+Name of the Kalkulationsschema (Corevatis) used for the prices,"Name des Kalkulationsschemas (Corevatis), mit dem die Preise gerechnet wurden"
+Generated from Measurement,Aus Aufmaß erzeugt
+Offer Texts,Angebotstexte
+Offer Introduction,Vorbemerkung
+Warranty Note,Garantiehinweis
+Costing (Corevatis),Kalkulation (Corevatis)
+Costing (JSON),Kalkulation (JSON)
+"Complete calculation of the quote engine: quantities, costs, surcharges, prices","Vollständige Kalkulation der Angebotsengine: Mengen, Kosten, Zuschläge, Preise"
+Origin (Corevatis),Herkunft (Corevatis)
+Measured Room,Raum
+Building Component,Bauteil
+Measurement Row,Aufmaßposition
+Name of the Aufmaßposition row(s),Name der Aufmaßzeile(n)
+Quantity Derivation,Mengenherkunft
+"Quantity rule, formula and rounding","Mengenregel, Formel und Rundung"
+Unit Production Cost,Einzelkosten
+Material and labour per unit without surcharges,Material und Lohn je Einheit ohne Zuschläge
+Optional Position,Eventualposition
+Alternative Position,Alternativposition
