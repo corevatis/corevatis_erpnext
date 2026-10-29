@@ -87,6 +87,7 @@ doc_events = {
 	# Befunde mvp-test: Objekt eines Leads am Lead eintragen (Lead.cv_objekt, 2.1);
 	# der Doctype Objekt kommt aus corevatis - ohne Kern greifen die Hooks nie
 	"Objekt": {
+		"validate": "corevatis_erpnext.vor_ort.lead_objekt.objekt_kunde_pruefen",
 		"after_insert": "corevatis_erpnext.vor_ort.lead_objekt.objekt_an_lead",
 		"on_update": "corevatis_erpnext.vor_ort.lead_objekt.objekt_an_lead",
 	},

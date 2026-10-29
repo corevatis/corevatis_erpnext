@@ -25,7 +25,8 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   ein neues Angebot „Standard Selling“ und alle Positionen standen auf 0,00 €.
 - Angebot: Hinweis beim Speichern, wenn Positionen keinen Preis haben (`angebot.pruefung`).
 - Objekt: ein für einen Lead angelegtes Objekt trägt sich in `Lead.cv_objekt` ein (nur wenn
-  leer); Lead-Formular „Erstellen → Objekt“.
+  leer, nur mit Schreibrecht auf den Lead); `Objekt.validate` prüft Leserecht auf den verknüpften
+  Kunden/Lead (Security-Review, IDOR); Lead-Formular „Erstellen → Objekt“.
 - Arbeitsbereich „Anfragen“ als CRM-Einstieg: Kennzahlen (Neue Anfragen 7 Tage, Offene Termine,
   Angebote offen), Kurzlinks (Neue Anfrage, Offene Anfragen, Kanban, Termine heute, Kalender,
   Angebote, Web Form), Links zu Lead, Chance, Potenzieller Kunde, Kampagne, Kunde, Kontakt,

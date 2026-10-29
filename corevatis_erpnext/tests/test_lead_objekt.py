@@ -64,6 +64,25 @@ class TestLeadObjekt(IntegrationTestCase):
 			}
 		).insert(ignore_permissions=True)
 
+	def _benutzer_ohne_lead_recht(self) -> str:
+		"""Darf Objekte anlegen, hat aber kein Recht auf Leads."""
+		rolle = "_Test Objekt Erfasser"
+		if not frappe.db.exists("Role", rolle):
+			frappe.get_doc({"doctype": "Role", "role_name": rolle, "desk_access": 1}).insert(
+				ignore_permissions=True
+			)
+		meta = frappe.get_doc("DocType", OBJEKT_DOCTYPE)
+		meta.append("permissions", {"role": rolle, "read": 1, "write": 1, "create": 1})
+		meta.save(ignore_permissions=True)
+		email = "cv-test-objekt-erfasser@example.com"
+		if not frappe.db.exists("User", email):
+			frappe.get_doc(
+				{"doctype": "User", "email": email, "first_name": "Objekt Erfasser", "send_welcome_email": 0}
+			).insert(ignore_permissions=True)
+		user = frappe.get_doc("User", email)
+		user.add_roles(rolle)
+		return email
+
 	def test_ohne_kern_kein_feld(self):
 		self.assertFalse(lead_objekt.ensure_lead_objekt_field())
 		after_migrate()
@@ -107,6 +126,21 @@ class TestLeadObjekt(IntegrationTestCase):
 			{"doctype": OBJEKT_DOCTYPE, "titel": "Garage", "kunde_doctype": "Lead", "kunde": lead.name}
 		).insert(ignore_permissions=True)
 		self.assertEqual(frappe.db.get_value("Lead", lead.name, FIELDNAME), objekt.name)
+		frappe.delete_doc("Lead", lead.name, force=True, ignore_permissions=True)
+
+		# Security-Review: Benutzer ohne Recht auf den Lead -> 403, kein cv_objekt
+		lead = make_lead()
+		user = self._benutzer_ohne_lead_recht()
+		frappe.set_user(user)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				frappe.get_doc(
+					{"doctype": OBJEKT_DOCTYPE, "titel": "Fremd", "kunde_doctype": "Lead", "kunde": lead.name}
+				).insert()
+		finally:
+			frappe.set_user("Administrator")
+		self.assertIsNone(frappe.db.get_value("Lead", lead.name, FIELDNAME))
+		self.assertFalse(frappe.db.exists(OBJEKT_DOCTYPE, {"titel": "Fremd"}))
 		frappe.delete_doc("Lead", lead.name, force=True, ignore_permissions=True)
 
 		lead_objekt.before_app_uninstall("corevatis")
