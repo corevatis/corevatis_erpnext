@@ -6,6 +6,16 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Neu (Aufgabe 3.9)
+
+- **Zeiterfassung** `corevatis_erpnext.zeiterfassung` für die Mobile-API des Kerns
+  (`zeit_start`/`zeit_stopp`/`zeit_eintrag`, `meine_zeiten`; Aufruf per `frappe.get_attr`):
+  Activity Types „Arbeitszeit“, „Fahrzeit“, „Pause“ (Pause nicht abrechenbar), Buchung als Zeile
+  im Timesheet-Entwurf je Mitarbeiter und Tag (über Mitternacht geteilt), Überlappung über
+  ERPNext als `ZeitKonflikt`, Idempotenz über `Timesheet Detail.cv_sync_key`, laufende Buchung
+  im neuen Doctype „Zeitbuchung Lauf“ (eine je Employee), Tagesliste, Sollstunden aus der
+  Holiday List (sonst 8 h Mo-Fr als Annahme).
+
 ### Hinzugefügt (3.7 Foto-Upload)
 
 - Foto-Galerie (1.5) auch am **Befund** (Doctype aus `corevatis`): Fotos der App aus der Tabelle

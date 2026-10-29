@@ -104,3 +104,13 @@ Queue Follow-up Email,Nachfass-E-Mail in die Warteschlange legen
 Empty: “Angebot Nachfassen”,Leer: „Angebot Nachfassen“
 Draft {0} contains manually added items that will be lost when it is replaced: {1},"Der Entwurf {0} enthält von Hand ergänzte Positionen, die beim Ersetzen verloren gehen: {1}"
 Company {0} has no services for measurement {1}; the quotation uses company {2}.,"Firma {0} hat keine Leistungen für das Aufmaß {1}; das Angebot läuft über die Firma {2}."
+Running time booking (start without stop) from the Corevatis app,Laufende Zeitbuchung (Start ohne Stopp) aus der Corevatis-App
+Zeitbuchung Lauf,Laufende Zeitbuchung
+Started At,Begonnen um
+Mobile Sync Key,Mobile-Sync-Schlüssel
+Idempotency key of the start in the Corevatis app.,Idempotenz-Schlüssel des Starts in der Corevatis-App.
+Idempotency key of the mobile booking (Corevatis app).,Idempotenz-Schlüssel der Buchung aus der Corevatis-App.
+End time must be after start time.,Das Ende muss nach dem Beginn liegen.
+Unknown activity type {0}.,Unbekannte Tätigkeitsart {0}.
+Employee {0} not found.,Mitarbeiter {0} nicht gefunden.
+A booking is already running.,Es läuft bereits eine Buchung.

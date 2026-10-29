@@ -134,6 +134,24 @@ window.addEventListener("message", function (e) {
   (Standard aus; Email Template „Angebot Nachfassen“, ohne SMTP nur Email Queue „Not Sent“).
   Button „Nachfassen“ am Angebot (`nachfassen`) legt die Aufgabe sofort an und zeigt den Text.
 
+## Zeiterfassung (Aufgabe 3.9)
+
+`corevatis_erpnext.zeiterfassung` ist der ERPNext-Teil der Monteur-Zeiterfassung. Die Kern-App
+`corevatis` (Sync-Entitäten `zeit_start`, `zeit_stopp`, `zeit_eintrag`, Endpunkt
+`meine_zeiten`) prüft Rechte und Ablauf und ruft die Funktionen per `frappe.get_attr` auf:
+
+| Funktion | Zweck |
+|---|---|
+| `activity_types_sicherstellen()` | „Arbeitszeit“, „Fahrzeit“, „Pause“ anlegen, falls sie fehlen (auch bei `migrate`) |
+| `employee_fuer_user(user)`, `mitarbeiter(employee)` | Employee ↔ User (`user_id`, nur aktive) |
+| `zeit_buchen(employee, project, task, activity_type, von, bis, idempotency_key, notiz)` | Zeile im Timesheet-Entwurf des Tages (je Mitarbeiter und Tag eins, über Mitternacht geteilt); Überlappung → `ZeitKonflikt("ueberlappung")`; gleicher Key → vorhandene Zeilen |
+| `offene_buchung(employee)`, `lauf_starten(…)`, `lauf_beenden(employee)` | laufende Buchung im Doctype „Zeitbuchung Lauf“ (Name = Employee) |
+| `tagesbuchungen(employee, datum)` | Zeilen des Tages mit Task-Titel und Projektname |
+| `sollstunden(employee, datum)` | Holiday List (Employee bzw. Firma): Feiertag 0 h, halber Tag 4 h, sonst 8 h; ohne Liste 8 h Mo-Fr (Annahme) |
+
+Pause ist nicht abrechenbar (`is_billable` 0), Arbeits- und Fahrzeit sind abrechenbar. Die
+Timesheets bleiben Entwurf, das Büro reicht sie im Desk ein.
+
 ## Lizenz
 
 Copyright (C) 2026 Corevatis

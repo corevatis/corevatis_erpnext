@@ -1,0 +1,135 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "field:employee",
+ "naming_rule": "By fieldname",
+ "creation": "2026-10-29 18:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "employee_name",
+  "activity_type",
+  "von",
+  "column_break_projekt",
+  "project",
+  "task",
+  "notiz",
+  "sync_key"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "fetch_from": "employee.employee_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "activity_type",
+   "fieldtype": "Link",
+   "label": "Activity Type",
+   "options": "Activity Type",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "von",
+   "fieldtype": "Datetime",
+   "label": "Started At",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_projekt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project"
+  },
+  {
+   "fieldname": "task",
+   "fieldtype": "Link",
+   "label": "Task",
+   "options": "Task"
+  },
+  {
+   "fieldname": "notiz",
+   "fieldtype": "Small Text",
+   "label": "Note"
+  },
+  {
+   "fieldname": "sync_key",
+   "fieldtype": "Data",
+   "label": "Mobile Sync Key",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Idempotency key of the start in the Corevatis app."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-29 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Zeitbuchung Lauf",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "print": 0,
+   "share": 0,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Meister",
+   "read": 1,
+   "write": 1,
+   "create": 0,
+   "delete": 1,
+   "email": 0,
+   "print": 0,
+   "share": 0,
+   "report": 1,
+   "export": 0
+  },
+  {
+   "role": "Büro",
+   "read": 1,
+   "write": 1,
+   "create": 0,
+   "delete": 1,
+   "email": 0,
+   "print": 0,
+   "share": 0,
+   "report": 1,
+   "export": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "employee_name",
+ "description": "Running time booking (start without stop) from the Corevatis app"
+}
