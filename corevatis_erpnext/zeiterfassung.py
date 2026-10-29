@@ -39,7 +39,7 @@ import datetime as _dt
 import frappe
 from frappe import _
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
-from frappe.utils import flt, get_datetime, getdate
+from frappe.utils import flt, get_datetime, getdate, now_datetime
 
 MODULE = "Corevatis ERPNext"
 
@@ -54,6 +54,10 @@ LAUF_DOCTYPE = "Zeitbuchung Lauf"
 SYNC_KEY_FELD = "cv_sync_key"
 
 STANDARD_SOLLSTUNDEN = 8.0
+# Grenzen je Buchung (Security-Review 3.9): Dauer, Abstand zu heute
+MAX_DAUER_STUNDEN = 24
+MAX_TAGE_ZURUECK = 31
+MAX_TAGE_VORAUS = 1
 # Annahme ohne Holiday List: Montag (0) bis Freitag (4)
 ARBEITSTAGE = (0, 1, 2, 3, 4)
 
@@ -62,7 +66,10 @@ class ZeitKonflikt(frappe.ValidationError):
 	"""Fachlicher Konflikt einer Buchung; ``grund`` ist maschinenlesbar.
 
 	``ueberlappung`` (ERPNext-Überlappung mit einer anderen Zeile), ``laeuft_bereits``
-	(Start, obwohl schon eine andere Buchung läuft), ``ungueltig`` (Ende nicht nach Beginn).
+	(Start, obwohl schon eine andere Buchung läuft), ``ungueltig`` (Ende nicht nach Beginn),
+	``zu_lang`` (mehr als 24 h), ``ausserhalb_zeitraum`` (mehr als 31 Tage zurück oder mehr
+	als einen Tag voraus), ``schluessel_fremd`` (Idempotenz-Key gehört zu Buchungen eines
+	anderen Mitarbeiters).
 	"""
 
 	def __init__(self, grund: str, message: str, details: dict | None = None):
@@ -208,21 +215,62 @@ def _zeile(row, ts) -> dict:
 	}
 
 
-def _vorhandene(idempotency_key: str) -> list[dict]:
-	namen = frappe.get_all(
-		"Timesheet Detail",
-		filters={SYNC_KEY_FELD: idempotency_key, "parenttype": "Timesheet"},
-		fields=["name", "parent"],
-		order_by="from_time asc",
-	)
+def _vorhandene(employee: str, idempotency_key: str) -> list[dict]:
+	"""Zeilen mit diesem Key - nur aus Timesheets des Mitarbeiters (Security-Review 3.9).
+
+	Gehört der Key zu Zeilen eines anderen Mitarbeiters, wird nichts zurückgegeben, sondern
+	``ZeitKonflikt("schluessel_fremd")`` - sonst ließen sich fremde Buchungen über einen
+	erratenen Key lesen.
+	"""
+	ts_t = frappe.qb.DocType("Timesheet")
+	td_t = frappe.qb.DocType("Timesheet Detail")
+	treffer = (
+		frappe.qb.from_(td_t)
+		.join(ts_t)
+		.on(td_t.parent == ts_t.name)
+		.select(td_t.name, td_t.parent, ts_t.employee)
+		.where(
+			(td_t.field(SYNC_KEY_FELD) == idempotency_key)
+			& (td_t.parenttype == "Timesheet")
+			& (ts_t.docstatus < 2)
+		)
+		.orderby(td_t.from_time)
+	).run(as_dict=True)
+	if any(t.employee != employee for t in treffer):
+		raise ZeitKonflikt("schluessel_fremd", _("This booking key is already used."), {})
 	zeilen = []
-	for eintrag in namen:
+	for eintrag in treffer:
 		ts = frappe.get_doc("Timesheet", eintrag.parent)
-		if ts.docstatus == 2:
-			continue
 		row = next(r for r in ts.time_logs if r.name == eintrag.name)
 		zeilen.append(_zeile(row, ts))
 	return zeilen
+
+
+def zeitraum_pruefen(von: _dt.datetime, bis: _dt.datetime | None = None) -> None:
+	"""Grenzen gegen beliebig lange bzw. weit entfernte Zeiträume (Security-Review 3.9).
+
+	Höchstens ``MAX_DAUER_STUNDEN`` je Buchung, Zeitpunkte höchstens ``MAX_TAGE_ZURUECK``
+	Tage in der Vergangenheit und ``MAX_TAGE_VORAUS`` in der Zukunft (Uhrabweichung des
+	Geräts). Verstoß → ``ZeitKonflikt("ausserhalb_zeitraum")`` bzw. ``("zu_lang")``.
+	"""
+	jetzt = now_datetime()
+	for wert in (von, bis):
+		if wert is None:
+			continue
+		if wert < jetzt - _dt.timedelta(days=MAX_TAGE_ZURUECK) or wert > jetzt + _dt.timedelta(
+			days=MAX_TAGE_VORAUS
+		):
+			raise ZeitKonflikt(
+				"ausserhalb_zeitraum",
+				_("Bookings are only possible within the last {0} days.").format(MAX_TAGE_ZURUECK),
+				{"zeitpunkt": _iso(wert), "max_tage_zurueck": MAX_TAGE_ZURUECK},
+			)
+	if bis is not None and (bis - von) > _dt.timedelta(hours=MAX_DAUER_STUNDEN):
+		raise ZeitKonflikt(
+			"zu_lang",
+			_("A booking may last at most {0} hours.").format(MAX_DAUER_STUNDEN),
+			{"max_stunden": MAX_DAUER_STUNDEN},
+		)
 
 
 def zeit_buchen(
@@ -246,13 +294,15 @@ def zeit_buchen(
 	from erpnext.projects.doctype.timesheet.timesheet import OverlapError
 
 	if idempotency_key:
-		vorhanden = _vorhandene(idempotency_key)
+		vorhanden = _vorhandene(employee, idempotency_key)
 		if vorhanden:
 			return {"timesheet": vorhanden[0]["timesheet"], "zeilen": vorhanden, "duplikat": True}
 
 	von, bis = _zeit(von), _zeit(bis)
 	if bis <= von:
 		raise ZeitKonflikt("ungueltig", _("End time must be after start time."), {"von": _iso(von)})
+	# vor jeder Schleife: höchstens 24 h, also höchstens zwei Tagesteile
+	zeitraum_pruefen(von, bis)
 	if activity_type not in ACTIVITY_TYPES:
 		raise frappe.ValidationError(_("Unknown activity type {0}.").format(activity_type))
 	if not frappe.db.exists("Activity Type", activity_type):
@@ -279,6 +329,11 @@ def zeit_buchen(
 			},
 		)
 		try:
+			# ignore_permissions bewusst: Die Funktion ist nicht whitelisted (kein REST-Aufruf);
+			# der Kern hat vorher geprüft, dass der Employee dem angemeldeten Benutzer gehört
+			# (Monteur) bzw. der Benutzer Meister/Büro ist. Die ERPNext-Rolle des Monteurs darf
+			# Timesheets nur „erfassen“, das Timesheet des Tages kann aber ein anderer (Meister)
+			# angelegt haben.
 			ts.save(ignore_permissions=True)
 		except OverlapError as exc:
 			raise ZeitKonflikt(
@@ -335,6 +390,7 @@ def lauf_starten(
 		raise ZeitKonflikt("laeuft_bereits", _("A booking is already running."), {"laufend": vorhanden})
 	if not mitarbeiter(employee):
 		raise frappe.DoesNotExistError(_("Employee {0} not found.").format(employee))
+	zeitraum_pruefen(_zeit(von))
 	doc = frappe.get_doc(
 		{
 			"doctype": LAUF_DOCTYPE,

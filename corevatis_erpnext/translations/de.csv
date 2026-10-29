@@ -114,3 +114,6 @@ End time must be after start time.,Das Ende muss nach dem Beginn liegen.
 Unknown activity type {0}.,Unbekannte Tätigkeitsart {0}.
 Employee {0} not found.,Mitarbeiter {0} nicht gefunden.
 A booking is already running.,Es läuft bereits eine Buchung.
+This booking key is already used.,Dieser Buchungsschlüssel ist bereits vergeben.
+Bookings are only possible within the last {0} days.,Buchungen sind nur für die letzten {0} Tage möglich.
+A booking may last at most {0} hours.,Eine Buchung darf höchstens {0} Stunden dauern.

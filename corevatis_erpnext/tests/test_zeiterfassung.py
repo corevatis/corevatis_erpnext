@@ -12,9 +12,11 @@ from corevatis_erpnext.tests._helpers import make_user
 
 USER = "cv-test-zeit-monteur@example.com"
 USER_OHNE = "cv-test-zeit-ohne@example.com"
+USER_FREMD = "cv-test-zeit-fremd@example.com"
 LISTE = "_TEST-CV-ZEIT-2026"
-# Montag 2. März 2026 ff. (feste Tage in der Vergangenheit, je Test eigene Tage)
-MO = dt.date(2026, 3, 2)
+# Montag vor 2 bis 3 Wochen (Buchungen nur bis 31 Tage zurück), je Test eigene Tage
+_heute = dt.date.today()
+MO = _heute - dt.timedelta(days=_heute.weekday() + 14)
 
 
 def ts(tag: dt.date, uhrzeit: str) -> dt.datetime:
@@ -137,7 +139,7 @@ class TestZeiterfassung(IntegrationTestCase):
 		self.assertIsNone(rows[2].task)
 		self.assertAlmostEqual(doc.total_hours, 3.25)
 		self.assertEqual(a["zeilen"][0]["stunden"], 2.5)
-		self.assertEqual(a["zeilen"][0]["von"], "2026-03-02T07:00:00")
+		self.assertEqual(a["zeilen"][0]["von"], f"{MO}T07:00:00")
 
 	def test_projekt_aus_task(self):
 		r = z.zeit_buchen(
@@ -189,14 +191,14 @@ class TestZeiterfassung(IntegrationTestCase):
 		r = self.buchen(ts(tag, "22:00"), ts(tag + dt.timedelta(days=1), "01:30"))
 		self.assertEqual([zl["stunden"] for zl in r["zeilen"]], [2.0, 1.5])
 		self.assertNotEqual(r["zeilen"][0]["timesheet"], r["zeilen"][1]["timesheet"])
-		self.assertEqual(r["zeilen"][1]["von"], "2026-03-07T00:00:00")
+		self.assertEqual(r["zeilen"][1]["von"], f"{tag + dt.timedelta(days=1)}T00:00:00")
 
 	def test_laufende_buchung(self):
 		self.assertIsNone(z.offene_buchung(self.employee))
 		lauf = z.lauf_starten(
 			self.employee, self.projekt.name, self.task.name, z.ARBEITSZEIT, ts(MO, "07:00"), "key-1"
 		)
-		self.assertEqual(lauf["von"], "2026-03-02T07:00:00")
+		self.assertEqual(lauf["von"], f"{MO}T07:00:00")
 		self.assertEqual(z.offene_buchung(self.employee)["task"], self.task.name)
 		# derselbe Start noch einmal: keine zweite, kein Fehler
 		self.assertEqual(
@@ -244,3 +246,36 @@ class TestZeiterfassung(IntegrationTestCase):
 		ausserhalb = z.sollstunden(employee, "2026-09-01")
 		self.assertEqual((ausserhalb["stunden"], ausserhalb["quelle"]), (8.0, "annahme"))
 		self.assertEqual(z.sollstunden(employee, "2026-09-05")["stunden"], 0.0)
+
+	def test_schluessel_fremder_mitarbeiter(self):
+		"""Security-Review: ein Key aus fremden Timesheets liefert keine fremden Zeilen."""
+		make_user(USER_FREMD, "Fremd", ["Monteur"])
+		anderer = ensure_employee(USER_FREMD)
+		key = "6f1c4c2e-0000-4000-8000-000000000002"
+		tag = MO + dt.timedelta(days=8)
+		self.buchen(ts(tag, "07:00"), ts(tag, "08:00"), key=key)
+		with self.assertRaises(z.ZeitKonflikt) as ctx:
+			z.zeit_buchen(anderer, None, None, z.PAUSE, ts(tag, "12:00"), ts(tag, "12:30"), key)
+		self.assertEqual(ctx.exception.grund, "schluessel_fremd")
+		self.assertNotIn("zeilen", ctx.exception.details)
+
+	def test_grenzen(self):
+		"""Security-Review: höchstens 24 h je Buchung, höchstens 31 Tage zurück, 1 Tag voraus."""
+		tag = MO + dt.timedelta(days=9)
+		with self.assertRaises(z.ZeitKonflikt) as ctx:
+			self.buchen(ts(tag, "07:00"), ts(tag + dt.timedelta(days=400), "07:00"))
+		self.assertIn(ctx.exception.grund, ("zu_lang", "ausserhalb_zeitraum"))
+		with self.assertRaises(z.ZeitKonflikt) as ctx:
+			self.buchen(ts(tag, "07:00"), ts(tag + dt.timedelta(days=1), "07:01"))
+		self.assertEqual(ctx.exception.grund, "zu_lang")
+		alt = dt.date.today() - dt.timedelta(days=40)
+		with self.assertRaises(z.ZeitKonflikt) as ctx:
+			self.buchen(ts(alt, "07:00"), ts(alt, "08:00"))
+		self.assertEqual(ctx.exception.grund, "ausserhalb_zeitraum")
+		zukunft = dt.date.today() + dt.timedelta(days=3)
+		with self.assertRaises(z.ZeitKonflikt):
+			z.lauf_starten(self.employee, None, None, z.ARBEITSZEIT, ts(zukunft, "07:00"), "k")
+		self.assertFalse(frappe.db.exists("Timesheet", {"employee": self.employee}))
+		# genau 24 h sind erlaubt (zwei Tagesteile)
+		r = self.buchen(ts(tag, "06:00"), ts(tag + dt.timedelta(days=1), "06:00"))
+		self.assertEqual([zl["stunden"] for zl in r["zeilen"]], [18.0, 6.0])
