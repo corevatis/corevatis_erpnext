@@ -21,7 +21,16 @@ from frappe.utils import flt, today
 from frappe.utils.nestedset import get_root_of
 
 from corevatis_erpnext.katalog import importieren, list_pakete, uebersicht
-from corevatis_erpnext.katalog.importer import DATEIEN, lese_csv, paket_dir, standard_preislisten
+from corevatis_erpnext.katalog.importer import (
+	BARCODE_DATEI,
+	DATEIEN,
+	Bericht,
+	_barcodes,
+	lese_barcodes,
+	lese_csv,
+	paket_dir,
+	standard_preislisten,
+)
 
 PAKET = "abdichtung"
 FIRMA = "Hülshoff Sanierungstechnik"
@@ -278,6 +287,10 @@ class TestKatalogImport(IntegrationTestCase):
 				for doctype, datei in DATEIEN
 				if frappe.db.exists("DocType", doctype)  # Leistungsregel nur mit corevatis
 			}
+			# EANs (3.11, optionale 09_barcode.csv): Kindzeilen ohne eigenen Data Import - im Desk
+			# am Artikel unter „Barcodes“, hier wie im Importer ergänzt
+			_barcodes(PAKET, Bericht(PAKET, FIRMA, False))
+			frappe.db.commit()
 		# Katalog-Preislisten als Standard für neue Belege (Importer bzw. Patch v0_4); der
 		# Desk-Weg über Data Import setzt sie nicht. Danach meldet der Importer keine Änderung.
 		standard_preislisten()
@@ -430,8 +443,39 @@ class TestKatalogImport(IntegrationTestCase):
 			if not frappe.db.exists("DocType", "Leistungsregel"):
 				self.assertEqual(len(ergebnis["optional_uebersprungen"]), 1)
 			# 8 UOM + 9 Item Group + 2 Price List + 1 Workstation + 1 Operation
-			# + 82 Item + 82 Item Price + 48 BOM
-			self.assertEqual(ergebnis["unveraendert"], 233)
+			# + 82 Item + 82 Item Price + 48 BOM + 29 Barcodes (3.11)
+			self.assertEqual(ergebnis["unveraendert"], 262)
+
+	def test_barcodes(self):
+		"""3.11: EAN-13 je Material (interner GS1-Bereich 20…), gültige Prüfziffer, nur Lagerartikel."""
+		zeilen_bc = lese_barcodes(PAKET)
+		self.assertTrue((paket_dir(PAKET) / BARCODE_DATEI).is_file())
+		self.assertEqual(len(zeilen_bc), 29)
+		self.assertEqual(len({z["barcode"] for z in zeilen_bc}), 29)
+		for z in zeilen_bc:
+			code = z["barcode"]
+			self.assertRegex(code, r"^20\d{11}$")
+			summe = sum(int(c) * (3 if i % 2 else 1) for i, c in enumerate(code[:12]))
+			self.assertEqual(int(code[12]), (10 - summe % 10) % 10, code)
+			self.assertEqual(frappe.db.get_value("Item Barcode", {"barcode": code}, "parent"), z["item_code"])
+			self.assertEqual(frappe.db.get_value("Item", z["item_code"], "is_stock_item"), 1)
+		with self.savepoint():
+			# Barcode an einem anderen Artikel: nicht übernommen, kein Überschreiben
+			erster = zeilen_bc[0]
+			frappe.db.delete("Item Barcode", {"barcode": erster["barcode"]})
+			item = frappe.get_doc("Item", zeilen_bc[1]["item_code"])
+			item.append("barcodes", {"barcode": erster["barcode"], "barcode_type": "EAN"})
+			item.save(ignore_permissions=True)
+			ergebnis = importieren(firma=FIRMA, commit=False)
+			self.assertEqual(ergebnis["changes"], [])
+			self.assertEqual(len(ergebnis["skipped"]), 1, ergebnis["skipped"])
+			self.assertIn(erster["barcode"], ergebnis["skipped"][0])
+			# fehlt er ganz, ergänzt ihn der Importer
+			frappe.db.delete("Item Barcode", {"barcode": erster["barcode"]})
+			ergebnis = importieren(firma=FIRMA, commit=False)
+			self.assertEqual(
+				ergebnis["changes"], [f"Item {erster['item_code']}: Barcode {erster['barcode']} ergänzt"]
+			)
 
 	def test_importer_legt_fehlendes_an(self):
 		with self.savepoint():

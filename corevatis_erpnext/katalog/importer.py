@@ -47,6 +47,11 @@ DATEIEN = (
 	("BOM", "08_bom.csv"),
 )
 
+# Optionale Zusatzdatei (Aufgabe 3.11): EANs der Materialien als Kindzeilen ``Item Barcode`` an
+# vorhandenen Artikeln. Kein eigener Doctype (Kindtabelle) - ergänzt nur fehlende Barcodes, ändert
+# und löscht nichts. Fehlt die Datei, entfällt der Schritt (ältere Pakete).
+BARCODE_DATEI = "09_barcode.csv"
+
 # Doctypes aus der Kern-App corevatis (nur per Name, kein Import - Lizenzgrenze): die Vorlage
 # wird nur eingespielt, wenn der Doctype auf der Site existiert. Ist corevatis installiert,
 # prüft Item.validate (2.2), dass cv_leistungsregel eine vorhandene Leistungsregel nennt.
@@ -233,6 +238,8 @@ def importieren(firma=None, paket="abdichtung", force=False, commit=True) -> dic
 			_einfach(doctype, daten[doctype], bericht, finde=_finde_preis, label=_label_preis)
 		else:
 			_einfach(doctype, daten[doctype], bericht)
+		if doctype == "Item":
+			_barcodes(paket, bericht)
 		if commit:
 			frappe.db.commit()
 
@@ -398,6 +405,47 @@ def _einfach(doctype: str, datensaetze: list[dict], bericht: Bericht, finde=_fin
 			doctype == "Item Price" and frappe.db.get_value("Price List", daten["price_list"], "buying")
 		):
 			bericht.kosten_geaendert = True
+
+
+def lese_barcodes(paket: str) -> list[dict]:
+	"""Zeilen der optionalen ``09_barcode.csv`` (``item_code``, ``barcode``, ``barcode_type``)."""
+	pfad = paket_dir(paket) / BARCODE_DATEI
+	if not pfad.is_file():
+		return []
+	header, rows = lese_csv(pfad)
+	zeilen = []
+	for row in rows:
+		werte = {h: cstr(v).strip() for h, v in zip(header, row, strict=False) if h}
+		if werte.get("item_code") and werte.get("barcode"):
+			zeilen.append(werte)
+	return zeilen
+
+
+def _barcodes(paket: str, bericht: Bericht) -> None:
+	"""Fehlende Barcodes an vorhandene Artikel hängen (idempotent, ohne Überschreiben)."""
+	je_artikel: dict[str, list[dict]] = {}
+	for zeile in lese_barcodes(paket):
+		vorhanden = frappe.db.get_value("Item Barcode", {"barcode": zeile["barcode"]}, "parent")
+		if vorhanden == zeile["item_code"]:
+			bericht.unveraendert += 1
+			continue
+		if vorhanden:
+			bericht.skipped.append(
+				f"Barcode {zeile['barcode']} ({zeile['item_code']}): gehört schon zu {vorhanden} - nicht übernommen"
+			)
+			continue
+		if not frappe.db.exists("Item", zeile["item_code"]):
+			bericht.warnings.append(f"Barcode {zeile['barcode']}: Artikel {zeile['item_code']} fehlt")
+			continue
+		je_artikel.setdefault(zeile["item_code"], []).append(zeile)
+	for item_code, zeilen in je_artikel.items():
+		item = frappe.get_doc("Item", item_code)
+		for zeile in zeilen:
+			item.append(
+				"barcodes", {"barcode": zeile["barcode"], "barcode_type": zeile.get("barcode_type") or ""}
+			)
+		item.save(ignore_permissions=True)
+		bericht.changes.append(f"Item {item_code}: Barcode {', '.join(z['barcode'] for z in zeilen)} ergänzt")
 
 
 # --------------------------------------------------------------------------- Stücklisten
