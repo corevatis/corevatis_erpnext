@@ -23,7 +23,7 @@ STANDARD = {
 	"nachfass_zuweisung": "Rolle Büro",
 	"nachfass_benutzer": None,
 	"nachfass_mail_aktiv": 0,
-	"nachfass_email_template": "Angebot Nachfassen",
+	"nachfass_email_template": None,
 }
 
 

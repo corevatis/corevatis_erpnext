@@ -101,3 +101,4 @@ Follow-up User,Benutzer für das Nachfassen
 Follow-up Email,Nachfass-E-Mail
 Queue Follow-up Email,Nachfass-E-Mail in die Warteschlange legen
 "Puts a follow-up email to the quotation contact into the email queue. Without an outgoing email account nothing is sent (status Not Sent).","Legt eine Nachfass-E-Mail an den Kontakt des Angebots in die E-Mail-Warteschlange. Ohne ausgehendes E-Mail-Konto wird nichts versendet (Status „Not Sent“)."
+Empty: “Angebot Nachfassen”,Leer: „Angebot Nachfassen“

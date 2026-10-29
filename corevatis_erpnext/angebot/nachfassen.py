@@ -44,7 +44,7 @@ STANDARD = {
 	"nachfass_zuweisung": "Rolle Büro",
 	"nachfass_benutzer": None,
 	"nachfass_mail_aktiv": 0,
-	"nachfass_email_template": EMAIL_TEMPLATE,
+	"nachfass_email_template": None,
 }
 GANZZAHLEN = (
 	"nachfass_aktiv",

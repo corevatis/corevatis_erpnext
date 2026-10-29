@@ -90,8 +90,8 @@
    "fieldtype": "Link",
    "label": "Email Template",
    "options": "Email Template",
-   "default": "Angebot Nachfassen",
-   "depends_on": "eval:doc.nachfass_mail_aktiv"
+   "depends_on": "eval:doc.nachfass_mail_aktiv",
+   "description": "Empty: “Angebot Nachfassen”"
   }
  ],
  "index_web_pages_for_search": 0,
