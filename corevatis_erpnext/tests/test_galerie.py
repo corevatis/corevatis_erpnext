@@ -154,7 +154,8 @@ class TestGalerie(IntegrationTestCase):
 		self.assertIn("public/js/galerie.js", hooks["Lead"])
 		self.assertIn("public/js/lead_galerie.js", hooks["Lead"])
 		self.assertIn("public/js/lead_termin.js", hooks["Lead"])
-		self.assertEqual(hooks["Befund"], ["public/js/galerie.js", "public/js/befund_galerie.js"])
+		# danach ggf. weitere Skripte (Prozessleiste)
+		self.assertEqual(hooks["Befund"][:2], ["public/js/galerie.js", "public/js/befund_galerie.js"])
 		for path in hooks["Lead"] + hooks["Befund"]:
 			self.assertTrue(frappe.read_file(frappe.get_app_path("corevatis_erpnext", path)))
 
