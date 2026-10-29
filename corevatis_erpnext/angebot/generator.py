@@ -263,12 +263,34 @@ def _partei(aufmass, kunde: str | None, lead: str | None) -> tuple[str, str]:
 	return "Customer", _platzhalterkunde()
 
 
-def _firma(quotation_to: str, party: str) -> str:
-	firma = frappe.db.get_value("Lead", party, "company") if quotation_to == "Lead" else None
-	firma = firma or _standardfirma()
-	if not firma:
+def _firma_des_objekts(aufmass) -> str | None:
+	"""Firma am Aufmaß bzw. Objekt (Kern), falls der Doctype ein Feld ``company`` hat."""
+	if aufmass.get("company"):
+		return aufmass.company
+	for doctype, name in ((AUFMASS_DOCTYPE, aufmass.get("name")), (OBJEKT_DOCTYPE, aufmass.get("objekt"))):
+		if name and frappe.db.exists("DocType", doctype) and frappe.db.has_column(doctype, "company"):
+			wert = frappe.db.get_value(doctype, name, "company")
+			if wert:
+				return wert
+	return None
+
+
+def _firmen(aufmass, quotation_to: str, party: str) -> list[str]:
+	"""Firmen in der Reihenfolge des Vorrangs (Abnahme mvp-test): Firma des Aufmaßes/Objekts,
+	Firma des Leads, Standardfirma - nur vorhandene, ohne Doppelte."""
+	kandidaten = [
+		_firma_des_objekts(aufmass),
+		frappe.db.get_value("Lead", party, "company") if quotation_to == "Lead" else None,
+		_standardfirma(),
+	]
+	firmen = [f for f in dict.fromkeys(kandidaten) if f and frappe.db.exists("Company", f)]
+	if not firmen:
 		frappe.throw(_("No company found (set a default company)."), AngebotFehler)
-	return firma
+	return firmen
+
+
+def _firma(quotation_to: str, party: str, aufmass=None) -> str:
+	return _firmen(aufmass or frappe._dict(), quotation_to, party)[0]
 
 
 def _steuervorlage(firma: str) -> str | None:
@@ -368,6 +390,24 @@ def angebot_fuellen(doc, aufmass, kalkulation: dict, quotation_to: str, party: s
 			doc.append("taxes", steuer)
 
 
+def manuelle_positionen(quotation: str) -> list[str]:
+	"""Positionen eines Angebots ohne Herkunft aus dem Aufmaß: weder ``cv_aufmass_position`` noch
+	``cv_mengen_herkunft`` (beides setzt nur der Generator; Pauschalen eines Verfahrens haben
+	evtl. keine Aufmaßzeile, aber immer eine Mengenherkunft)."""
+	zeilen = frappe.get_all(
+		"Quotation Item",
+		filters={"parent": quotation, "parenttype": "Quotation"},
+		fields=["idx", "item_code", "item_name", "cv_aufmass_position", "cv_mengen_herkunft"],
+		order_by="idx asc",
+	)
+	return [
+		f"{z.idx}. {z.item_code}"
+		+ (f" ({z.item_name})" if z.item_name and z.item_name != z.item_code else "")
+		for z in zeilen
+		if not (z.cv_aufmass_position or "").strip() and not (z.cv_mengen_herkunft or "").strip()
+	]
+
+
 @frappe.whitelist(methods=["POST"])
 def erzeuge_angebot(
 	aufmass: str,
@@ -376,8 +416,14 @@ def erzeuge_angebot(
 	lead: str | None = None,
 	neu_erzeugen=0,
 	erschwernis_prozent=None,
+	bestaetigen=0,
 ) -> dict:
 	"""Angebot aus einem Aufmaß erzeugen (Rollen Büro, Meister).
+
+	``neu_erzeugen=1`` ersetzt alle Positionen des neuesten Entwurfs. Hat der Entwurf von Hand
+	ergänzte Positionen (ohne ``cv_aufmass_position``, z. B. Regiestunden, Pauschalen), wird
+	nichts geändert, solange ``bestaetigen`` nicht 1 ist - die Antwort nennt die Positionen
+	(``bestaetigung_noetig``, ``manuelle_positionen``; Review Epic 4 G-2).
 
 	Rückgabe: ``angebot`` (Name), ``neu`` (angelegt/ersetzt oder nur gemeldet), ``ersetzt``,
 	``positionen``, ``netto``, ``steuer``, ``brutto``, ``warnungen``.
@@ -407,10 +453,33 @@ def erzeuge_angebot(
 				),
 				AngebotFehler,
 			)
+		manuell = manuelle_positionen(entwurf)
+		if manuell and not cint(bestaetigen):
+			return {
+				"angebot": entwurf,
+				"neu": False,
+				"ersetzt": False,
+				"bestaetigung_noetig": True,
+				"manuelle_positionen": manuell,
+				"meldung": _(
+					"Draft {0} contains manually added items that will be lost when it is replaced: {1}"
+				).format(entwurf, "; ".join(manuell)),
+			}
 
 	quotation_to, party = _partei(am, kunde, lead)
-	firma = _firma(quotation_to, party)
-	leistungen, warnungen = leistungen_aus_aufmass(am, firma)
+	# Firma mit Vorrang; hat sie für dieses Aufmaß keine Leistungen (z. B. alter Lead einer Firma
+	# ohne Katalog/Stücklisten), die nächste - mit Hinweis
+	firmen = _firmen(am, quotation_to, party)
+	for firma in firmen:
+		leistungen, warnungen = leistungen_aus_aufmass(am, firma)
+		if leistungen:
+			break
+	if leistungen and firma != firmen[0]:
+		warnungen.append(
+			_("Company {0} has no services for measurement {1}; the quotation uses company {2}.").format(
+				firmen[0], am.name, firma
+			)
+		)
 	if not leistungen:
 		frappe.throw(
 			_("No services found for measurement {0}.").format(am.name)

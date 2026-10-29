@@ -532,6 +532,13 @@ def _ensure_roles(cfg: dict, report: Report) -> None:
 		for doctype, perm in (spec.get("permissions") or {}).items():
 			_ensure_docperm(doctype, role, _rights(cfg, perm), report)
 
+	# Kalkulationsfelder am Angebot/Auftrag (Ebene 2, Review Epic 4 G-1): erst jetzt haben Büro
+	# und Meister Ebene 0 an Quotation/Sales Order
+	from corevatis_erpnext.angebot.felder import ensure_feldrechte
+
+	for text in ensure_feldrechte():
+		report.change("Rechte", text)
+
 
 def _ensure_role_profile(role: str, extra_roles: list[str], report: Report) -> None:
 	roles = [role]
@@ -1003,6 +1010,12 @@ def _verify(cfg: dict) -> dict:
 		check(f"Lager {wh['warehouse_name']}", name, name or "fehlt")
 		if cint(wh.get("is_default")):
 			check("Standardlager", data.default_warehouse == name, data.default_warehouse or "leer")
+
+	if cfg.get("roles"):
+		from corevatis_erpnext.angebot.felder import feldrechte_fehlend
+
+		fehlend = feldrechte_fehlend()
+		check("Feldrechte Kalkulation (Ebene 2)", not fehlend, "; ".join(fehlend))
 
 	if cfg.get("letter_head") is not None:
 		name = _value(cfg["letter_head"].get("letter_head_name")) or company

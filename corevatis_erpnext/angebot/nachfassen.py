@@ -10,9 +10,12 @@ Täglicher Scheduler-Job (``hooks.scheduler_events["daily"]`` → ``taeglich``):
 - Ergebnis: ToDo „Angebot <Nr> nachfassen“ mit Referenz auf das Angebot, Fälligkeit heute,
   ``cv_nachfass_zyklus`` = 1, 2, ... Höchstens ``nachfass_zyklen`` Nachfass-Aufgaben je Angebot.
 - Idempotent: Solange eine Nachfass-Aufgabe offen ist, entsteht keine weitere; ein zweiter Lauf
-  am selben Tag legt nichts an.
-- Zuweisung: „Rolle Büro“ = Ersteller des Angebots, wenn er die Rolle Büro hat, sonst alle
-  aktiven Büro-Benutzer; „Benutzer“ = fester Benutzer aus den Einstellungen.
+  am selben Tag legt nichts an. Parallele Läufe bzw. Doppelklicks serialisiert dieselbe Sperre
+  wie die Annahme (``annahme.angebot_sperren``), die Prüfung auf offene Aufgaben und Aufträge
+  ist ein Locking Read (Review Epic 4, A-1).
+- Zuweisung (genau **ein** ToDo je Zyklus, Review Epic 4 N-1): „Rolle Büro“ = Ersteller des
+  Angebots (aktiver Systembenutzer, nicht Administrator - auch ein Meister), sonst der erste
+  aktive Büro-Benutzer; „Benutzer“ = fester Benutzer aus den Einstellungen.
 - Follow-up-Mail (Standard aus): Email Template „Angebot Nachfassen“ an ``contact_email`` des
   Angebots in die Email Queue. Im MVP gibt es kein SMTP - ohne ausgehendes E-Mail-Konto bleibt
   der Eintrag „Not Sent“ (wie die Terminbestätigung 1.3), die Aufgabe ist das ToDo.
@@ -26,11 +29,15 @@ werten, auch wenn das Formular nie gespeichert wurde).
 """
 
 import frappe
-import frappe.share
 from frappe import _
 from frappe.utils import add_days, cint, date_diff, escape_html, fmt_money, get_fullname, getdate, today
 
-from corevatis_erpnext.angebot.annahme import bestehender_auftrag, pruefe_rolle
+from corevatis_erpnext.angebot.annahme import (
+	angebot_sperren,
+	bestehender_auftrag,
+	darf_annehmen,
+	pruefe_rolle,
+)
 
 EINSTELLUNGEN = "Corevatis Vertrieb Einstellungen"
 EMAIL_TEMPLATE = "Angebot Nachfassen"
@@ -87,12 +94,20 @@ def nachfassen_pruefen(stichtag=None) -> dict:
 	if not e.nachfass_aktiv:
 		return ergebnis
 	stichtag = getdate(stichtag or today())
+	if not frappe.db.transaction_writes:
+		# neuer Snapshot: ein paralleler Lauf, der vorher bestätigt hat, ist sichtbar (A-1)
+		frappe.db.begin()
 	for name in kandidaten(stichtag, e):
-		zyklus = faelliger_zyklus(name, stichtag, e)
-		if not zyklus:
+		if not faelliger_zyklus(name, stichtag, e):
 			continue
 		frappe.db.savepoint("cv_nachfassen")
 		try:
+			# Sperre, dann erneut prüfen (Locking Read): ein paralleler Lauf oder der Button hat
+			# die Aufgabe vielleicht gerade angelegt
+			frappe.db.sql("select name from `tabQuotation` where name=%s for update", name)
+			zyklus = faelliger_zyklus(name, stichtag, e, sperren=True)
+			if not zyklus or bestehender_auftrag(name, sperren=True):
+				continue
 			angebot = frappe.get_doc("Quotation", name)
 			todos = aufgabe_anlegen(angebot, zyklus, stichtag, e)
 			ergebnis["angelegt"].append((name, zyklus, todos))
@@ -130,7 +145,16 @@ def kandidaten(stichtag, e) -> list[str]:
 	return namen
 
 
-def nachfass_todos(quotation: str) -> list:
+def nachfass_todos(quotation: str, sperren: bool = False) -> list:
+	"""Nachfass-Aufgaben zum Angebot; ``sperren`` = Locking Read (Index reference_type/-name)."""
+	if sperren:
+		return frappe.db.sql(
+			f"""select name, status, `{FELD_ZYKLUS}`, modified, allocated_to from `tabToDo`
+			where reference_type='Quotation' and reference_name=%s and `{FELD_ZYKLUS}` > 0
+			order by `{FELD_ZYKLUS}` desc, modified desc for update""",
+			quotation,
+			as_dict=True,
+		)
 	return frappe.get_all(
 		"ToDo",
 		filters={"reference_type": "Quotation", "reference_name": quotation, FELD_ZYKLUS: [">", 0]},
@@ -139,9 +163,9 @@ def nachfass_todos(quotation: str) -> list:
 	)
 
 
-def faelliger_zyklus(quotation: str, stichtag, e) -> int | None:
+def faelliger_zyklus(quotation: str, stichtag, e, sperren: bool = False) -> int | None:
 	"""Nächster Zyklus, wenn fällig - sonst ``None`` (offene Aufgabe, Grenze erreicht, zu früh)."""
-	todos = nachfass_todos(quotation)
+	todos = nachfass_todos(quotation, sperren=sperren)
 	if any(t.status == "Open" for t in todos):
 		return None
 	zyklus = max((cint(t.get(FELD_ZYKLUS)) for t in todos), default=0)
@@ -171,19 +195,29 @@ def _aktive_systembenutzer(namen) -> list[str]:
 	)
 
 
+def _berechtigt(user: str, angebot) -> bool:
+	"""Rolle Büro/Meister und eigenes Leserecht am Angebot - die Aufgabe verleiht keine Rechte
+	(keine Freigabe, Security-Review)."""
+	return darf_annehmen(user) and bool(frappe.has_permission("Quotation", "read", doc=angebot, user=user))
+
+
 def empfaenger(angebot, e) -> list[str]:
+	"""Genau ein Empfänger (N-1): fester Benutzer, sonst Ersteller des Angebots (auch Meister),
+	sonst der erste aktive Büro-Benutzer, zuletzt Administrator. Nur Benutzer mit Rolle
+	Büro/Meister und Leserecht am Angebot (``_berechtigt``)."""
+	kandidaten = []
 	if e.nachfass_zuweisung == "Benutzer" and e.nachfass_benutzer:
-		benutzer = _aktive_systembenutzer([e.nachfass_benutzer])
-		if benutzer:
-			return benutzer
-	buero = _aktive_systembenutzer(
-		frappe.get_all("Has Role", filters={"role": ROLLE_BUERO, "parenttype": "User"}, pluck="parent")
+		kandidaten.append(e.nachfass_benutzer)
+	if angebot.owner != "Administrator":
+		kandidaten.append(angebot.owner)
+	kandidaten += frappe.get_all(
+		"Has Role", filters={"role": ROLLE_BUERO, "parenttype": "User"}, pluck="parent", order_by="parent asc"
 	)
-	if angebot.owner in buero:
-		return [angebot.owner]
-	if buero:
-		return buero
-	return _aktive_systembenutzer([angebot.owner]) or ["Administrator"]
+	aktiv = set(_aktive_systembenutzer(kandidaten))
+	for user in dict.fromkeys(kandidaten):
+		if user in aktiv and user != "Administrator" and _berechtigt(user, angebot):
+			return [user]
+	return ["Administrator"]
 
 
 def aufgabe_text(angebot, zyklus: int) -> str:
@@ -196,7 +230,7 @@ def aufgabe_text(angebot, zyklus: int) -> str:
 
 
 def aufgabe_anlegen(angebot, zyklus: int, stichtag, e) -> list[str]:
-	"""ToDo je Empfänger (wie ``frappe.desk.form.assign_to.add``, zusätzlich ``cv_nachfass_zyklus``)."""
+	"""ToDo für den Empfänger (wie ``frappe.desk.form.assign_to.add``, zusätzlich ``cv_nachfass_zyklus``)."""
 	from frappe.desk.form.assign_to import notify_assignment
 
 	beschreibung = escape_html(aufgabe_text(angebot, zyklus))
@@ -218,10 +252,6 @@ def aufgabe_anlegen(angebot, zyklus: int, stichtag, e) -> list[str]:
 			}
 		).insert(ignore_permissions=True)
 		namen.append(todo.name)
-		if not frappe.has_permission("Quotation", "read", doc=angebot, user=user):
-			frappe.share.add_docshare(
-				"Quotation", angebot.name, user, read=1, flags={"ignore_share_permission": True}, notify=0
-			)
 		notify_assignment(
 			todo.assigned_by, user, "Quotation", angebot.name, action="ASSIGN", description=beschreibung
 		)
@@ -324,18 +354,18 @@ def nachfassen(quotation: str, mail: int | str | None = None) -> dict:
 
 	:param mail: 1 = Follow-up-Mail in die Email Queue, 0 = nicht; leer = Einstellung
 	"""
-	pruefe_rolle()
+	pruefe_rolle(_("Angebote nachfassen dürfen nur die Rollen Büro und Meister."))
+	angebot_sperren(quotation)
 	frappe.has_permission("Quotation", "read", quotation, throw=True)
-	frappe.db.get_value("Quotation", quotation, "name", for_update=True)
 	angebot = frappe.get_doc("Quotation", quotation)
 	if angebot.docstatus != 1 or angebot.status not in (*STATUS_NACHFASSEN, "Expired"):
 		frappe.throw(_("Nachfassen nur bei eingereichten, offenen Angeboten."))
-	auftrag = bestehender_auftrag(angebot.name)
+	auftrag = bestehender_auftrag(angebot.name, sperren=True)
 	if auftrag:
 		frappe.throw(_("Zum Angebot {0} gibt es bereits den Auftrag {1}.").format(angebot.name, auftrag.name))
 
 	e = einstellungen()
-	todos = nachfass_todos(angebot.name)
+	todos = nachfass_todos(angebot.name, sperren=True)
 	offen = [t.name for t in todos if t.status == "Open"]
 	warnungen = []
 	if offen:

@@ -63,7 +63,7 @@
    "label": "Assign Follow-up to",
    "options": "Rolle Büro\nBenutzer",
    "default": "Rolle Büro",
-   "description": "Rolle Büro: the creator of the quotation if they have the role Büro, otherwise all active users with the role Büro."
+   "description": "Rolle Büro: one task for the creator of the quotation (any active user except Administrator), otherwise for the first active user with the role Büro."
   },
   {
    "fieldname": "nachfass_benutzer",
@@ -97,7 +97,7 @@
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-29 08:00:00.000000",
+ "modified": "2026-10-29 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Corevatis ERPNext",
  "name": "Corevatis Vertrieb Einstellungen",

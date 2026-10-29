@@ -9,11 +9,14 @@ from frappe.utils import add_days, getdate, today
 
 from corevatis_erpnext.angebot import annahme, nachfassen
 from corevatis_erpnext.tests import _angebot as td
+from corevatis_erpnext.tests import _parallel
 from corevatis_erpnext.tests._helpers import make_user
 
 BUERO = "cv-test-buero@example.com"
 BUERO_NF = "cv-test-buero-nachfassen@example.com"
+MEISTER_NF = "cv-test-meister-nachfassen@example.com"
 MONTEUR = "cv-test-monteur-annahme@example.com"
+METHODE_NACHFASSEN = "/api/method/corevatis_erpnext.angebot.nachfassen.nachfassen"
 
 STANDARD = {
 	"nachfass_aktiv": 1,
@@ -38,6 +41,7 @@ class TestNachfassen(IntegrationTestCase):
 		super().setUpClass()
 		make_user(BUERO, "Bea", ["Büro", "Sales User"], "Büro")
 		make_user(BUERO_NF, "Nora", ["Büro", "Sales User"], "Nachfassen")
+		make_user(MEISTER_NF, "Mia", ["Meister", "Sales User"], "Meister")
 		make_user(MONTEUR, "Moritz", ["Monteur"], "Monteur")
 		td.ensure_felder_41()
 		td.ensure_artikel()
@@ -169,16 +173,79 @@ class TestNachfassen(IntegrationTestCase):
 		nachfassen.nachfassen_pruefen()
 		self.assertEqual([t.allocated_to for t in self._todos()], [BUERO])
 
-	def test_zuweisung_alle_buero_wenn_ersteller_nicht_buero(self):
+	def test_meister_angebot_genau_ein_todo_fuer_den_ersteller(self):
+		"""Review Epic 4 N-1: Angebot eines Meisters → ein ToDo für ihn, nicht eins je Büro-Benutzer."""
+		frappe.db.set_value("Quotation", self.angebot.name, "owner", MEISTER_NF, update_modified=False)
+		nachfassen.nachfassen_pruefen()
+		self.assertEqual([t.allocated_to for t in self._todos()], [MEISTER_NF])
+
+	def test_zuweisung_erster_buero_benutzer_wenn_ersteller_administrator(self):
 		frappe.db.set_value("Quotation", self.angebot.name, "owner", "Administrator", update_modified=False)
 		nachfassen.nachfassen_pruefen()
-		erwartet = set(
-			nachfassen._aktive_systembenutzer(
+		buero = [
+			b
+			for b in nachfassen._aktive_systembenutzer(
 				frappe.get_all("Has Role", filters={"role": "Büro", "parenttype": "User"}, pluck="parent")
 			)
+			if b != "Administrator" and nachfassen._berechtigt(b, self.angebot)
+		]
+		self.assertIn(BUERO_NF, buero)
+		self.assertEqual([t.allocated_to for t in self._todos()], buero[:1])
+
+	def test_ersteller_ohne_rolle_bekommt_keine_aufgabe_und_keine_freigabe(self):
+		"""Security-Review: Ersteller ohne Büro/Meister (z. B. Rolle entzogen) → Büro-Benutzer;
+		die Aufgabe verleiht keine Rechte (keine DocShare)."""
+		vertrieb = make_user("cv-test-vertrieb-nachfassen@example.com", "Vera", ["Sales User"], "Vertrieb")
+		frappe.db.set_value("Quotation", self.angebot.name, "owner", vertrieb, update_modified=False)
+		nachfassen.nachfassen_pruefen()
+		zugewiesen = [t.allocated_to for t in self._todos()]
+		self.assertEqual(len(zugewiesen), 1)
+		self.assertNotEqual(zugewiesen[0], vertrieb)
+		self.assertFalse(
+			frappe.db.exists(
+				"DocShare", {"share_doctype": "Quotation", "share_name": self.angebot.name, "user": vertrieb}
+			)
 		)
-		self.assertIn(BUERO_NF, erwartet)
-		self.assertEqual({t.allocated_to for t in self._todos()}, erwartet)
+		self.assertFalse(
+			frappe.db.exists("DocShare", {"share_doctype": "Quotation", "share_name": self.angebot.name})
+		)
+
+	def test_button_parallel_ein_todo(self):
+		"""Review Epic 4 A-1: zwei gleichzeitige Klicks „Nachfassen“ über die WSGI-App - genau ein
+		offenes ToDo, die zweite Anfrage meldet die vorhandene Aufgabe."""
+		frisch = self._angebot(tage_alt=0)
+		token = _parallel.api_token(BUERO)
+		frappe.db.commit()  # zweite Verbindung sieht nur bestätigte Daten
+		schranke, langsam = _parallel.gleichzeitig(nachfassen, "pruefe_rolle", "aufgabe_anlegen")
+		with schranke, langsam:
+			antworten = _parallel.parallel_post(
+				METHODE_NACHFASSEN, {"quotation": frisch.name, "mail": 0}, token
+			)
+		frappe.db.rollback()  # neuer Snapshot im Test-Thread
+		self.assertEqual(
+			[a.status_code for a in antworten], [200, 200], [a.get_data(as_text=True) for a in antworten]
+		)
+		nachrichten = [a.json["message"] for a in antworten]
+		self.assertEqual(len(self._todos(frisch.name)), 1)
+		self.assertEqual({tuple(m["todos"]) for m in nachrichten}, {(self._todos(frisch.name)[0].name,)})
+		self.assertEqual(sorted(len(m["warnungen"]) for m in nachrichten), [0, 1])
+
+	def test_lauf_prueft_nach_der_sperre_erneut(self):
+		"""Review Epic 4 A-1: legt ein paralleler Lauf die Aufgabe zwischen Kandidatenliste und
+		Sperre an, erkennt der Locking Read sie und es entsteht keine zweite (nachgestellt)."""
+		original = nachfassen.faelliger_zyklus
+
+		def dazwischen(name, stichtag, e, sperren=False):
+			if name == self.angebot.name and not sperren:
+				zyklus = original(name, stichtag, e)
+				nachfassen.aufgabe_anlegen(frappe.get_doc("Quotation", name), zyklus, stichtag, e)
+				return zyklus  # Stand vor dem parallelen Lauf
+			return original(name, stichtag, e, sperren=sperren)
+
+		with patch.object(nachfassen, "faelliger_zyklus", side_effect=dazwischen):
+			ergebnis = nachfassen.nachfassen_pruefen()
+		self.assertEqual(self._angelegt(ergebnis), [])
+		self.assertEqual(len(self._todos()), 1)
 
 	def test_follow_up_mail_in_email_queue(self):
 		_einstellen(nachfass_mail_aktiv=1)
@@ -239,8 +306,10 @@ class TestNachfassen(IntegrationTestCase):
 	def test_button_rechte(self):
 		frappe.set_user(MONTEUR)
 		try:
-			with self.assertRaises(frappe.PermissionError):
+			with self.assertRaises(frappe.PermissionError) as fehler:
 				nachfassen.nachfassen(self.angebot.name)
+			self.assertIn("nachfassen", str(fehler.exception))
+			self.assertNotIn("ablehnen", str(fehler.exception))
 		finally:
 			frappe.set_user("Administrator")
 		self.assertEqual(self._todos(), [])

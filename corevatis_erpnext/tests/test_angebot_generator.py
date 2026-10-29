@@ -248,6 +248,53 @@ class TestAngebotGenerator(IntegrationTestCase):
 			self.erzeugen(neu_erzeugen=1)
 		self.assertEqual(self.erzeugen()["angebot"], erstes)
 
+	def test_entwurf_ersetzen_warnt_bei_manuellen_positionen(self):
+		"""Review Epic 4 G-2: von Hand ergänzte Positionen gehen nur nach Bestätigung verloren."""
+		erstes = self.erzeugen()["angebot"]
+		self.assertEqual(generator.manuelle_positionen(erstes), [])
+		q = frappe.get_doc("Quotation", erstes)
+		code = "AZ-01" if frappe.db.exists("Item", "AZ-01") else next(iter(SOLL))
+		q.append("items", {"item_code": code, "qty": 2, "rate": 55})
+		q.save()
+		r = self.erzeugen(neu_erzeugen=1)
+		self.assertTrue(r["bestaetigung_noetig"])
+		self.assertEqual((r["angebot"], r["neu"], r["ersetzt"]), (erstes, False, False))
+		self.assertEqual(len(r["manuelle_positionen"]), 1)
+		self.assertTrue(r["manuelle_positionen"][0].startswith(f"8. {code}"), r["manuelle_positionen"])
+		self.assertEqual(len(frappe.get_doc("Quotation", erstes).items), 8)  # unverändert
+		r = self.erzeugen(neu_erzeugen=1, bestaetigen=1)
+		self.assertEqual((r["angebot"], r["neu"], r["ersetzt"]), (erstes, True, True))
+		self.assertEqual(len(frappe.get_doc("Quotation", erstes).items), 7)
+
+	def test_kalkulationsfelder_nur_buero_und_meister(self):
+		"""Review Epic 4 G-1: EK, Minuten, Zuschläge (JSON) und Herstellkosten auf Feldebene 2."""
+		from corevatis_erpnext.angebot.felder import PERMLEVEL_KALKULATION, feldrechte_fehlend
+
+		for doctype, feld in (
+			("Quotation", "cv_kalkulation_json"),
+			("Quotation Item", "cv_einzelkosten"),
+			("Sales Order", "cv_kalkulation_json"),
+			("Sales Order Item", "cv_einzelkosten"),
+		):
+			with self.subTest(doctype=doctype, feld=feld):
+				self.assertEqual(frappe.get_meta(doctype).get_field(feld).permlevel, PERMLEVEL_KALKULATION)
+		self.assertEqual(feldrechte_fehlend(), [])
+		frappe.set_user(BUERO)
+		name = self.erzeugen()["angebot"]
+		q = frappe.get_doc("Quotation", name)
+		self.assertIn(PERMLEVEL_KALKULATION, q.get_permlevel_access("read"))
+		# Generator mit den Rechten des Büros: Werte bleiben erhalten (Schreibrecht Ebene 2)
+		self.assertTrue(q.cv_kalkulation_json)
+		self.assertTrue(flt(q.items[0].cv_einzelkosten))
+		frappe.set_user(OHNE_ROLLE)
+		q = frappe.get_doc("Quotation", name)
+		self.assertTrue(q.has_permission("read"))
+		self.assertNotIn(PERMLEVEL_KALKULATION, q.get_permlevel_access("read"))
+		q.apply_fieldlevel_read_permissions()
+		self.assertFalse(q.get("cv_kalkulation_json"))
+		self.assertFalse(flt(q.items[0].get("cv_einzelkosten")))
+		self.assertTrue(q.items[0].get("cv_mengen_herkunft"))  # Mengenherkunft bleibt sichtbar
+
 	def test_lead_als_partei(self):
 		lead = make_lead(company=FIRMA)
 		r = self.erzeugen(lead=lead.name)
@@ -260,6 +307,35 @@ class TestAngebotGenerator(IntegrationTestCase):
 		self.aufmass = testaufmass("AUF-TEST-4.1-X")
 		with self.assertRaises(generator.AngebotFehler):
 			generator.erzeuge_angebot("AUF-TEST-4.1-X", lead="CRM-LEAD-GIBT-ES-NICHT")
+
+	def test_firma_vorrang_objekt_lead_standard(self):
+		"""Abnahme mvp-test: Firma des Aufmaßes/Objekts vor der des Leads vor der Standardfirma;
+		Firmen, die es nicht gibt, zählen nicht."""
+		lead = make_lead()
+		frappe.db.set_value("Lead", lead.name, "company", "_Test Gibt Es Nicht", update_modified=False)
+		self.assertEqual(generator._firmen(self.aufmass, "Lead", lead.name)[0], generator._standardfirma())
+		frappe.db.set_value("Lead", lead.name, "company", FIRMA, update_modified=False)
+		self.assertEqual(generator._firmen(self.aufmass, "Lead", lead.name)[0], FIRMA)
+		with patch.object(generator, "_firma_des_objekts", return_value=FIRMA):
+			self.assertEqual(generator._firmen(self.aufmass, "Customer", "egal")[0], FIRMA)
+		self.aufmass.company = FIRMA
+		self.assertEqual(generator._firma_des_objekts(self.aufmass), FIRMA)
+
+	def test_firma_ohne_leistungen_naechste_firma(self):
+		"""Abnahme mvp-test: alter Lead mit einer Firma ohne Stücklisten (CVT) - das Angebot
+		entsteht über die nächste Firma mit Leistungen, mit Hinweis statt „Keine Leistungen“."""
+		original = generator.leistungen_aus_aufmass
+
+		def je_firma(am, firma):
+			return ([], ["keine Stückliste"]) if firma == "_Test Ohne Katalog" else original(am, firma)
+
+		with (
+			patch.object(generator, "_firmen", return_value=["_Test Ohne Katalog", FIRMA]),
+			patch.object(generator, "leistungen_aus_aufmass", side_effect=je_firma),
+		):
+			r = self.erzeugen()
+		self.assertEqual(frappe.db.get_value("Quotation", r["angebot"], "company"), FIRMA)
+		self.assertTrue(any("_Test Ohne Katalog" in w for w in r["warnungen"]), r["warnungen"])
 
 	def test_rechte_und_ohne_kern(self):
 		frappe.set_user(OHNE_ROLLE)

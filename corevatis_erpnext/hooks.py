@@ -97,7 +97,13 @@ doc_events = {
 	"Quotation": {
 		"before_insert": "corevatis_erpnext.angebot.textbausteine.standard_texte",
 		"before_validate": "corevatis_erpnext.angebot.textbausteine.kennzeichen_ausserhalb_summe",
-		"validate": "corevatis_erpnext.angebot.pruefung.positionen_ohne_preis",
+		# Review Epic 4 A-2: Eventual-/Alternativpositionen sind kein Ersatz für die Zeile davor
+		"before_submit": "corevatis_erpnext.angebot.textbausteine.alternativ_sets_aufloesen",
+		"validate": [
+			"corevatis_erpnext.angebot.pruefung.positionen_ohne_preis",
+			# Security-Review: cv_lead setzt nur der Server
+			"corevatis_erpnext.angebot.annahme.cv_lead_schuetzen",
+		],
 		# 4.4: über ERPNext „Als verloren festlegen“ verloren -> Lead „Verloren“
 		"on_update_after_submit": "corevatis_erpnext.angebot.annahme.angebot_aktualisiert",
 	},

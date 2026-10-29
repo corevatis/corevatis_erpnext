@@ -11,6 +11,9 @@
   ein Link auf ``Objekt``/``Aufmass`` verlangte deren Doctype), ``cv_angebot`` (Link
   Quotation), ``cv_lead`` (Link Lead).
 - **Lead:** ``cv_projekt`` (Link Project, schreibgeschützt) - gesetzt von der Annahme.
+- **Quotation:** ``cv_lead`` (Link Lead, schreibgeschützt) - Anfrage des Angebots, gemerkt,
+  wenn die Annahme das Angebot auf den Kunden umstellt (auch auf einen übernommenen
+  Bestandskunden mit anderem ``lead_name``, Review Epic 4 A-3); wird gespiegelt.
 - **ToDo:** ``cv_nachfass_zyklus`` (Int, schreibgeschützt): 0 = keine Nachfass-Aufgabe,
   1, 2, ... = Nachfass-Zyklus (Idempotenz des Scheduler-Jobs, 4.5).
 
@@ -51,6 +54,8 @@ SPIEGEL_EIGENSCHAFTEN = (
 	"translatable",
 	"default",
 	"non_negative",
+	# Feldrechte (Kalkulationsdaten, Review Epic 4 G-1/A-7) gelten auch am Auftrag
+	"permlevel",
 )
 
 
@@ -122,6 +127,22 @@ def lead_felder() -> list[dict]:
 	]
 
 
+def angebot_felder() -> list[dict]:
+	return [
+		{
+			"fieldname": "cv_lead",
+			"fieldtype": "Link",
+			"options": "Lead",
+			"label": "Inquiry",
+			"read_only": 1,
+			"no_copy": 1,
+			"search_index": 1,
+			"insert_after": "cv_aufmass",
+			"depends_on": "eval:doc.cv_lead",
+		}
+	]
+
+
 def todo_felder() -> list[dict]:
 	return [
 		{
@@ -185,6 +206,7 @@ def ensure_felder() -> None:
 		{
 			"Project": _mit_modul(projekt_felder()),
 			"Lead": _mit_modul(lead_felder()),
+			"Quotation": _mit_modul(angebot_felder()),
 			"ToDo": _mit_modul(todo_felder()),
 		},
 		update=True,

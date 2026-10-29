@@ -6,6 +6,45 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Behoben (Review Epic 4)
+
+- **A-1** Angebotsannahme und Nachfassen: parallele Aufrufe (Doppelklick, REST-Wiederholung,
+  zwei Scheduler-Läufe) ergeben genau einen Auftrag, ein Projekt bzw. ein Nachfass-ToDo.
+  `annahme.angebot_sperren`: neue Transaktion, solange die Anfrage nichts geschrieben hat
+  (REPEATABLE READ: Snapshot sonst von vor der Sperre), dann `FOR UPDATE` auf das Angebot vor
+  jedem Lesen der Belegdaten; Dublettenprüfungen (`Sales Order Item.prevdoc_docname`, ToDos)
+  als Locking Read; Riegel nach dem Anlegen (`nur_ein_auftrag`); Projektanlage sperrt den
+  Auftrag. Tests mit zwei gleichzeitigen Anfragen über die WSGI-App (`tests/_parallel.py`).
+- **A-2** Eventual-/Alternativpositionen: Quotation `before_submit` nimmt `has_alternative_item`
+  der Zeile davor zurück (keine Alternativ-Sets mehr, Normalpositionen fallen auf dem
+  ERPNext-Weg nicht mehr weg), Patch `v0_4.alternativ_sets_aufloesen` für eingereichte Angebote;
+  am Angebot mit Kennzeichen ist ERPNext „Erstellen → Auftrag“ ausgeblendet und verweist auf
+  „Angebot annehmen“. `is_alternative` bleibt der Summenmechanismus (einziger Weg in v16, der
+  in Desk und Server gleich rechnet).
+- **A-3** Kundendubletten: vor dem Anlegen wird ein bestehender Kunde mit derselben E-Mail
+  (Kontakt mit Kundenverknüpfung) oder demselben Namen und derselben PLZ übernommen (Warnung),
+  die Objektanschrift an ihn gehängt; neues Feld `Quotation.cv_lead` (gespiegelt) hält die
+  Anfrage.
+- **A-5** Projekt automatisch nur für Angebote aus dem Aufmaß (`cv_erzeugt_aus_aufmass`,
+  `cv_aufmass`), sonst optional (`projekt_anlegen`, Dialog „Projekt anlegen“); gilt auch für den
+  `on_submit`-Hook.
+- **G-1/A-7** `cv_kalkulation_json` und `cv_einzelkosten` auf Feldebene 2 (Ebene 1 lesen in
+  ERPNext schon Sales User u. a.); Büro und Meister bekommen Ebene 2 (`ensure_feldrechte`,
+  Site-Template, `verify_site_template`); der Spiegel übernimmt `permlevel`.
+- **G-2** „Entwurf ersetzen“ mit von Hand ergänzten Positionen verlangt `bestaetigen=1`
+  (Antwort `bestaetigung_noetig`, `manuelle_positionen`; Dialog am Aufmaß).
+- **N-1** Nachfassen: genau ein ToDo je Zyklus - Ersteller des Angebots (auch Meister), sonst
+  der erste aktive Büro-Benutzer.
+- Abnahme mvp-test: Generator wählt die Firma mit Vorrang Aufmaß/Objekt (Feld `company`, falls
+  vorhanden) > Lead > Standardfirma; hat die Firma für das Aufmaß keine Leistungen (alter Lead
+  einer Firma ohne Stücklisten), nimmt er die nächste mit Hinweis. 403 beim Nachfassen nennt
+  „nachfassen“ statt „annehmen und ablehnen“.
+- Security-Review: `Quotation.cv_lead` setzt nur der Server (`validate` verwirft Änderungen aus
+  Formular/REST), bei der Annahme zählt es nur, wenn der Lead zum Kunden gehört; Annahme und
+  `on_submit`-Hook ändern einen Lead nur mit Schreibrecht. Nachfass-Aufgaben gehen nur an
+  Benutzer mit Rolle Büro/Meister und eigenem Leserecht am Angebot - keine Freigabe (DocShare)
+  mehr.
+
 ### Behoben (Verifikation Epic 4 auf mvp-test)
 
 - Aufmaß: Die Verbindung „Angebot“ zeigt jetzt die Anzahl. Ohne `fieldname` im Dashboard lud

@@ -20,7 +20,13 @@ frappe.provide("corevatis_erpnext.angebot");
 			.join("");
 	}
 
+	// Review Epic 4 A-5: Projekt automatisch nur für Angebote aus dem Aufmaß
+	const ist_corevatis_angebot = (doc) => !!(doc.cv_erzeugt_aus_aufmass || doc.cv_aufmass);
+	// Review Epic 4 A-2: Eventual-/Alternativpositionen (Corevatis-Kennzeichen)
+	const hat_kennzeichen = (doc) => (doc.items || []).some((z) => z.cv_eventualposition || z.cv_alternativposition);
+
 	corevatis_erpnext.angebot.annehmen_dialog = function (frm) {
+		const corevatis = ist_corevatis_angebot(frm.doc);
 		const d = new frappe.ui.Dialog({
 			title: __("Angebot annehmen"),
 			fields: [
@@ -42,6 +48,16 @@ frappe.provide("corevatis_erpnext.angebot");
 					default: frappe.datetime.add_days(frappe.datetime.get_today(), 14),
 				},
 				{ fieldtype: "Check", fieldname: "einreichen", label: __("Auftrag direkt einreichen"), default: 1 },
+				{
+					fieldtype: "Check",
+					fieldname: "projekt_anlegen",
+					label: __("Projekt anlegen"),
+					default: corevatis ? 1 : 0,
+					read_only: corevatis ? 1 : 0,
+					description: corevatis
+						? __("Angebot aus dem Aufmaß: das Projekt wird immer angelegt.")
+						: __("Angebot ohne Aufmaß (z. B. Materialverkauf): Projekt nur bei Bedarf."),
+				},
 			],
 			primary_action_label: __("Annehmen"),
 			primary_action(values) {
@@ -133,8 +149,44 @@ frappe.provide("corevatis_erpnext.angebot");
 		});
 	};
 
+	// ERPNext „Erstellen → Auftrag“ bei Eventual-/Alternativpositionen: Auswahl-Dialog von ERPNext
+	// behandelt sie als Ersatz für die Zeile davor - stattdessen „Angebot annehmen“ (Review Epic 4 A-2)
+	function hinweis_annehmen(frm) {
+		const text = __(
+			"Dieses Angebot enthält Eventual- oder Alternativpositionen. Bitte den Auftrag über „Angebot annehmen“ anlegen: Er übernimmt alle Normalpositionen und lässt Eventual- und Alternativpositionen weg."
+		);
+		if (frappe.user.has_role(ROLLEN)) {
+			frappe.confirm(`${esc(text)}<br><br>${esc(__("Jetzt „Angebot annehmen“ öffnen?"))}`, () =>
+				corevatis_erpnext.angebot.annehmen_dialog(frm)
+			);
+		} else {
+			frappe.msgprint({ title: __("Auftrag anlegen"), indicator: "orange", message: esc(text) });
+		}
+	}
+
+	function erpnext_auftrag_umleiten(frm) {
+		const cs = frm.cscript;
+		if (!cs || cs.__cv_make_sales_order) return;
+		// Rückfall, falls der Button doch sichtbar ist (eigener Button, andere Menüs)
+		cs.__cv_make_sales_order = cs.make_sales_order;
+		cs.make_sales_order = function () {
+			if (hat_kennzeichen(frm.doc)) return hinweis_annehmen(frm);
+			return cs.__cv_make_sales_order && cs.__cv_make_sales_order.apply(this, arguments);
+		};
+	}
+
 	frappe.ui.form.on("Quotation", {
 		refresh(frm) {
+			erpnext_auftrag_umleiten(frm);
+			if (frm.doc.docstatus === 1 && hat_kennzeichen(frm.doc)) {
+				// ERPNext fügt den Button im Controller-refresh nach diesem Handler hinzu
+				setTimeout(() => frm.remove_custom_button(__("Sales Order"), __("Create")), 0);
+				frm.dashboard.add_comment(
+					__("Eventual-/Alternativpositionen: Auftrag nur über „Angebot annehmen“ (ERPNext „Erstellen → Auftrag“ ist ausgeblendet)."),
+					"blue",
+					true
+				);
+			}
 			if (frm.doc.docstatus !== 1 || !frappe.user.has_role(ROLLEN)) return;
 			const status = frm.doc.status;
 			if (["Open", "Replied", "Partially Ordered", "Ordered", "Expired"].includes(status)) {
