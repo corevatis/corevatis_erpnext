@@ -230,7 +230,7 @@ def _vorhandene(employee: str, idempotency_key: str) -> list[dict]:
 		.on(td_t.parent == ts_t.name)
 		.select(td_t.name, td_t.parent, ts_t.employee)
 		.where(
-			(td_t.field(SYNC_KEY_FELD) == idempotency_key)
+			(getattr(td_t, SYNC_KEY_FELD) == idempotency_key)
 			& (td_t.parenttype == "Timesheet")
 			& (ts_t.docstatus < 2)
 		)
@@ -440,7 +440,7 @@ def tagesbuchungen(employee: str, datum) -> list[dict]:
 			td.task,
 			td.description,
 			td.is_billable,
-			td.field(SYNC_KEY_FELD).as_("sync_key"),
+			getattr(td, SYNC_KEY_FELD).as_("sync_key"),
 		)
 		.where(
 			(ts.employee == employee)
