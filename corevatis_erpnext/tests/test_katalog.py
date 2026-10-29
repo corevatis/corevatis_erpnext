@@ -11,6 +11,7 @@ Katalog bleibt auf der Testsite stehen (der CI-Schritt nach den Tests prüft ihn
 from __future__ import annotations
 
 import contextlib
+import re
 from decimal import ROUND_HALF_UP, Decimal
 from unittest.mock import patch
 
@@ -186,6 +187,27 @@ class TestKatalogVorlagen(UnitTestCase):
 				self.assertGreater(float(menge), 0)
 			_mat, _lohn, hk = herstellkosten(bom, self.ek)
 			self.assertGreater(self.vk[item], hk, f"{item}: Verkaufspreis unter Herstellkosten")
+
+	def test_verkaufspreis_aus_herstellkosten_der_stueckliste(self):
+		"""Jede Preisnotiz „Herstellkosten X EUR x Faktor 1.45“ muss zur Stückliste passen
+		(Verifikation Epic 2: eine BOM-Folgezeile war in die falsche Stückliste gerutscht)."""
+		muster = re.compile(r"Herstellkosten ([0-9.]+) EUR x Faktor ([0-9.]+)")
+		geprueft = 0
+		for z in zeilen("07_item_price.csv"):
+			if z["price_list"] != VERKAUF or z["item_code"] not in self.boms:
+				continue
+			treffer = muster.search(z["note"])
+			self.assertTrue(treffer, f"{z['item_code']}: Notiz ohne Herstellkosten")
+			notiz_hk, faktor = Decimal(treffer.group(1)), Decimal(treffer.group(2))
+			_mat, _lohn, hk = herstellkosten(self.boms[z["item_code"]], self.ek)
+			self.assertEqual(hk, notiz_hk, z["item_code"])
+			self.assertEqual(
+				Decimal(z["price_list_rate"]),
+				(hk * faktor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+				z["item_code"],
+			)
+			geprueft += 1
+		self.assertEqual(geprueft, len(self.boms))
 
 	def test_beispiele_von_hand(self):
 		for item, soll in BEISPIELE.items():
