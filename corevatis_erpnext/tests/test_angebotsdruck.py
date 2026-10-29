@@ -31,8 +31,6 @@ PRAEFIX = "_T43-"
 LANGTEXT = (
 	"<div class='ql-editor read-mode'><p>Untergrund vorbereiten: lose und mürbe Putz- und Mörtelteile "
 	"bis auf tragfähigen Untergrund entfernen, Fugen 2 cm tief auskratzen, Flächen abfegen und vornässen.</p>"
-	"<p>Verarbeitung nach Herstellerrichtlinie, Verbrauch und Schichtdicke nach Systemaufbau, "
-	"Anschlüsse an angrenzende Bauteile fachgerecht ausbilden.</p>"
 	"<p>Einschließlich Abdecken angrenzender Bauteile und Reinigung des Arbeitsbereichs.</p></div>"
 )
 
@@ -323,20 +321,44 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 	def html(self, doc) -> str:
 		return frappe.get_print("Quotation", doc.name, print_format=FORMAT, doc=doc)
 
-	def pdf(self, doc, name: str):
+	def pdf(self, doc, name: str | None = None):
+		"""PDF rendern; Rückgabe (Seitenzahl, Text je Seite, PDF). Mit ``name`` als Muster speichern."""
 		if not wkhtmltopdf_vorhanden():
 			self.skipTest("wkhtmltopdf fehlt")
 		from pypdf import PdfReader
 
 		inhalt = frappe.get_print("Quotation", doc.name, print_format=FORMAT, doc=doc, as_pdf=True)
+		if name:
+			self.muster_speichern(name, inhalt)
+		reader = PdfReader(BytesIO(inhalt))
+		return len(reader.pages), [page.extract_text() or "" for page in reader.pages], inhalt
+
+	def muster_speichern(self, name: str, inhalt: bytes) -> None:
 		if self.muster:
 			Path(self.muster).mkdir(parents=True, exist_ok=True)
 			(Path(self.muster) / f"angebot-{name}.pdf").write_bytes(inhalt)
-		reader = PdfReader(BytesIO(inhalt))
-		texte = [page.extract_text() or "" for page in reader.pages]
-		return len(reader.pages), texte
+
+	def auffuellen(self, baue, seiten: int, name: str, von: int, bis: int):
+		"""Größtes Angebot ``baue(n)`` (n = von … bis), das genau ``seiten`` Seiten hat.
+
+		Die Seitenzahl hängt an Schriften und wkhtmltopdf-Version der Umgebung; statt einer
+		festen Positionszahl wird aufgefüllt, bis die nächste Position eine Seite mehr bringt.
+		Eine Position mehr ergibt höchstens eine Seite mehr, ``seiten`` wird also getroffen."""
+		treffer = None
+		for anzahl in range(von, bis + 1):
+			doc = baue(anzahl)
+			anzahl_seiten, texte, inhalt = self.pdf(doc)
+			if anzahl_seiten > seiten:
+				break
+			if anzahl_seiten == seiten:
+				treffer = (doc, texte, inhalt)
+		self.assertIsNotNone(treffer, f"kein Angebot mit {seiten} Seiten ({von}-{bis} Positionen)")
+		doc, texte, inhalt = treffer
+		self.muster_speichern(name, inhalt)
+		return doc, texte
 
 	def pruefe(self, doc, seiten: int, texte: list[str]):
+		self.assertEqual(len(texte), seiten)
 		alles = "\n".join(texte)
 		self.assertNotIn("None", alles)
 		self.assertIn(f"Seite 1 von {seiten}", texte[0].replace("\n", " "))
@@ -345,9 +367,18 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		self.assertIn(doc.get_formatted("grand_total"), alles)
 		self.assertIn(doc.taxes[0].get_formatted("tax_amount"), alles)
 		self.assertIn(FIRMA, alles)
+		# Summen: Netto = Positionen ohne Eventual-/Alternativpositionen (- Nachlass)
+		self.assertEqual(flt(doc.total, 2), flt(sum(r.amount for r in doc.items if not r.is_alternative), 2))
+		self.assertEqual(flt(doc.net_total, 2), flt(doc.total - flt(doc.discount_amount), 2))
+		self.assertEqual(flt(doc.grand_total, 2), flt(doc.net_total + doc.total_taxes_and_charges, 2))
+		# jede Position steht vollständig auf einer Seite (Kurztext und Preis zusammen)
+		for row in doc.items:
+			self.assertTrue(
+				any(row.item_name[:25] in t and row.get_formatted("rate") in t for t in texte), row.item_name
+			)
 
 	def test_kurz_eine_seite(self):
-		# kurzes Angebot (Feuchtemessung): eigene kurze Vorbemerkung und Gewährleistung
+		# kurzes Angebot (Feuchtemessung): kurze Vorbemerkung und Gewährleistung
 		doc = self.angebot(
 			[self.position("AL-01", 1), self.position("AL-03", 4)],
 			cv_vorbemerkung="<p>Sehr geehrte Frau Feucht, wie besprochen bieten wir Ihnen an:</p>",
@@ -356,44 +387,41 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		html = self.html(doc)
 		self.assertNotIn("None", html)
 		self.assertNotIn("Zusammenstellung", html)
-		seiten, texte = self.pdf(doc, "kurz")
-		self.assertEqual(seiten, 1, texte)
+		_seiten, texte, _pdf = self.pdf(doc, "kurz")
 		self.pruefe(doc, 1, texte)
 		self.assertIn("Musterweg 3", texte[0])
+		self.assertIn("Angebot", texte[0])
 
-	def test_mittel_zwei_seiten_mit_gruppen(self):
+	def positionen_mittel(self, anzahl: int) -> list[dict]:
+		"""Allgemeine Leistungen, ``anzahl`` Positionen Wand, zwei Boden, eine Eventualposition."""
 		wand, boden = ("Keller 1", "Außenwand innen"), ("Keller 2", "Boden")
-		positionen = [self.position("AL-01", 1), self.position("AL-02", 2)]
-		positionen += [
-			self.position(code, menge, *wand)
-			for code, menge in (
-				("IA-01", 18.5),
-				("IA-02", 18.5),
-				("IA-03", 18.5),
-				("IA-04", 9.2),
-				("IA-05", 18.5),
-			)
-		]
+		codes = ("IA-01", "IA-02", "IA-03", "IA-04", "IA-05", "IA-07", "SP-06", "HS-02")
+		positionen = [self.position("AL-01", 1)]
+		positionen += [self.position(codes[i % len(codes)], 18.5, *wand) for i in range(anzahl)]
 		positionen += [self.position("IA-08", 12, *boden), self.position("IA-04", 14, *boden)]
 		positionen.append(self.position("HS-02", 9.2, *wand, cv_eventualposition=1))
-		doc = self.angebot(positionen, cv_titel="Kellerabdichtung von innen")
-		self.assertEqual(
-			flt(doc.net_total, 2), flt(sum(r.amount for r in doc.items if not r.is_alternative), 2)
+		return positionen
+
+	def test_mittel_zwei_seiten_mit_gruppen(self):
+		doc, texte = self.auffuellen(
+			lambda n: self.angebot(self.positionen_mittel(n), cv_titel="Kellerabdichtung von innen"),
+			2,
+			"mittel",
+			1,
+			20,
 		)
+		self.pruefe(doc, 2, texte)
 		html = self.html(doc)
 		self.assertNotIn("None", html)
 		for teil in (
 			"1.1",
-			"2.6",
+			"2.1",
 			"3.2",
 			"Keller 1 \u2013 Außenwand innen",
 			"Zusammenstellung",
 			"Eventualposition",
 		):
 			self.assertIn(teil, html)
-		seiten, texte = self.pdf(doc, "mittel")
-		self.assertEqual(seiten, 2, [t[-300:] for t in texte])
-		self.pruefe(doc, 2, texte)
 		self.assertIn("Kellerabdichtung von innen", texte[0])
 
 	def positionen_lang(self, anzahl: int) -> list[dict]:
@@ -412,22 +440,22 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		return positionen
 
 	def test_lang_sechs_seiten(self):
-		# Positionen ergänzen, bis das PDF 6 Seiten hat (Schriften der Umgebung bestimmen den
-		# Umbruch); eine Position mehr bringt höchstens eine Seite mehr
-		for anzahl in range(14, 70):
-			doc = self.angebot(
-				self.positionen_lang(anzahl),
+		doc, texte = self.auffuellen(
+			lambda n: self.angebot(
+				self.positionen_lang(n),
 				cv_titel="Abdichtung Keller und Erdgeschoss",
 				additional_discount_percentage=3,
-			)
-			seiten, texte = self.pdf(doc, "lang")
-			if seiten >= 6:
-				break
-		self.assertEqual(seiten, 6, [t[-300:] for t in texte])
+			),
+			6,
+			"lang",
+			8,
+			80,
+		)
 		self.pruefe(doc, 6, texte)
-		self.assertIn("Nachlass", "\n".join(texte))
-		for row in doc.items:
-			self.assertTrue(any(row.item_name[:30] in t for t in texte), row.item_name)
+		alles = "\n".join(texte)
+		self.assertIn("Nachlass", alles)
+		self.assertIn("Zusammenstellung", alles)
+		self.assertIn("Alternativposition", alles)
 
 	def test_maskierung(self):
 		img = "<img src=x onerror=alert(1)>"
