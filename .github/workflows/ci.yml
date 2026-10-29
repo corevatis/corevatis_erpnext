@@ -18,7 +18,7 @@ env:
   FRAPPE_BRANCH: version-16
   ERPNEXT_BRANCH: version-16
   ERPNEXT_GERMANY_BRANCH: version-16
-  DRUCKFORMATE_BRANCH: version-16-corevatis
+  DRUCKFORMATE_BRANCH: fix/review-epic-4
   PYTHON_VERSION: "3.14"
   NODE_VERSION: "24"
   RUFF_VERSION: "0.14.10"
