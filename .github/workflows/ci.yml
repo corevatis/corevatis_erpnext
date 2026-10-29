@@ -150,6 +150,10 @@ jobs:
           raise SystemExit(0 if result["ok"] else 1)
           PY
 
+      - name: Frappe-Assets bauen (Druckansicht braucht print.bundle.css, Drucktests 4.3)
+        working-directory: /home/runner/frappe-bench
+        run: bench build --app frappe
+
       - name: bench run-tests --app corevatis_erpnext
         working-directory: /home/runner/frappe-bench
         run: |
