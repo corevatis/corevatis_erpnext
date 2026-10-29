@@ -127,6 +127,7 @@ def apply_site_template(
 	_ensure_letter_head(cfg, company, report)
 	_ensure_print_formats(cfg, report)
 	_ensure_print_settings(cfg, report)
+	_ensure_angebot(cfg, company, report)
 	_ensure_workspaces(cfg, report)
 	_ensure_erpnext_germany(cfg, report)
 
@@ -767,6 +768,9 @@ def _ensure_letter_head(cfg: dict, company: str, report: Report) -> None:
 def _ensure_print_formats(cfg: dict, report: Report) -> None:
 	from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 
+	# eigene Formate, die das Template als Standard ablösen darf (z. B. „Angebot“ durch
+	# „Angebot Corevatis“, 4.3); alle anderen eigenen Standards bleiben
+	replace = cfg.get("print_formats_replace") or {}
 	for doctype, print_format in (cfg.get("print_formats") or {}).items():
 		if not frappe.db.exists("Print Format", print_format):
 			report.skip("Druckformate", f"{print_format} ({doctype}) nicht installiert")
@@ -777,7 +781,7 @@ def _ensure_print_formats(cfg: dict, report: Report) -> None:
 		current = frappe.get_meta(doctype).default_print_format
 		if current == print_format:
 			continue
-		if _is_custom_print_format(current):
+		if _is_custom_print_format(current) and current not in replace.get(doctype, ()):
 			report.skip("Druckformate", f"{doctype} hat schon eigenen Standard {current!r}")
 			continue
 		make_property_setter(doctype, None, "default_print_format", print_format, "Data", for_doctype=True)
@@ -793,6 +797,25 @@ def _ensure_print_settings(cfg: dict, report: Report) -> None:
 		if str(frappe.db.get_single_value("Print Settings", field)) != str(value):
 			frappe.db.set_single_value("Print Settings", field, value)
 			report.change("Druckeinstellungen", f"{field}={value}")
+
+
+def _ensure_angebot(cfg: dict, company: str, report: Report) -> None:
+	"""Angebotsdruck (4.3): Textbausteine anlegen (auch ohne migrate, z. B. frische Site im
+	Onboarding) und Zahlungsbedingungen als Standard der Firma, wenn dort noch keine stehen."""
+	spec = cfg.get("angebot") or {}
+	if not spec:
+		return
+	from corevatis_erpnext.angebot.textbausteine import ensure_textbausteine
+
+	for titel in ensure_textbausteine():
+		report.change("Angebot", f"Textbaustein {titel} angelegt")
+	terms = spec.get("default_selling_terms")
+	if terms and not frappe.db.get_value("Company", company, "default_selling_terms"):
+		if frappe.db.exists("Terms and Conditions", terms):
+			frappe.db.set_value("Company", company, "default_selling_terms", terms)
+			report.change("Angebot", f"{terms} als Zahlungsbedingungen der Firma")
+		else:
+			report.warn("Angebot", f"Textbaustein {terms} fehlt")
 
 
 def _ensure_workspaces(cfg: dict, report: Report) -> None:
@@ -1003,13 +1026,28 @@ def _verify(cfg: dict) -> dict:
 			current = frappe.get_meta(doctype).default_print_format
 			check(
 				f"Druckformat {doctype}",
-				current == print_format or (current and _is_custom_print_format(current)),
+				current == print_format
+				or (
+					current
+					and _is_custom_print_format(current)
+					and current not in (cfg.get("print_formats_replace") or {}).get(doctype, ())
+				),
 				current or "leer",
 			)
 
 	for field, value in (cfg.get("print_settings") or {}).items():
 		got = frappe.db.get_single_value("Print Settings", field)
 		check(f"Druckeinstellung {field}", str(got) == str(value), str(got))
+
+	angebot = cfg.get("angebot") or {}
+	if angebot:
+		from corevatis_erpnext.angebot.textbausteine import TEXTBAUSTEINE
+
+		for titel in TEXTBAUSTEINE:
+			check(f"Textbaustein {titel}", frappe.db.exists("Terms and Conditions", titel))
+		if angebot.get("default_selling_terms"):
+			got = frappe.db.get_value("Company", company, "default_selling_terms")
+			check("Zahlungsbedingungen der Firma", bool(got), got or "leer")
 	for name, values in (cfg.get("workspaces") or {}).items():
 		if frappe.db.exists("Workspace", name):
 			for field, value in values.items():

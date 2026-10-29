@@ -18,6 +18,10 @@
 		"city": "Willich",
 		"country": "Germany"
 	},
+	"print_formats": {
+		"_beschreibung": "Angebotsdruck (4.3): „Angebot Corevatis“ (erpnext_druckformate) statt „Angebot“ als Standard für Angebote.",
+		"Quotation": "Angebot Corevatis"
+	},
 	"letter_head": {
 		"letter_head_name": "Hülshoff Sanierungstechnik",
 		"owner_line": "PLATZHALTER Inhaber/Geschäftsführung"

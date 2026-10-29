@@ -39,6 +39,11 @@ def after_install() -> None:
 	from corevatis_erpnext.katalog.importer import ensure_grundlagen
 
 	ensure_grundlagen()
+	# Angebotsdruck (4.3): Textbausteine anlegen, vorhandene bleiben unverändert
+	from corevatis_erpnext.angebot.textbausteine import ensure_textbausteine
+
+	ensure_textbausteine()
+
 	ensure_angebot_setup()
 
 
@@ -70,6 +75,11 @@ def after_migrate() -> None:
 	from corevatis_erpnext.katalog.importer import ensure_grundlagen
 
 	ensure_grundlagen()
+	# Angebotsdruck (4.3): Textbausteine anlegen, vorhandene bleiben unverändert
+	from corevatis_erpnext.angebot.textbausteine import ensure_textbausteine
+
+	ensure_textbausteine()
+
 	# Angebotsannahme/Nachfassen (4.4/4.5) zuletzt: der Spiegel Quotation -> Sales Order
 	# übernimmt die cv_*-Felder, die andere Schritte am Angebot angelegt haben
 	ensure_angebot_setup()
