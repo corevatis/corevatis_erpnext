@@ -81,3 +81,23 @@ Quotation {0} already exists for measurement {1}.,Zum Aufmaß {1} gibt es schon 
 Quotation {0} is already submitted; amend it instead of regenerating.,Angebot {0} ist bereits gebucht; bitte abändern statt neu erzeugen.
 No services found for measurement {0}.,Keine Leistungen zum Aufmaß {0} gefunden.
 No sales tax template {0} for company {1}.,Keine Verkaufs-Steuervorlage {0} für die Firma {1}.
+Quotation and Property,Angebot und Objekt
+Measurement,Aufmaß
+Follow-up Cycle,Nachfass-Zyklus
+"Follow-up task for a quotation (Corevatis), cycle number","Nachfass-Aufgabe zu einem Angebot (Corevatis), Nummer des Zyklus"
+Corevatis Vertrieb Einstellungen,Corevatis Vertrieb Einstellungen
+Settings for quotation acceptance and follow-up (Corevatis),Einstellungen für Angebotsannahme und Nachfassen (Corevatis)
+Quotation Follow-up,Angebote nachfassen
+Automatic Follow-up,Automatisch nachfassen
+"Daily job: creates a follow-up task for submitted, open quotations without answer.","Täglicher Lauf: legt für eingereichte, offene Angebote ohne Antwort eine Nachfass-Aufgabe an."
+Follow-up after (Days),Nachfassen nach (Tagen)
+Days after the quotation date (and after the previous follow-up task was closed).,Tage nach dem Angebotsdatum (und nach dem Erledigen der vorigen Nachfass-Aufgabe).
+Maximum Follow-ups per Quotation,Höchstens Nachfass-Aufgaben je Angebot
+Also Expired Quotations,Auch abgelaufene Angebote
+Also follow up quotations whose validity (Valid Till) has passed.,"Auch Angebote nachfassen, deren Gültigkeit („Gültig bis“) abgelaufen ist."
+Assign Follow-up to,Nachfassen zuweisen an
+"Rolle Büro: the creator of the quotation if they have the role Büro, otherwise all active users with the role Büro.","Rolle Büro: Ersteller des Angebots, wenn er die Rolle Büro hat, sonst alle aktiven Benutzer mit der Rolle Büro."
+Follow-up User,Benutzer für das Nachfassen
+Follow-up Email,Nachfass-E-Mail
+Queue Follow-up Email,Nachfass-E-Mail in die Warteschlange legen
+"Puts a follow-up email to the quotation contact into the email queue. Without an outgoing email account nothing is sent (status Not Sent).","Legt eine Nachfass-E-Mail an den Kontakt des Angebots in die E-Mail-Warteschlange. Ohne ausgehendes E-Mail-Konto wird nichts versendet (Status „Not Sent“)."

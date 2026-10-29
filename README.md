@@ -109,6 +109,31 @@ window.addEventListener("message", function (e) {
 - **Foto-Galerie**: `corevatis_erpnext.galerie(frm, {fieldname})` aus `public/js/galerie.js`,
   für weitere Doctypes die Datei in `doctype_js` eintragen und im `refresh` aufrufen.
 
+## Angebot annehmen, ablehnen, nachfassen (Epic 4)
+
+- **Angebot annehmen** (4.4, Büro/Meister, Button am eingereichten Angebot bzw.
+  `POST /api/method/corevatis_erpnext.angebot.annahme.angebot_annehmen` mit `quotation`,
+  `auftragsdatum`, `lieferdatum`, `einreichen`): Kunde aus dem Lead (ERPNext `_make_customer`,
+  Anschrift aus Objekt/Objektadresse und Kontakt werden übernommen), Auftrag `AB-` ohne
+  Eventual-/Alternativpositionen (`cv_eventualposition`, `cv_alternativposition`,
+  `is_alternative`), Steuervorlage und `cv_*`-Felder vom Angebot, Projekt „<Objektadresse> –
+  <Verfahren>“ (Projekttyp „Sanierung“), Lead „Gewonnen“ mit `cv_projekt`. Idempotent: ein
+  zweiter Aufruf meldet den vorhandenen Auftrag und das Projekt.
+- **Angebot ablehnen** (`angebot_ablehnen`, `quotation`, `grund`, `details`): Angebot „Lost“
+  mit Grund, Lead „Verloren“ mit `cv_verlustgrund` (bleibt offen, wenn er ein weiteres offenes
+  Angebot hat). Der ERPNext-Dialog „Als verloren festlegen“ führt den Lead ebenfalls nach.
+- **Spiegel Angebot → Auftrag:** Alle `cv_*`-Custom-Fields an Quotation/Quotation Item entstehen
+  bei jedem `migrate` gleichnamig an Sales Order/Sales Order Item (`angebot.annahme_felder`).
+- **Sales Order einreichen** (auch über ERPNext „Erstellen → Auftrag“): Projekt anlegen, Lead
+  „Gewonnen“, Angebotsstatus „Ordered“, wenn nur Eventual-/Alternativpositionen offen sind.
+- **Nachfassen** (4.5): täglicher Scheduler-Job `corevatis_erpnext.angebot.nachfassen.taeglich`
+  legt für eingereichte, offene Angebote nach X Tagen ein ToDo „Angebot <Nr> nachfassen“ an
+  (`ToDo.cv_nachfass_zyklus`, höchstens N Zyklen, nie zwei offene). Einstellungen im Single
+  **Corevatis Vertrieb Einstellungen** (`/app/corevatis-vertrieb-einstellungen`): Tage (7),
+  Zyklen (2), abgelaufene Angebote, Zuweisung (Rolle Büro / fester Benutzer), Follow-up-Mail
+  (Standard aus; Email Template „Angebot Nachfassen“, ohne SMTP nur Email Queue „Not Sent“).
+  Button „Nachfassen“ am Angebot (`nachfassen`) legt die Aufgabe sofort an und zeigt den Text.
+
 ## Lizenz
 
 Copyright (C) 2026 Corevatis
@@ -138,9 +163,11 @@ corevatis_erpnext/
   katalog/              Leistungskatalog (2.3): importer.py, daten/<paket>/*.csv (Data-Import-Vorlagen)
   crm/                  Lead: Termin + Terminbestätigung (1.3), Foto-Galerie get_bilder (1.5),
                         Custom Fields cv_termin/cv_galerie (setup.py)
-  crm/vorlagen/         Email Template „Terminbestätigung Besichtigung“ (Quelle für email_vorlagen.py)
-  public/js/            Desk-Skripte (hooks.doctype_js): galerie.js, lead_galerie.js, lead_termin.js
-  corevatis_erpnext/    Modul "Corevatis ERPNext"
+  crm/vorlagen/         Email Templates „Terminbestätigung Besichtigung“, „Angebot Nachfassen“
+  angebot/              Angebot: Preis-Hinweis, Annahme/Ablehnung (4.4), Nachfassen (4.5), Feld-Spiegel
+  public/js/            Desk-Skripte (hooks.doctype_js): galerie.js, lead_galerie.js, lead_termin.js,
+                        quotation_annahme.js
+  corevatis_erpnext/    Modul "Corevatis ERPNext" (Single „Corevatis Vertrieb Einstellungen“)
   translations/de.csv   deutsche Übersetzungen
   tests/                Installationstests
 ```

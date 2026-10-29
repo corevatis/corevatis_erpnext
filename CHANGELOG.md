@@ -31,6 +31,21 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   „Angebot …“ (`public/js/aufmass_angebot.js`); Verbindungen „Angebot“ am Objekt und am Aufmaß
   (`override_doctype_dashboards`).
 
+### Neu (Epic 4: Angebotsannahme 4.4, Nachfassen 4.5)
+
+- `angebot.annahme.angebot_annehmen`: Angebot → Kunde (aus Lead, mit Anschrift und Kontakt) →
+  Auftrag `AB-` ohne Eventual-/Alternativpositionen → Projekt (Typ „Sanierung“) → Lead
+  „Gewonnen“; idempotent, Desk-Button mit Dialog (Datum, Liefertermin, einreichen).
+- `angebot.annahme.angebot_ablehnen`: Angebot „Lost“ mit Grund, Lead „Verloren“ mit
+  Verlustgrund; Verlustgründe des Leads als „Quotation Lost Reason“.
+- Hooks: Sales Order `on_submit` (Projekt, Lead, Angebotsstatus ohne Zusatzpositionen),
+  Quotation `on_update_after_submit` (ERPNext-Verloren-Dialog → Lead).
+- Custom Fields: Spiegel `cv_*` Quotation → Sales Order (+ Positionen), Project `cv_objekt`,
+  `cv_aufmass`, `cv_angebot`, `cv_lead`, Lead `cv_projekt`, ToDo `cv_nachfass_zyklus`.
+- Nachfass-Automatik: Single „Corevatis Vertrieb Einstellungen“, täglicher Job
+  `angebot.nachfassen.taeglich`, Email Template „Angebot Nachfassen“ (Email Queue, kein SMTP),
+  Button „Nachfassen“ am Angebot.
+
 ### Geändert (Befunde mvp-test, Angebot)
 
 - Nachprüfung: Standard-Preisliste auch als Site-Default (`frappe.defaults`), den das Desk-Formular liest;

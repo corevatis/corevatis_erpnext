@@ -39,6 +39,7 @@ def after_install() -> None:
 	from corevatis_erpnext.katalog.importer import ensure_grundlagen
 
 	ensure_grundlagen()
+	ensure_angebot_setup()
 
 
 def after_migrate() -> None:
@@ -69,3 +70,17 @@ def after_migrate() -> None:
 	from corevatis_erpnext.katalog.importer import ensure_grundlagen
 
 	ensure_grundlagen()
+	# Angebotsannahme/Nachfassen (4.4/4.5) zuletzt: der Spiegel Quotation -> Sales Order
+	# übernimmt die cv_*-Felder, die andere Schritte am Angebot angelegt haben
+	ensure_angebot_setup()
+
+
+def ensure_angebot_setup() -> None:
+	from corevatis_erpnext.anfrage.setup import ensure_roles
+	from corevatis_erpnext.angebot.annahme import ensure_projekttyp, ensure_verlustgruende
+	from corevatis_erpnext.angebot.annahme_felder import ensure_felder
+
+	ensure_roles()
+	ensure_felder()
+	ensure_projekttyp()
+	ensure_verlustgruende()

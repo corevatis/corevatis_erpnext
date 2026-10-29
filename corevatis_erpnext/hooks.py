@@ -55,6 +55,8 @@ doctype_js = {
 		"public/js/lead_galerie.js",
 		"public/js/lead_termin.js",
 	],
+	# Angebot annehmen/ablehnen (4.4), Nachfassen (4.5)
+	"Quotation": ["public/js/quotation_annahme.js"],
 	# Angebot aus dem Aufmaß (4.1): Doctype Aufmass aus corevatis, ohne Kern lädt es nie
 	"Aufmass": "public/js/aufmass_angebot.js",
 }
@@ -92,6 +94,12 @@ doc_events = {
 	# Befunde mvp-test: Hinweis auf Positionen ohne Preis (falsche Preisliste)
 	"Quotation": {
 		"validate": "corevatis_erpnext.angebot.pruefung.positionen_ohne_preis",
+		# 4.4: über ERPNext „Als verloren festlegen“ verloren -> Lead „Verloren“
+		"on_update_after_submit": "corevatis_erpnext.angebot.annahme.angebot_aktualisiert",
+	},
+	# 4.4: Projekt, Lead „Gewonnen“ und Angebotsstatus auch beim ERPNext-Weg „Erstellen → Auftrag“
+	"Sales Order": {
+		"on_submit": "corevatis_erpnext.angebot.annahme.auftrag_eingereicht",
 	},
 	# Befunde mvp-test: Objekt eines Leads am Lead eintragen (Lead.cv_objekt, 2.1);
 	# der Doctype Objekt kommt aus corevatis - ohne Kern greifen die Hooks nie
@@ -106,6 +114,14 @@ doc_events = {
 # Fotos. Andere Web Forms reicht die Funktion unverändert an Frappe weiter.
 override_whitelisted_methods = {
 	"frappe.website.doctype.web_form.web_form.accept": "corevatis_erpnext.webform.einschaetzung.accept",
+}
+
+# Scheduled Tasks
+# ---------------
+# 4.5: Nachfass-Aufgaben (ToDo) für offene Angebote, Einstellungen im Single
+# „Corevatis Vertrieb Einstellungen“
+scheduler_events = {
+	"daily": ["corevatis_erpnext.angebot.nachfassen.taeglich"],
 }
 
 # Weitere Hooks (doc_events an Quotation/Sales Order/Sales Invoice, fixtures,

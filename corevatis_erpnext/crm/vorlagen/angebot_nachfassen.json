@@ -1,0 +1,8 @@
+{
+ "name": "Angebot Nachfassen",
+ "reference_doctype": "Quotation",
+ "subject": "Ihr Angebot {{ angebot }} vom {{ datum }}",
+ "use_html": 0,
+ "response": "<p>Guten Tag {{ kunde }},</p>\n<p>vor einiger Zeit haben wir Ihnen unser Angebot {{ angebot }} vom {{ datum }}{% if objekt %} für {{ objekt }}{% endif %}{% if betrag %} über {{ betrag }}{% endif %} zugesandt. Wir möchten nachfragen, ob Sie Fragen dazu haben oder weitere Informationen benötigen.</p>\n{% if gueltig_bis %}<p>Das Angebot ist gültig bis zum {{ gueltig_bis }}.</p>\n{% endif %}<p>Gern stimmen wir mit Ihnen auch einen möglichen Ausführungszeitraum ab. Antworten Sie einfach auf diese Nachricht oder rufen Sie uns an.</p>\n<p>Mit freundlichen Grüßen<br>\n{% if ansprechpartner %}{{ ansprechpartner }}<br>\n{% endif %}{{ firma }}</p>",
+ "response_html": null
+}
