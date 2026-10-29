@@ -445,6 +445,8 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 			lambda n: self.angebot(
 				self.positionen_lang(n),
 				cv_titel="Abdichtung Keller und Erdgeschoss",
+				# Nachlass auf die Nettosumme (wie im Handwerk üblich), Umsatzsteuer danach
+				apply_discount_on="Net Total",
 				additional_discount_percentage=3,
 			),
 			6,
