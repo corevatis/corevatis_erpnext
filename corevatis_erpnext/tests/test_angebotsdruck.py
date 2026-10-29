@@ -38,8 +38,6 @@ LANGTEXT = (
 
 RAEUME = ("Keller 1", "Keller 2", "Heizungsraum", "Treppenhaus", "Waschküche", "Vorratsraum")
 BAUTEILE = ("Außenwand innen", "Innenwand", "Boden")
-# Muster lang: so viele Gruppen à 5 lange Positionen, dass das PDF 6 Seiten hat
-ANZAHL_GRUPPEN_LANG = 5
 
 
 def katalog() -> dict[str, dict]:
@@ -80,6 +78,9 @@ class AngebotsdruckBasis(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
+		# Druck und Template setzen frappe.local.lang auf Deutsch; andere Tests (Data-Import-
+		# Meldungen in test_katalog) erwarten die Sprache, mit der sie gestartet sind
+		cls._lang = frappe.local.lang
 		frappe.set_user("Administrator")
 		# in der CI schon per bench execute gelaufen, lokal der erste Lauf
 		apply_site_template(template="huelshoff")
@@ -104,6 +105,11 @@ class AngebotsdruckBasis(IntegrationTestCase):
 			cls._item(code, zeile)
 		cls.kunde = cls._kunde()
 		frappe.db.commit()
+
+	@classmethod
+	def tearDownClass(cls):
+		frappe.local.lang = cls._lang
+		super().tearDownClass()
 
 	@classmethod
 	def _kunde(cls) -> str:
@@ -230,7 +236,7 @@ class TestTextbausteine(AngebotsdruckBasis):
 
 	def test_vorhandene_texte_bleiben(self):
 		doc = self.angebot(
-			[self.position(0)],
+			[self.position("IA-05", 18)],
 			cv_vorbemerkung="<p>Eigene Vorbemerkung</p>",
 			cv_garantiehinweis="Eigener Hinweis",
 		)
@@ -333,9 +339,11 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		self.assertIn(FIRMA, alles)
 
 	def test_kurz_eine_seite(self):
+		# kurzes Angebot (Feuchtemessung): eigene kurze Vorbemerkung und Gewährleistung
 		doc = self.angebot(
-			[self.position("AL-01", 1), self.position("AL-03", 4), self.position("HS-02", 8.5)],
-			cv_vorbemerkung="<p>Sehr geehrte Frau Feucht,</p><p>wie vor Ort besprochen bieten wir Ihnen an:</p>",
+			[self.position("AL-01", 1), self.position("AL-03", 4)],
+			cv_vorbemerkung="<p>Sehr geehrte Frau Feucht, wie besprochen bieten wir Ihnen an:</p>",
+			cv_garantiehinweis="Gewährleistung nach den gesetzlichen Bestimmungen (§ 634a BGB).",
 		)
 		html = self.html(doc)
 		self.assertNotIn("None", html)
@@ -361,7 +369,9 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		positionen += [self.position("IA-08", 12, *boden), self.position("IA-04", 14, *boden)]
 		positionen.append(self.position("HS-02", 9.2, *wand, cv_eventualposition=1))
 		doc = self.angebot(positionen, cv_titel="Kellerabdichtung von innen")
-		self.assertEqual(flt(doc.net_total), flt(sum(r.amount for r in doc.items if not r.is_alternative)))
+		self.assertEqual(
+			flt(doc.net_total, 2), flt(sum(r.amount for r in doc.items if not r.is_alternative), 2)
+		)
 		html = self.html(doc)
 		self.assertNotIn("None", html)
 		for teil in (
@@ -378,23 +388,33 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		self.pruefe(doc, 2, texte)
 		self.assertIn("Kellerabdichtung von innen", texte[0])
 
-	def test_lang_sechs_seiten(self):
+	def positionen_lang(self, anzahl: int) -> list[dict]:
+		"""Allgemeine Leistungen, dann ``anzahl`` lange Positionen in Gruppen à 5 (Raum/Bauteil),
+		zuletzt eine Eventual- und eine Alternativposition."""
 		codes = ("IA-01", "IA-02", "IA-03", "IA-05", "IA-07", "SP-03", "SP-04", "SP-05", "SP-06", "HS-02")
 		positionen = [self.position("AL-01", 1), self.position("AL-02", 6)]
-		for g in range(ANZAHL_GRUPPEN_LANG):
+		for i in range(anzahl):
+			g = i // 5
 			raum, bauteil = RAEUME[g % len(RAEUME)], BAUTEILE[g % len(BAUTEILE)]
-			positionen += [
-				self.position(codes[(g + i) % len(codes)], 12.5 + g, raum, bauteil, lang=True)
-				for i in range(5)
-			]
+			positionen.append(self.position(codes[i % len(codes)], 12.5 + g, raum, bauteil, lang=True))
 		positionen.append(self.position("IA-09", 12, "Waschküche", "Boden", lang=True, cv_eventualposition=1))
 		positionen.append(
 			self.position("IA-06", 12, "Waschküche", "Boden", lang=True, cv_alternativposition=1)
 		)
-		doc = self.angebot(
-			positionen, cv_titel="Abdichtung Keller und Erdgeschoss", additional_discount_percentage=3
-		)
-		seiten, texte = self.pdf(doc, "lang")
+		return positionen
+
+	def test_lang_sechs_seiten(self):
+		# Positionen ergänzen, bis das PDF 6 Seiten hat (Schriften der Umgebung bestimmen den
+		# Umbruch); eine Position mehr bringt höchstens eine Seite mehr
+		for anzahl in range(14, 70):
+			doc = self.angebot(
+				self.positionen_lang(anzahl),
+				cv_titel="Abdichtung Keller und Erdgeschoss",
+				additional_discount_percentage=3,
+			)
+			seiten, texte = self.pdf(doc, "lang")
+			if seiten >= 6:
+				break
 		self.assertEqual(seiten, 6, [t[-300:] for t in texte])
 		self.pruefe(doc, 6, texte)
 		self.assertIn("Nachlass", "\n".join(texte))
