@@ -21,7 +21,12 @@
 	},
 	"taxes": {
 		"_beschreibung": "Steuervorlagen legt ERPNext beim Anlegen der Firma aus country_wise_tax.json passend zum SKR an (19 %/7 %, Inland/EU/Drittland, § 13b). Das Template prüft sie und setzt den Artikelsteuer-Standard an der obersten Artikelgruppe.",
-		"default_sales_template": "Lieferung oder sonstige Leistung im Inland",
+		"_default_sales_template": "Standard-Verkaufsvorlage der Firma. „Umsatzsteuer 19 %“ legt das Template selbst an (sales_templates): genau eine Zeile, fester Satz. Die ERPNext-Vorlage „Lieferung oder sonstige Leistung im Inland“ (19 % und 7 % mit Satz 0, Satz aus der Artikelsteuer) bleibt wählbar, z. B. für Belege mit 7-%-Positionen; als Standard wird sie ersetzt (replace_default_sales_templates), eigene Standards bleiben.",
+		"default_sales_template": "Umsatzsteuer 19 %",
+		"sales_templates": {
+			"Umsatzsteuer 19 %": {"account": "ust19", "rate": 19, "description": "Umsatzsteuer 19 %"}
+		},
+		"replace_default_sales_templates": ["Lieferung oder sonstige Leistung im Inland"],
 		"default_purchase_template": "Lieferung aus dem Inland",
 		"default_item_tax_template": "19 %",
 		"item_tax_templates": ["19 %", "7 %", "0 %"],
@@ -122,6 +127,14 @@
 		"Request for Quotation": "Angebotsanfrage",
 		"Purchase Order": "Bestellung",
 		"Dunning": "Mahnung"
+	},
+	"print_settings": {
+		"_beschreibung": "Print Settings. print_generated_pdf: „Drucken“ im Desk druckt das erzeugte PDF (wkhtmltopdf, Fußzeile und Seitenzahlen auf jeder Seite) statt der Browser-Vorschau, die über die Seitenlänge lief (Befunde mvp-test).",
+		"print_generated_pdf": 1
+	},
+	"workspaces": {
+		"_beschreibung": "Sichtbarkeit von ERPNext-Arbeitsbereichen. CRM ist in v16 fast leer (ein Diagramm, drei Kennzahlen, keine Links); Einstieg ist „Anfragen“ (corevatis_erpnext). Rücknahme: is_hidden auf 0 setzen und das Template erneut ausführen.",
+		"CRM": {"is_hidden": 1}
 	},
 	"address_template_germany": true,
 	"erpnext_germany": {

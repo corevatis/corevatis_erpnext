@@ -6,6 +6,34 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Geändert (Befunde mvp-test, Angebot)
+
+- Steuern: eigene Verkaufs-Steuervorlage „Umsatzsteuer 19 %“ je Firma (eine Zeile, fester
+  Satz 19 % auf 1776/3806), Standard statt der ERPNext-Vorlage „Lieferung oder sonstige
+  Leistung im Inland“ (zwei Zeilen 19 %/7 % mit Satz 0, Satz aus der Artikelsteuer; im Angebot
+  stand immer eine leere 7-%-Zeile, Firmen ohne Artikelsteuer-Standard bekamen 0 € Steuer).
+  Die ERPNext-Vorlage bleibt wählbar (7-%-Belege). Template-Schlüssel `taxes.sales_templates`,
+  `taxes.replace_default_sales_templates`; neuer Prüfpunkt „genau eine Zeile“.
+- Patch `v0_4.angebot_steuern_druck` für bestehende Sites: `add_taxes_from_item_tax_template = 0`
+  (Sites mit Template vor #24, z. B. mvp-kunde2: acht Steuerzeilen je Angebot), Vorlage
+  „Umsatzsteuer 19 %“ für jede deutsche Firma mit ERPNext-Steuervorlagen (auch Firmen ohne
+  Template-Lauf), `print_generated_pdf`, Standard-Preislisten. Bestehende Belege bleiben.
+- Drucken: Print Settings `print_generated_pdf = 1` (Template-Schlüssel `print_settings`) –
+  „Drucken“ im Desk druckt das PDF statt der Browser-Vorschau, die über die Seitenlänge lief.
+- Katalog: Importer setzt die Katalog-Preislisten als Standard in Selling/Buying Settings,
+  solange dort die ERPNext-Vorgabe steht (`katalog.importer.standard_preislisten`); vorher zog
+  ein neues Angebot „Standard Selling“ und alle Positionen standen auf 0,00 €.
+- Angebot: Hinweis beim Speichern, wenn Positionen keinen Preis haben (`angebot.pruefung`).
+- Objekt: ein für einen Lead angelegtes Objekt trägt sich in `Lead.cv_objekt` ein (nur wenn
+  leer); Lead-Formular „Erstellen → Objekt“.
+- Arbeitsbereich „Anfragen“ als CRM-Einstieg: Kennzahlen (Neue Anfragen 7 Tage, Offene Termine,
+  Angebote offen), Kurzlinks (Neue Anfrage, Offene Anfragen, Kanban, Termine heute, Kalender,
+  Angebote, Web Form), Links zu Lead, Chance, Potenzieller Kunde, Kampagne, Kunde, Kontakt,
+  Adresse, Termin, Angebot; sichtbar auch für System Manager; ganz oben. Kachel „Anfragen“ auf
+  dem Startbildschirm (`add_to_apps_screen`). Template-Schlüssel `workspaces` blendet den fast
+  leeren ERPNext-Arbeitsbereich „CRM“ aus (`is_hidden`, rücknehmbar).
+- Übersetzung „Get Items From“ → „Positionen übernehmen aus“ (ERPNext: „Holen Sie Elemente aus“).
+
 ### Geändert (Review Epic 2)
 
 - D-1: Bodenabdichtung im Katalog: IA-08 „Innenabdichtung Boden mineralische Dichtschlämme

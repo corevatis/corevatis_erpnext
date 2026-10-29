@@ -131,7 +131,26 @@ class TestWorkspace(IntegrationTestCase):
 		ws = frappe.get_doc("Workspace", "Anfragen")
 		self.assertEqual(ws.module, "Corevatis ERPNext")
 		self.assertTrue(ws.public)
-		self.assertEqual({row.role for row in ws.roles}, {"Büro", "Meister"})
+		self.assertEqual({row.role for row in ws.roles}, {"Büro", "Meister", "System Manager"})
+		# Befunde mvp-test („kein CRM“): vollwertiger Einstieg mit Kennzahlen und Links
+		from corevatis_erpnext.anfrage.setup import KENNZAHLEN
+
+		karten = {row.number_card_name for row in ws.number_cards}
+		self.assertEqual(karten, {k["name"] for k in KENNZAHLEN})
+		for karte in karten:
+			self.assertTrue(frappe.db.exists("Number Card", karte), karte)
+		ziele = {link.link_to for link in ws.links if link.type == "Link"}
+		for doctype in (
+			"Lead",
+			"Opportunity",
+			"Prospect",
+			"Customer",
+			"Contact",
+			"Address",
+			"Event",
+			"Campaign",
+		):
+			self.assertIn(doctype, ziele)
 		shortcuts = {(s.link_to or s.url, s.doc_view or "") for s in ws.shortcuts}
 		self.assertIn(("Lead", "List"), shortcuts)
 		self.assertIn(("Lead", "New"), shortcuts)

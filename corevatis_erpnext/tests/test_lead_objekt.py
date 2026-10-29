@@ -50,7 +50,16 @@ class TestLeadObjekt(IntegrationTestCase):
 				"module": "Corevatis ERPNext",
 				"custom": 1,
 				"autoname": "hash",
-				"fields": [{"fieldname": "titel", "fieldtype": "Data", "label": "Titel"}],
+				"fields": [
+					{"fieldname": "titel", "fieldtype": "Data", "label": "Titel"},
+					{"fieldname": "kunde_doctype", "fieldtype": "Link", "options": "DocType", "label": "Typ"},
+					{
+						"fieldname": "kunde",
+						"fieldtype": "Dynamic Link",
+						"options": "kunde_doctype",
+						"label": "Kunde",
+					},
+				],
 				"permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1}],
 			}
 		).insert(ignore_permissions=True)
@@ -85,6 +94,19 @@ class TestLeadObjekt(IntegrationTestCase):
 		self.assertEqual(frappe.db.get_value("Lead", lead.name, FIELDNAME), objekt.name)
 		with self.assertRaises(frappe.LinkValidationError):
 			make_lead(**{FIELDNAME: "gibt-es-nicht"})
+		frappe.delete_doc("Lead", lead.name, force=True, ignore_permissions=True)
+
+		# Befund mvp-test: Objekt für einen Lead angelegt -> steht am Lead (doc_events Objekt)
+		lead = make_lead()
+		objekt = frappe.get_doc(
+			{"doctype": OBJEKT_DOCTYPE, "titel": "Lindenweg 5", "kunde_doctype": "Lead", "kunde": lead.name}
+		).insert(ignore_permissions=True)
+		self.assertEqual(frappe.db.get_value("Lead", lead.name, FIELDNAME), objekt.name)
+		# ein zweites Objekt überschreibt den Verweis nicht
+		frappe.get_doc(
+			{"doctype": OBJEKT_DOCTYPE, "titel": "Garage", "kunde_doctype": "Lead", "kunde": lead.name}
+		).insert(ignore_permissions=True)
+		self.assertEqual(frappe.db.get_value("Lead", lead.name, FIELDNAME), objekt.name)
 		frappe.delete_doc("Lead", lead.name, force=True, ignore_permissions=True)
 
 		lead_objekt.before_app_uninstall("corevatis")

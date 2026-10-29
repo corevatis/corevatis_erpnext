@@ -81,7 +81,25 @@
 		});
 	}
 
-	const handlers = { before_workflow_action: ask_verlustgrund };
+	// Befund mvp-test: Objekt (2.1) direkt aus der Anfrage anlegen; das Objekt trägt sich
+	// beim Speichern am Lead ein (corevatis_erpnext.vor_ort.lead_objekt.objekt_an_lead).
+	function objekt_button(frm) {
+		if (frm.is_new() || frm.doc.cv_objekt || !frappe.boot.user.can_create.includes("Objekt")) {
+			return;
+		}
+		frm.add_custom_button(
+			__("Objekt"),
+			() =>
+				frappe.new_doc("Objekt", {
+					kunde_doctype: "Lead",
+					kunde: frm.doc.name,
+					titel: frm.doc.lead_name || frm.doc.name,
+				}),
+			__("Create")
+		);
+	}
+
+	const handlers = { before_workflow_action: ask_verlustgrund, refresh: objekt_button };
 	for (const [fieldname] of SYMPTOME) {
 		handlers[fieldname] = rebuild;
 	}

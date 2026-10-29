@@ -21,6 +21,13 @@ Eigene Vorlage: JSON mit `"extends": "_standard"` und `company` (Name, Kürzel,
 `chart_of_accounts` SKR03/SKR04), Aufruf mit `{"config_file": "/absoluter/pfad.json"}`.
 Idempotent; ein zweiter Lauf meldet `"changes": []`.
 
+Steuern: Standard-Verkaufsvorlage ist „Umsatzsteuer 19 %“ (eine Zeile); die ERPNext-Vorlage
+„Lieferung oder sonstige Leistung im Inland“ (19 %/7 %, Satz aus der Artikelsteuer) bleibt für
+Belege mit 7-%-Positionen wählbar. Drucken im Desk druckt das PDF (`print_generated_pdf`). Der
+ERPNext-Arbeitsbereich „CRM“ ist ausgeblendet (`workspaces`), Einstieg ist „Anfragen“.
+Bestehende Sites übernimmt der Patch `v0_4.angebot_steuern_druck` beim `migrate` (Steuern,
+Drucken, Preislisten); „CRM ausblenden“ kommt mit dem nächsten `apply_site_template`.
+
 ## Leistungskatalog
 
 ```bash

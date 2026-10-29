@@ -63,3 +63,19 @@ def after_app_install(app_name: str) -> None:
 def before_app_uninstall(app_name: str) -> None:
 	if app_name == CORE_APP:
 		remove_lead_objekt_field()
+
+
+def objekt_an_lead(doc, method=None) -> None:
+	"""``doc_events`` Objekt (``after_insert``/``on_update``): Objekt am Lead eintragen.
+
+	Befund mvp-test: Ein im Desk für einen Lead angelegtes Objekt (``kunde_doctype`` Lead)
+	stand nicht am Lead (``cv_objekt`` leer), obwohl das Feld „wird zum Vor-Ort-Termin
+	angelegt“ verspricht. Gesetzt wird nur ein leeres Feld; ein Lead mit anderem Objekt
+	bleibt unverändert.
+	"""
+	if doc.get("kunde_doctype") != "Lead" or not doc.get("kunde"):
+		return
+	if not frappe.db.has_column("Lead", FIELDNAME) or not frappe.db.exists("Lead", doc.kunde):
+		return
+	if not frappe.db.get_value("Lead", doc.kunde, FIELDNAME):
+		frappe.db.set_value("Lead", doc.kunde, FIELDNAME, doc.name)

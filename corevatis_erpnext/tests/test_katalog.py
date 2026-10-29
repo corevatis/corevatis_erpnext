@@ -21,7 +21,7 @@ from frappe.utils import flt, today
 from frappe.utils.nestedset import get_root_of
 
 from corevatis_erpnext.katalog import importieren, list_pakete, uebersicht
-from corevatis_erpnext.katalog.importer import DATEIEN, lese_csv, paket_dir
+from corevatis_erpnext.katalog.importer import DATEIEN, lese_csv, paket_dir, standard_preislisten
 
 PAKET = "abdichtung"
 FIRMA = "Hülshoff Sanierungstechnik"
@@ -278,6 +278,10 @@ class TestKatalogImport(IntegrationTestCase):
 				for doctype, datei in DATEIEN
 				if frappe.db.exists("DocType", doctype)  # Leistungsregel nur mit corevatis
 			}
+		# Katalog-Preislisten als Standard für neue Belege (Importer bzw. Patch v0_4); der
+		# Desk-Weg über Data Import setzt sie nicht. Danach meldet der Importer keine Änderung.
+		standard_preislisten()
+		frappe.db.commit()
 
 	@classmethod
 	def _data_import(cls, doctype: str, datei: str) -> frappe._dict:
@@ -490,6 +494,12 @@ class TestKatalogImport(IntegrationTestCase):
 			self.assertEqual(frappe.db.get_value("BOM", eigene.name, ["docstatus", "is_active"]), (1, 1))
 			self.assertEqual(flt(frappe.db.get_value("BOM", neu, "total_cost")), BEISPIELE["IA-05"]["hk"])
 
+	def test_standard_preislisten(self):
+		# Befund mvp-test: neues Angebot zog „Standard Selling“, Positionen mit 0,00 €
+		self.assertEqual(frappe.db.get_single_value("Selling Settings", "selling_price_list"), VERKAUF)
+		self.assertEqual(frappe.db.get_single_value("Buying Settings", "buying_price_list"), EINKAUF)
+		self.assertEqual(standard_preislisten(), [])
+
 	def test_unbekanntes_paket(self):
 		with self.assertRaises(frappe.ValidationError):
 			importieren(firma=FIRMA, paket="../setup", commit=False)
@@ -581,6 +591,7 @@ class TestKatalogImport(IntegrationTestCase):
 		self.assertEqual(angebot.taxes_and_charges, vorlage)
 		self.assertEqual(flt(angebot.total_taxes_and_charges), ANGEBOT_UST, steuern)
 		self.assertEqual([b for k, b in steuern if k.startswith("1776")], [ANGEBOT_UST], steuern)
+		self.assertEqual(len(angebot.taxes), 1, steuern)  # genau eine Zeile (Befunde mvp-test)
 		self.assertEqual(flt(angebot.grand_total), flt(ANGEBOT_NETTO + ANGEBOT_UST, 2))
 
 	def test_uebersicht(self):
