@@ -177,6 +177,31 @@ class TestMaterial(IntegrationTestCase):
 			frappe.set_user("Administrator")
 		self.assertFalse(rechte["buchen"])
 
+	def test_user_permission_auf_lager(self):
+		"""Security-Review: Submit-Recht am Beleg - User Permission auf ein anderes Lager sperrt."""
+		user = make_user("cv-test-material-lager@example.com", "Lager", ["Stock User"])
+		frappe.db.delete("User Permission", {"user": user})
+		frappe.get_doc(
+			{"doctype": "User Permission", "user": user, "allow": "Warehouse", "for_value": self.fahrzeug2}
+		).insert(ignore_permissions=True)
+		frappe.set_user(user)
+		try:
+			self.assertEqual(m.lager_rechte(self.fahrzeug2), {"lesen": True, "buchen": True})
+			self.assertEqual(m.lager_rechte(self.fahrzeug), {"lesen": False, "buchen": False})
+			with self.assertRaises(frappe.PermissionError):
+				m.entnahme_buchen(
+					None,
+					self.fahrzeug,
+					None,
+					None,
+					[{"item_code": ART_KG, "menge": 1}],
+					key(),
+					mit_rechten=True,
+				)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(bin_menge(ART_KG, self.fahrzeug), 20)
+
 	def test_bestand_mit_ean(self):
 		zeilen = {z["item_code"]: z for z in m.bestand(self.fahrzeug)}
 		self.assertEqual(zeilen[ART_KG]["menge"], 20)

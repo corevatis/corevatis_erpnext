@@ -152,9 +152,17 @@ def lager_rechte(warehouse: str) -> dict:
 	einen Stock Entry einzureichen. Die Mobile-API verlangt ``lesen`` immer und ``buchen``, wenn
 	Meister/Büro aus einem anderen als dem eigenen Fahrzeuglager buchen.
 	"""
+	company = frappe.db.get_value("Warehouse", warehouse, "company")
+	# Submit-Recht am konkreten (ungespeicherten) Beleg prüfen, damit User Permissions auf
+	# Firma/Lager greifen - ohne Dokument prüft Frappe nur die Rolle (Security-Review 3.11)
+	entwurf = frappe.new_doc("Stock Entry")
+	entwurf.update(
+		{"purpose": ZWECK, "stock_entry_type": ZWECK, "company": company, "from_warehouse": warehouse}
+	)
+	entwurf.append("items", {"s_warehouse": warehouse})
 	return {
 		"lesen": bool(frappe.has_permission("Warehouse", "read", doc=warehouse)),
-		"buchen": bool(frappe.has_permission("Stock Entry", "submit")),
+		"buchen": bool(frappe.has_permission("Stock Entry", "submit", doc=entwurf)),
 	}
 
 
@@ -430,8 +438,13 @@ def entnahme_buchen(
 	positionen: list[dict],
 	idempotency_key: str,
 	notiz: str | None = None,
+	mit_rechten: bool = False,
 ) -> dict:
 	"""Materialentnahme als eingereichten Stock Entry „Material Issue“ buchen.
+
+	``mit_rechten``: Insert/Submit mit den Frappe-Rechten des Benutzers (User Permissions auf
+	Firma/Lager) - der Kern setzt es für Buchungen außerhalb des eigenen Fahrzeuglagers. Sonst
+	bucht der Server für den Monteur, der im Desk nur Entwürfe anlegen darf (0.4).
 
 	``positionen``: ``[{"item_code" | "ean", "menge"}]`` (``qty`` als Synonym), Lagereinheit.
 	Antwort: ``stock_entry``, ``docstatus`` (1), ``posting_date``, ``warehouse``, ``project``,
@@ -527,9 +540,14 @@ def entnahme_buchen(
 			],
 		}
 	)
-	# ignore_permissions bewusst: nicht whitelisted, Rechte prüft der Kern (Modul-Docstring)
-	se.insert(ignore_permissions=True)
-	se.submit()
+	if mit_rechten:
+		se.insert()
+		se.submit()
+	else:
+		# ignore_permissions bewusst: eigenes Fahrzeuglager, Rechte prüft der Kern (Modul-Docstring)
+		se.flags.ignore_permissions = True
+		se.insert()
+		se.submit()
 	return _beleg(se.name, duplikat=False, hinweise=hinweise)
 
 
