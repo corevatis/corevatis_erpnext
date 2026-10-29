@@ -135,6 +135,29 @@ def employee_fuer_user(user: str) -> dict | None:
 	return dict(rows[0]) if rows else None
 
 
+def mitarbeiter(employee: str) -> dict | None:
+	"""Employee mit Status (``name``, ``employee_name``, ``company``, ``user_id``, ``status``)."""
+	if not employee or not isinstance(employee, str):
+		return None
+	row = frappe.db.get_value(
+		"Employee", employee, ["name", "employee_name", "company", "user_id", "status"], as_dict=True
+	)
+	return dict(row) if row else None
+
+
+def lager_rechte(warehouse: str) -> dict:
+	"""Rechte des angemeldeten Benutzers am Lager (Security-Review 3.11).
+
+	``lesen``: Leserecht auf das Warehouse (User Permissions, Firma greifen); ``buchen``: Recht,
+	einen Stock Entry einzureichen. Die Mobile-API verlangt ``lesen`` immer und ``buchen``, wenn
+	Meister/Büro aus einem anderen als dem eigenen Fahrzeuglager buchen.
+	"""
+	return {
+		"lesen": bool(frappe.has_permission("Warehouse", "read", doc=warehouse)),
+		"buchen": bool(frappe.has_permission("Stock Entry", "submit")),
+	}
+
+
 def _lager_info(name: str, quelle: str) -> dict | None:
 	row = frappe.db.get_value(
 		"Warehouse", name, ["name", "warehouse_name", "company", "is_group", "disabled"], as_dict=True

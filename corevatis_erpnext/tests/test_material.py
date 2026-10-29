@@ -165,6 +165,18 @@ class TestMaterial(IntegrationTestCase):
 		namen = {lg["warehouse"] for lg in m.fahrzeuglager_liste(firma())}
 		self.assertLessEqual({self.fahrzeug, self.fahrzeug2}, namen)
 
+	def test_mitarbeiter_und_rechte(self):
+		ma = m.mitarbeiter(self.employee)
+		self.assertEqual((ma["name"], ma["status"], ma["user_id"]), (self.employee, "Active", USER))
+		self.assertIsNone(m.mitarbeiter("EMP-GIBT-ES-NICHT"))
+		self.assertEqual(m.lager_rechte(self.fahrzeug), {"lesen": True, "buchen": True})
+		frappe.set_user(USER)  # Monteur ohne Stock-Rollen (Site-Template: Warehouse lesen, kein Submit)
+		try:
+			rechte = m.lager_rechte(self.fahrzeug)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertFalse(rechte["buchen"])
+
 	def test_bestand_mit_ean(self):
 		zeilen = {z["item_code"]: z for z in m.bestand(self.fahrzeug)}
 		self.assertEqual(zeilen[ART_KG]["menge"], 20)
