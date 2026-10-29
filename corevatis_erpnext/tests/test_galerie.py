@@ -139,17 +139,23 @@ class TestGalerie(IntegrationTestCase):
 	def test_ungueltige_ziele(self):
 		with self.assertRaises(frappe.DoesNotExistError):
 			galerie.get_bilder("Lead", "GIBT-ES-NICHT")
-		# Allowlist: nur Lead (und später Objekt)
+		# Allowlist: nur Lead, Objekt und Befund
 		for doctype in ("Kein Doctype", "Event Participants", "Event", "User", "File"):
 			with self.assertRaises(frappe.PermissionError):
 				galerie.get_bilder(doctype, "x")
+		self.assertIn("Befund", galerie.GALERIE_DOCTYPES)
+		# Befund freigegeben (3.7): ohne Kern-App fehlt der Doctype → nicht gefunden statt verboten
+		if not frappe.db.exists("DocType", "Befund"):
+			with self.assertRaises(frappe.DoesNotExistError):
+				galerie.get_bilder("Befund", "x")
 
 	def test_hooks_doctype_js(self):
 		hooks = frappe.get_hooks("doctype_js", app_name="corevatis_erpnext")
 		self.assertIn("public/js/galerie.js", hooks["Lead"])
 		self.assertIn("public/js/lead_galerie.js", hooks["Lead"])
 		self.assertIn("public/js/lead_termin.js", hooks["Lead"])
-		for path in hooks["Lead"]:
+		self.assertEqual(hooks["Befund"], ["public/js/galerie.js", "public/js/befund_galerie.js"])
+		for path in hooks["Lead"] + hooks["Befund"]:
 			self.assertTrue(frappe.read_file(frappe.get_app_path("corevatis_erpnext", path)))
 
 	def test_fotofelder_aus_1_1(self):
