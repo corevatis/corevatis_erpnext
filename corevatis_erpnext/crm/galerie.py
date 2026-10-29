@@ -29,8 +29,9 @@ from frappe import _
 # Site-Origin geladen - Stored XSS, Review Epic 1 E-11). Gleiche Liste in public/js/galerie.js.
 BILD_ENDUNGEN = {"jpg", "jpeg", "png", "gif", "webp", "heic"}
 ANHANG_FELDTYPEN = ("Attach", "Attach Image")
-# Allowlist: Galerie nur an diesen Doctypes (Objekt kommt mit 2.1)
-GALERIE_DOCTYPES = ("Lead", "Objekt")
+# Allowlist: Galerie nur an diesen Doctypes (Objekt und Befund aus corevatis, 2.1; Befund mit
+# den Fotos der App ab 3.7)
+GALERIE_DOCTYPES = ("Lead", "Objekt", "Befund")
 ERLAUBTE_PRAEFIXE = ("/files/", "/private/files/", "/api/method/frappe_s3_attachment.")
 
 

@@ -59,6 +59,8 @@ doctype_js = {
 	"Quotation": ["public/js/quotation_annahme.js"],
 	# Angebot aus dem Aufmaß (4.1): Doctype Aufmass aus corevatis, ohne Kern lädt es nie
 	"Aufmass": "public/js/aufmass_angebot.js",
+	# Foto-Galerie am Befund (3.7): Fotos der App; Doctype aus corevatis, ohne Kern lädt es nie
+	"Befund": ["public/js/galerie.js", "public/js/befund_galerie.js"],
 }
 
 # Verbindungen: Angebote am Objekt und am Aufmaß (Kern-Doctypes, Quotation.cv_objekt/cv_aufmass);

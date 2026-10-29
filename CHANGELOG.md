@@ -6,6 +6,13 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (3.7 Foto-Upload)
+
+- Foto-Galerie (1.5) auch am **Befund** (Doctype aus `corevatis`): Fotos der App aus der Tabelle
+  „Fotos“ und Anhänge als Thumbnails mit Vollbild, als Abschnitt im Formular-Dashboard
+  (`befund_galerie.js`); `get_bilder` lässt `Befund` zu (Allowlist), Rechte wie bisher
+  (Leserecht auf den Befund, Feldrechte, nur Anhänge des eigenen Datensatzes).
+
 ### Behoben (Nachprüfung mvp-test)
 
 - Angebotsannahme: `Quotation.cv_lead` und der Spiegel `Sales Order.cv_lead` blieben leer, weil
