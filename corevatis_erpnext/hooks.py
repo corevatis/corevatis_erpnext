@@ -61,6 +61,9 @@ doctype_js = {
 	"Aufmass": "public/js/aufmass_angebot.js",
 	# Foto-Galerie am Befund (3.7): Fotos der App; Doctype aus corevatis, ohne Kern lädt es nie
 	"Befund": ["public/js/galerie.js", "public/js/befund_galerie.js"],
+	# Arbeitspakete und Materialbedarf erzeugen (5.1)
+	"Sales Order": "public/js/planung.js",
+	"Project": "public/js/planung.js",
 }
 
 # Verbindungen: Angebote am Objekt und am Aufmaß (Kern-Doctypes, Quotation.cv_objekt/cv_aufmass);
@@ -109,9 +112,13 @@ doc_events = {
 		# 4.4: über ERPNext „Als verloren festlegen“ verloren -> Lead „Verloren“
 		"on_update_after_submit": "corevatis_erpnext.angebot.annahme.angebot_aktualisiert",
 	},
-	# 4.4: Projekt, Lead „Gewonnen“ und Angebotsstatus auch beim ERPNext-Weg „Erstellen → Auftrag“
+	# 4.4: Projekt, Lead „Gewonnen“ und Angebotsstatus auch beim ERPNext-Weg „Erstellen → Auftrag“;
+	# 5.1 danach: Arbeitspakete (Task) und Materialbedarf (Material Request) - braucht das Projekt
 	"Sales Order": {
-		"on_submit": "corevatis_erpnext.angebot.annahme.auftrag_eingereicht",
+		"on_submit": [
+			"corevatis_erpnext.angebot.annahme.auftrag_eingereicht",
+			"corevatis_erpnext.planung.auftrag_eingereicht",
+		],
 	},
 	# Befunde mvp-test: Objekt eines Leads am Lead eintragen (Lead.cv_objekt, 2.1);
 	# der Doctype Objekt kommt aus corevatis - ohne Kern greifen die Hooks nie

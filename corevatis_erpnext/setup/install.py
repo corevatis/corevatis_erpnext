@@ -49,6 +49,7 @@ def after_install() -> None:
 	from corevatis_erpnext.zeiterfassung import ensure_setup as ensure_zeiterfassung
 
 	ensure_zeiterfassung()
+	ensure_planung_setup()
 
 
 def after_migrate() -> None:
@@ -91,6 +92,14 @@ def after_migrate() -> None:
 	from corevatis_erpnext.zeiterfassung import ensure_setup as ensure_zeiterfassung
 
 	ensure_zeiterfassung()
+	# Planung (5.1): Task/Material Request cv_auftrag, cv_verfahren, cv_sollstunden, cv_positionen
+	ensure_planung_setup()
+
+
+def ensure_planung_setup() -> None:
+	from corevatis_erpnext.planung.felder import ensure_planung_felder
+
+	ensure_planung_felder()
 
 
 def ensure_angebot_setup() -> None:

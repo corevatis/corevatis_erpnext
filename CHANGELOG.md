@@ -23,6 +23,19 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   (`befund_galerie.js`); `get_bilder` lässt `Befund` zu (Allowlist), Rechte wie bisher
   (Leserecht auf den Befund, Feldrechte, nur Anhänge des eigenen Datensatzes).
 
+### Neu (5.1 Arbeitspakete und Materialbedarf)
+
+- Modul `planung/`: beim Einreichen eines Auftrags mit Projekt je Verfahren ein Task
+  (Sollstunden aus den Montageminuten der Stücklisten, Bauablauf-Reihenfolge mit `depends_on`,
+  Termine fortlaufend nach Teamgröße und Tagesarbeitszeit, Projektende wird bei Bedarf verschoben)
+  und eine Material Request (Entwurf, „Purchase“ ins Hauptlager oder „Material Transfer“ ins
+  Fahrzeug, aggregiert mit Verschnitt, optional abzüglich Bestand). Whitelist
+  `planung.tasks_erzeugen` / `planung.materialbedarf_erzeugen` (Büro/Meister, idempotent),
+  Buttons an Auftrag und Projekt, Single „Corevatis Planung Einstellungen“, Custom Fields
+  `Task.cv_auftrag/cv_verfahren/cv_sollstunden/cv_positionen`, `Material Request.cv_auftrag`.
+- Workspace „Anfragen“: Karte „Aufträge und Planung“ (Auftrag, Projekt, Aufgabe,
+  Materialanforderung), Links auf Vertriebs- und Planungs-Einstellungen.
+
 ### Behoben (Nachprüfung mvp-test)
 
 - Angebotsannahme: `Quotation.cv_lead` und der Spiegel `Sales Order.cv_lead` blieben leer, weil
