@@ -460,6 +460,10 @@ def aufmass_dashboard(data):
 
 def _dashboard(data, feld: str):
 	data = data or {}
+	# Ohne ``fieldname`` lädt der Desk keine Zähler (Frappe ``form/dashboard.js``
+	# ``set_open_count``); das Aufmaß hat im Kern kein eigenes Dashboard. Für Quotation
+	# gilt ``non_standard_fieldnames``, ``fieldname`` ist nur der Rückfall.
+	data.setdefault("fieldname", feld)
 	data.setdefault("non_standard_fieldnames", {})["Quotation"] = feld
 	data.setdefault("transactions", []).append({"label": _("Offer"), "items": ["Quotation"]})
 	return data
