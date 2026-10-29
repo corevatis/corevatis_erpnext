@@ -146,11 +146,57 @@ def kennzeichen_ausserhalb_summe(doc, method=None) -> None:
 	Das Druckformat „Angebot Corevatis“ druckt Positionen mit ``cv_eventualposition`` oder
 	``cv_alternativposition`` als „nicht in der Angebotssumme enthalten“. Damit das stimmt,
 	setzt der Hook ERPNexts ``is_alternative``: ERPNext lässt solche Positionen aus Summen und
-	Steuern heraus. Läuft vor ``validate``, also vor der Summenberechnung. ``is_alternative``
-	wird nur gesetzt, nie zurückgenommen (das Büro kann es auch direkt setzen).
+	Steuern heraus (Server ``taxes_and_totals.filter_rows`` und gleich im Desk-Formular). Läuft vor
+	``validate``, also vor der Summenberechnung. ``is_alternative`` wird nur gesetzt, nie
+	zurückgenommen (das Büro kann es auch direkt setzen).
+
+	``is_alternative`` ist in ERPNext v16 der einzige Weg, eine Zeile mit Preis aus Netto, Steuer
+	und Brutto zu nehmen, der in Desk (JS) und Server gleich rechnet. Seine zweite Bedeutung -
+	„Ersatz für die Zeile davor“ (``has_alternative_item``, Auswahl-Dialog beim Auftrag) - hebt
+	``alternativ_sets_aufloesen`` für Corevatis-Kennzeichen auf (Review Epic 4, A-2).
 	"""
 	for row in doc.get("items") or []:
-		if (row.get("cv_eventualposition") or row.get("cv_alternativposition")) and not row.get(
-			"is_alternative"
-		):
+		if ist_kennzeichen_zeile(row) and not row.get("is_alternative"):
 			row.is_alternative = 1
+
+
+def ist_kennzeichen_zeile(row) -> bool:
+	return bool(row.get("cv_eventualposition") or row.get("cv_alternativposition"))
+
+
+def saetze_ohne_ersatz(doc) -> list:
+	"""Zeilen mit ``has_alternative_item``, deren „Alternativen“ nur Corevatis-Kennzeichen sind.
+
+	ERPNext (``Quotation.set_has_alternative_item``, ``before_submit``) markiert die Zeile **vor**
+	einer ``is_alternative``-Zeile als „hat Alternative“. Der ERPNext-Weg „Erstellen → Auftrag“
+	zeigt dann einen Auswahl-Dialog, in dem diese Normalposition ohne Haken stillschweigend aus
+	dem Auftrag fällt (``can_map_row``). Eine Eventual- oder Alternativposition aus Corevatis ist
+	aber kein Ersatz für die Zeile davor, sondern eine eigene, optionale Position. Echte
+	ERPNext-Alternativen (``is_alternative`` ohne ``cv_*``-Kennzeichen) bleiben unberührt.
+	"""
+	zeilen = list(doc.get("items") or [])
+	ergebnis = []
+	for idx, row in enumerate(zeilen):
+		if not row.get("has_alternative_item"):
+			continue
+		folgende = []
+		for naechste in zeilen[idx + 1 :]:
+			if not naechste.get("is_alternative"):
+				break
+			folgende.append(naechste)
+		if folgende and all(ist_kennzeichen_zeile(z) for z in folgende):
+			ergebnis.append(row)
+	return ergebnis
+
+
+def alternativ_sets_aufloesen(doc, method=None) -> None:
+	"""``before_submit`` Quotation (nach ERPNexts eigenem ``before_submit``): ``has_alternative_item``
+	für Normalpositionen vor Corevatis-Eventual-/Alternativpositionen zurücknehmen.
+
+	Wirkung auf dem ERPNext-Weg „Erstellen → Auftrag“: Im Auswahl-Dialog stehen nur noch die
+	Eventual-/Alternativpositionen; Normalpositionen gehen immer in den Auftrag
+	(``can_map_row``: einfache Zeile → übernehmen). Der Corevatis-Weg „Angebot annehmen“ war davon
+	nie betroffen (``filtered_children``).
+	"""
+	for row in saetze_ohne_ersatz(doc):
+		row.has_alternative_item = 0

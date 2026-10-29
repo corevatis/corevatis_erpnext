@@ -8,7 +8,9 @@ Ablauf ``angebot_annehmen`` (Button „Angebot annehmen“ am eingereichten Ange
    Vorher bekommt der Lead eine Anschrift (Address) aus dem Objekt bzw. der Objektadresse,
    falls er noch keine hat (Befund mvp-test 14), und einen Kontakt, falls keiner verknüpft
    ist. ERPNext verknüpft beide beim Anlegen mit dem Kunden und stellt die Angebote des Leads
-   auf den Kunden um. Gibt es schon einen Kunden mit diesem Lead, wird er benutzt.
+   auf den Kunden um. Gibt es schon einen Kunden mit diesem Lead, wird er benutzt; ebenso ein
+   bestehender Kunde mit derselben E-Mail (Kontakt mit Verknüpfung zum Kunden) oder demselben
+   Namen und derselben PLZ (Kundendubletten, Review Epic 4 A-3) - mit Warnung.
 2. **Auftrag:** ERPNext ``_make_sales_order`` (Mapping wie „Erstellen → Auftrag“) ohne
    Eventual- und Alternativpositionen (``cv_eventualposition``, ``cv_alternativposition`` aus
    4.1 sowie ERPNext ``is_alternative``), Nummernkreis ``AB-.YYYY.-`` (Site-Template), Steuer-
@@ -18,14 +20,21 @@ Ablauf ``angebot_annehmen`` (Button „Angebot annehmen“ am eingereichten Ange
 3. **Projekt:** ERPNext Project „<Objektadresse> - <Verfahren>“ (Gedankenstrich ``TRENNER``), Kunde, Auftrag, Status Open,
    Projekttyp „Sanierung“ (wird angelegt, falls er fehlt), erwarteter Start = Auftragsdatum,
    erwartetes Ende = Liefertermin, ``cv_objekt``/``cv_aufmass``/``cv_angebot``/``cv_lead``.
+   Automatisch nur für Corevatis-Angebote (``cv_erzeugt_aus_aufmass`` oder ``cv_aufmass``
+   gesetzt, Review Epic 4 A-5); für andere Angebote nur auf Wunsch (``projekt_anlegen``).
 4. **Lead:** ``cv_projekt`` gesetzt, Workflow-Übergang „Als gewonnen markieren“ (aus
    „Besichtigt“ vorher „Angebot erstellt“). Ist der Übergang nicht möglich (Rolle, Zustand),
    bleibt der Auftrag bestehen und die Antwort enthält eine Warnung.
 
 Idempotent: Ein zweiter Aufruf legt nichts doppelt an, sondern meldet Kunde, Auftrag und
 Projekt (``bereits_angenommen``); fehlt nur das Projekt, wird es ergänzt, und ein Auftrags-
-entwurf wird auf Wunsch eingereicht. Parallele Aufrufe serialisiert eine Zeilensperre auf dem
-Angebot.
+entwurf wird auf Wunsch eingereicht. Parallele Aufrufe (Doppelklick, REST-Wiederholung)
+serialisiert ``angebot_sperren`` (Review Epic 4 A-1): neue Transaktion, solange die Anfrage
+noch nichts geschrieben hat (sonst sähe der wartende Aufruf unter REPEATABLE READ den
+Lese-Snapshot von vor der Sperre), dann ``SELECT … FOR UPDATE`` auf das Angebot als erster
+Zugriff auf Belegdaten; die Dublettenprüfung auf ``Sales Order Item`` ist ein Locking Read
+(liest den zuletzt bestätigten Stand), und nach dem Anlegen prüft ein Riegel, dass es genau
+einen Auftrag zum Angebot gibt.
 
 ``angebot_ablehnen``: Angebot „Lost“ über ERPNext ``declare_enquiry_lost`` (Grund als
 „Quotation Lost Reason“ und ``order_lost_reason``), Lead „Verloren“ mit ``cv_verlustgrund`` -
@@ -59,6 +68,7 @@ LIEFERFRIST_TAGE = 14
 SERIE_AUFTRAG = "AB-.YYYY.-"
 FELD_EVENTUAL = "cv_eventualposition"
 FELD_ALTERNATIV = "cv_alternativposition"
+FELD_LEAD = "cv_lead"
 STATUS_GEWONNEN = "Gewonnen"
 PROJEKT_RUECKFALL = "Sanierung"
 # Projektname „<Objektadresse> <Gedankenstrich> <Verfahren>“ (Escape wegen ruff RUF001)
@@ -77,13 +87,39 @@ def darf_annehmen(user: str | None = None) -> bool:
 	return bool(set(ROLLEN) & set(frappe.get_roles(user)))
 
 
-def pruefe_rolle() -> None:
-	# frappe.only_for ist in Tests abgeschaltet - eigene Prüfung (wie crm.termin)
+def pruefe_rolle(meldung: str | None = None) -> None:
+	# eigene Prüfung statt frappe.only_for: auch System Manager, Meldung auf Deutsch (wie crm.termin)
 	if not darf_annehmen():
 		frappe.throw(
-			_("Angebote annehmen und ablehnen dürfen nur die Rollen Büro und Meister."),
+			meldung or _("Angebote annehmen und ablehnen dürfen nur die Rollen Büro und Meister."),
 			frappe.PermissionError,
 		)
+
+
+# --- Sperre ---------------------------------------------------------------------------------
+
+
+def angebot_sperren(quotation: str) -> None:
+	"""Zeilensperre auf dem Angebot, bevor Belegdaten gelesen werden (Review Epic 4, A-1).
+
+	MariaDB arbeitet mit REPEATABLE READ: Der Lese-Snapshot einer Transaktion entsteht mit dem
+	ersten gewöhnlichen ``SELECT`` - in einer Anfrage schon bei der Anmeldung (API-Schlüssel,
+	Sitzung), also vor dieser Methode. Ein zweiter Aufruf, der an der Sperre wartet, sähe danach
+	den Auftrag des ersten nicht. Deshalb:
+
+	1. Hat die Transaktion noch nichts geschrieben (der Normalfall am Anfang einer Anfrage oder
+	   eines Scheduler-Laufs), beginnt eine neue (``START TRANSACTION``; eine Lese-Transaktion
+	   zu beenden verwirft nichts). Hat sie schon geschrieben (z. B. in Tests), bleibt sie - dann
+	   schützen die Locking Reads der Dublettenprüfungen (``bestehender_auftrag(sperren=True)``).
+	2. ``SELECT … FOR UPDATE`` auf die Zeile des Angebots: Ein paralleler Aufruf wartet hier, bis
+	   der erste bestätigt (Commit) oder zurückgerollt hat. Locking Reads legen keinen Snapshot
+	   an - der erste gewöhnliche Lesezugriff danach sieht den Stand nach dem ersten Aufruf.
+	"""
+	if not frappe.db.transaction_writes:
+		frappe.db.begin()
+		frappe.db.value_cache.clear()
+	if not frappe.db.sql("select name from `tabQuotation` where name=%s for update", quotation):
+		frappe.throw(_("Angebot {0} nicht gefunden.").format(quotation), frappe.DoesNotExistError)
 
 
 # --- Whitelist ------------------------------------------------------------------------------
@@ -95,6 +131,7 @@ def angebot_annehmen(
 	auftragsdatum: str | None = None,
 	lieferdatum: str | None = None,
 	einreichen: int | str | bool | None = 1,
+	projekt_anlegen: int | str | bool | None = None,
 ) -> dict:
 	"""Angebot annehmen: Kunde, Auftrag (AB-) und Projekt anlegen, Lead „Gewonnen“.
 
@@ -102,11 +139,13 @@ def angebot_annehmen(
 	:param auftragsdatum: Datum des Auftrags (Standard heute), zugleich erwarteter Projektstart
 	:param lieferdatum: Liefertermin = erwartetes Projektende (Standard Auftragsdatum + 14 Tage)
 	:param einreichen: 1 = Auftrag einreichen (Standard), 0 = Auftrag als Entwurf lassen
+	:param projekt_anlegen: 1 = Projekt auch für ein Angebot ohne Aufmaß-Herkunft; Corevatis-
+		Angebote (aus dem Aufmaß) bekommen immer ein Projekt
 	"""
+	# Rolle aus dem Benutzerkontext (keine Belegdaten), dann sofort die Sperre
 	pruefe_rolle()
+	angebot_sperren(quotation)
 	frappe.has_permission("Quotation", "read", quotation, throw=True)
-	# Zeilensperre: ein Doppelklick bzw. paralleler REST-Aufruf wartet und findet dann den Auftrag
-	frappe.db.get_value("Quotation", quotation, "name", for_update=True)
 	angebot = frappe.get_doc("Quotation", quotation)
 	if angebot.docstatus != 1:
 		frappe.throw(_("Nur ein eingereichtes Angebot kann angenommen werden."))
@@ -120,18 +159,23 @@ def angebot_annehmen(
 
 	warnungen: list[str] = []
 	lead = lead_zum_angebot(angebot)
-	auftrag = bestehender_auftrag(angebot.name)
+	auftrag = bestehender_auftrag(angebot.name, sperren=True)
 	bereits = bool(auftrag)
 
 	kunde, kunde_neu = kunde_sicherstellen(angebot, lead, warnungen)
 	if not auftrag:
 		pruefe_gueltigkeit(angebot)
 		auftrag = auftrag_anlegen(angebot.name, start, ende)
-	projekt, projekt_neu = projekt_sicherstellen(auftrag, lead, start, ende)
+		nur_ein_auftrag(angebot.name, auftrag.name)
+	if ist_corevatis_angebot(angebot) or cint(projekt_anlegen):
+		projekt, projekt_neu = projekt_sicherstellen(auftrag, lead, start, ende)
+	else:
+		projekt, projekt_neu = vorhandenes_projekt(auftrag), False
 
 	lead_status = None
 	if lead:
-		lead_mit_projekt(lead, projekt)
+		if projekt:
+			lead_mit_projekt(lead, projekt)
 		lead_status, warnung = lead_gewonnen(lead)
 		if warnung:
 			warnungen.append(warnung)
@@ -167,15 +211,15 @@ def angebot_ablehnen(quotation: str, grund: str, details: str | None = None) -> 
 	:param details: Freitext für ``order_lost_reason`` (Standard: der Grund)
 	"""
 	pruefe_rolle()
+	angebot_sperren(quotation)
 	frappe.has_permission("Quotation", "write", quotation, throw=True)
 	if not grund or grund not in verlustgruende():
 		frappe.throw(_("Bitte einen Ablehnungsgrund auswählen."), frappe.MandatoryError)
 
-	frappe.db.get_value("Quotation", quotation, "name", for_update=True)
 	angebot = frappe.get_doc("Quotation", quotation)
 	if angebot.docstatus != 1:
 		frappe.throw(_("Nur ein eingereichtes Angebot kann abgelehnt werden."))
-	auftrag = bestehender_auftrag(angebot.name)
+	auftrag = bestehender_auftrag(angebot.name, sperren=True)
 	if auftrag:
 		frappe.throw(_("Zum Angebot {0} gibt es bereits den Auftrag {1}.").format(angebot.name, auftrag.name))
 
@@ -220,13 +264,10 @@ def annahme_status(quotation: str) -> dict:
 	pruefe_rolle()
 	frappe.has_permission("Quotation", "read", quotation, throw=True)
 	auftrag = bestehender_auftrag(quotation)
-	projekt = None
-	if auftrag:
-		projekt = auftrag.get("project") or frappe.db.get_value("Project", {"sales_order": auftrag.name})
 	return {
 		"auftrag": auftrag.name if auftrag else None,
 		"auftrag_docstatus": auftrag.docstatus if auftrag else None,
-		"projekt": projekt,
+		"projekt": vorhandenes_projekt(auftrag) if auftrag else None,
 	}
 
 
@@ -234,9 +275,12 @@ def annahme_status(quotation: str) -> dict:
 
 
 def lead_zum_angebot(angebot) -> str | None:
-	"""Lead des Angebots: direkt (an Lead) oder über ``Customer.lead_name`` (nach der Umwandlung)."""
+	"""Lead des Angebots: direkt (an Lead), ``cv_lead`` (bei der Annahme gemerkt - wichtig, wenn ein
+	bestehender Kunde übernommen wurde) oder über ``Customer.lead_name`` (nach der Umwandlung)."""
 	if angebot.quotation_to == "Lead":
 		return angebot.party_name or None
+	if angebot.get(FELD_LEAD):
+		return angebot.get(FELD_LEAD)
 	if angebot.quotation_to == "Customer" and angebot.party_name:
 		return frappe.db.get_value("Customer", angebot.party_name, "lead_name") or None
 	return None
@@ -256,6 +300,20 @@ def kunde_sicherstellen(angebot, lead: str | None, warnungen: list[str]) -> tupl
 	if vorhanden:
 		_angebot_auf_kunde(angebot, vorhanden)
 		return vorhanden, False
+
+	dublette, grund = bestehender_kunde(lead, angebot)
+	if dublette:
+		# Kundendublette (A-3): bestehenden Kunden übernehmen, die Objektanschrift dazuhängen;
+		# keinen zweiten Kontakt anlegen (der Kunde hat ihn schon)
+		_anschrift_und_kontakt(lead, angebot, warnungen, kontakt=False)
+		_adressen_an_kunde(lead, dublette)
+		_angebot_auf_kunde(angebot, dublette)
+		warnungen.append(
+			_("Bestehender Kunde {0} übernommen ({1}) - es wurde kein zweiter Kunde angelegt.").format(
+				dublette, grund
+			)
+		)
+		return dublette, False
 
 	_anschrift_und_kontakt(lead, angebot, warnungen)
 
@@ -313,15 +371,76 @@ def _hauptadresse_und_kontakt(kunde, adresse: str | None, kontakt: str | None) -
 
 def _angebot_auf_kunde(angebot, kunde: str) -> None:
 	"""ERPNext stellt Angebote des Leads beim Anlegen des Kunden um (``Customer.update_lead_status``),
-	aber nur mit Schreibrecht des Benutzers - hier für *dieses* Angebot ausdrücklich."""
-	if frappe.db.get_value("Quotation", angebot.name, "quotation_to") == "Lead":
-		frappe.db.set_value(
-			"Quotation",
-			angebot.name,
-			{"quotation_to": "Customer", "party_name": kunde},
-			update_modified=False,
-		)
+	aber nur mit Schreibrecht des Benutzers - hier für *dieses* Angebot ausdrücklich. Der Lead
+	bleibt in ``cv_lead`` (ein übernommener Bestandskunde hat einen anderen ``lead_name``)."""
+	alt = frappe.db.get_value("Quotation", angebot.name, ["quotation_to", "party_name"], as_dict=True)
+	if alt and alt.quotation_to == "Lead":
+		werte = {"quotation_to": "Customer", "party_name": kunde}
+		if frappe.db.has_column("Quotation", FELD_LEAD):
+			werte[FELD_LEAD] = alt.party_name
+			angebot.set(FELD_LEAD, alt.party_name)
+		frappe.db.set_value("Quotation", angebot.name, werte, update_modified=False)
 	angebot.quotation_to, angebot.party_name = "Customer", kunde
+
+
+def _aktive_kunden(namen: list[str]) -> list[str]:
+	if not namen:
+		return []
+	aktiv = set(frappe.get_all("Customer", filters={"name": ["in", namen], "disabled": 0}, pluck="name"))
+	return [n for n in dict.fromkeys(namen) if n in aktiv]
+
+
+def bestehender_kunde(lead_name: str, angebot) -> tuple[str | None, str | None]:
+	"""Kundendublette zu einem Lead (Review Epic 4, A-3): ``(Kunde, Grund)`` oder ``(None, None)``.
+
+	1. **E-Mail:** ein Kontakt mit der E-Mail des Leads, der mit einem Kunden verknüpft ist
+	   (ERPNext hängt den Kontakt eines umgewandelten Leads an den Kunden).
+	2. **Name und PLZ:** Kunde mit dem Namen des Leads und einer Anschrift mit der PLZ des
+	   Objekts bzw. der Objektadresse.
+
+	Bei mehreren Treffern gewinnt der älteste Kunde; deaktivierte Kunden zählen nicht.
+	"""
+	lead = frappe.get_doc("Lead", lead_name)
+	email = (lead.get("email_id") or "").strip()
+	if email:
+		kontakte = frappe.get_all(
+			"Contact Email", filters={"email_id": email, "parenttype": "Contact"}, pluck="parent"
+		) + frappe.get_all("Contact", filters={"email_id": email}, pluck="name")
+		if kontakte:
+			kunden = frappe.get_all(
+				"Dynamic Link",
+				filters={
+					"parenttype": "Contact",
+					"parent": ["in", list(set(kontakte))],
+					"link_doctype": "Customer",
+				},
+				pluck="link_name",
+				order_by="creation asc",
+			)
+			kunden = _aktive_kunden(kunden)
+			if kunden:
+				return kunden[0], _("gleiche E-Mail {0}").format(email)
+
+	name = (lead.get("lead_name") or lead.get("company_name") or "").strip()
+	plz = objekt_anschrift(angebot, lead).get("plz")
+	if name and plz:
+		kunden = frappe.get_all(
+			"Customer", filters={"customer_name": name, "disabled": 0}, pluck="name", order_by="creation asc"
+		)
+		for kunde in kunden:
+			adressen = _verknuepft("Address", "Customer", kunde)
+			if adressen and frappe.db.exists("Address", {"name": ["in", adressen], "pincode": plz}):
+				return kunde, _("gleicher Name und PLZ {0}").format(plz)
+	return None, None
+
+
+def _adressen_an_kunde(lead_name: str, kunde: str) -> None:
+	"""Anschriften des Leads zusätzlich mit dem übernommenen Kunden verknüpfen (zweites Objekt)."""
+	for name in _verknuepft("Address", "Lead", lead_name):
+		adresse = frappe.get_doc("Address", name)
+		if not adresse.has_link("Customer", kunde):
+			adresse.append("links", {"link_doctype": "Customer", "link_name": kunde})
+			adresse.save(ignore_permissions=True)
 
 
 def _verknuepft(doctype: str, link_doctype: str, link_name: str) -> list[str]:
@@ -333,7 +452,7 @@ def _verknuepft(doctype: str, link_doctype: str, link_name: str) -> list[str]:
 	)
 
 
-def _anschrift_und_kontakt(lead_name: str, angebot, warnungen: list[str]) -> None:
+def _anschrift_und_kontakt(lead_name: str, angebot, warnungen: list[str], kontakt: bool = True) -> None:
 	"""Anschrift und Kontakt am Lead, damit ERPNext sie an den neuen Kunden hängt."""
 	lead = frappe.get_doc("Lead", lead_name)
 	if not _verknuepft("Address", "Lead", lead.name):
@@ -364,12 +483,14 @@ def _anschrift_und_kontakt(lead_name: str, angebot, warnungen: list[str]) -> Non
 					"Keine Anschrift für den Kunden gefunden (Objektadresse fehlt) - bitte am Kunden nachtragen."
 				)
 			)
-	if not _verknuepft("Contact", "Lead", lead.name) and (
-		lead.get("email_id") or lead.get("mobile_no") or lead.get("phone")
+	if (
+		kontakt
+		and not _verknuepft("Contact", "Lead", lead.name)
+		and (lead.get("email_id") or lead.get("mobile_no") or lead.get("phone"))
 	):
-		kontakt = lead.create_contact()
-		kontakt.append("links", {"link_doctype": "Lead", "link_name": lead.name})
-		kontakt.save(ignore_permissions=True)
+		neu = lead.create_contact()
+		neu.append("links", {"link_doctype": "Lead", "link_name": lead.name})
+		neu.save(ignore_permissions=True)
 
 
 # --- Objektadresse --------------------------------------------------------------------------
@@ -451,16 +572,56 @@ def ist_zusatzposition(zeile) -> bool:
 	)
 
 
-def bestehender_auftrag(quotation: str):
-	"""Nicht stornierter Auftrag zu diesem Angebot (Entwurf oder eingereicht), sonst ``None``."""
-	namen = frappe.get_all(
-		"Sales Order Item",
-		filters={"prevdoc_docname": quotation, "docstatus": ["<", 2], "parenttype": "Sales Order"},
-		pluck="parent",
-		order_by="creation asc",
-		limit=1,
+def auftraege_zum_angebot(quotation: str, sperren: bool = False) -> list[str]:
+	"""Nicht stornierte Aufträge (Entwurf oder eingereicht) zum Angebot, älteste zuerst.
+
+	``sperren``: Locking Read (``FOR UPDATE``, Index auf ``prevdoc_docname``) - liest den zuletzt
+	bestätigten Stand statt des Lese-Snapshots der Transaktion (A-1).
+	"""
+	if not sperren:
+		return list(
+			dict.fromkeys(
+				frappe.get_all(
+					"Sales Order Item",
+					filters={
+						"prevdoc_docname": quotation,
+						"docstatus": ["<", 2],
+						"parenttype": "Sales Order",
+					},
+					pluck="parent",
+					order_by="creation asc",
+				)
+			)
+		)
+	zeilen = frappe.db.sql(
+		"""select parent from `tabSales Order Item`
+		where prevdoc_docname=%s and docstatus < 2 and parenttype='Sales Order'
+		order by creation asc for update""",
+		quotation,
 	)
+	return list(dict.fromkeys(z[0] for z in zeilen))
+
+
+def bestehender_auftrag(quotation: str, sperren: bool = False):
+	"""Nicht stornierter Auftrag zu diesem Angebot (Entwurf oder eingereicht), sonst ``None``."""
+	namen = auftraege_zum_angebot(quotation, sperren=sperren)
 	return frappe.get_doc("Sales Order", namen[0]) if namen else None
+
+
+def nur_ein_auftrag(quotation: str, auftrag: str) -> None:
+	"""Fachlicher Riegel nach dem Anlegen: genau ein nicht stornierter Auftrag je Angebot (A-1).
+	Sonst Abbruch - die Transaktion wird zurückgerollt, der zuerst angelegte Auftrag bleibt."""
+	andere = [n for n in auftraege_zum_angebot(quotation, sperren=True) if n != auftrag]
+	if andere:
+		frappe.throw(
+			_("Zum Angebot {0} gibt es bereits den Auftrag {1}.").format(quotation, ", ".join(andere)),
+			frappe.DuplicateEntryError,
+		)
+
+
+def ist_corevatis_angebot(angebot) -> bool:
+	"""Angebot aus dem Aufmaß (Generator 4.1): ``cv_erzeugt_aus_aufmass`` oder ``cv_aufmass`` (A-5)."""
+	return bool(cint(angebot.get("cv_erzeugt_aus_aufmass")) or angebot.get("cv_aufmass"))
 
 
 def pruefe_gueltigkeit(angebot) -> None:
@@ -575,9 +736,18 @@ def projekt_name(basis: str, auftrag: str) -> str:
 	return basis[: PROJEKTNAME_LAENGE - len(zusatz)] + zusatz
 
 
+def vorhandenes_projekt(auftrag) -> str | None:
+	return auftrag.get("project") or frappe.db.get_value("Project", {"sales_order": auftrag.name})
+
+
 def projekt_sicherstellen(auftrag, lead: str | None, start=None, ende=None) -> tuple[str, bool]:
-	"""Projekt zum Auftrag (vorhanden: ``Sales Order.project`` bzw. ``Project.sales_order``)."""
-	vorhanden = auftrag.get("project") or frappe.db.get_value("Project", {"sales_order": auftrag.name})
+	"""Projekt zum Auftrag (vorhanden: ``Sales Order.project`` bzw. ``Project.sales_order``).
+
+	Sperrt die Zeile des Auftrags, damit Annahme und ``on_submit``-Hook kein zweites Projekt anlegen.
+	"""
+	if not auftrag.is_new():
+		frappe.db.sql("select name from `tabSales Order` where name=%s for update", auftrag.name)
+	vorhanden = vorhandenes_projekt(auftrag)
 	if vorhanden:
 		return vorhanden, False
 
@@ -737,10 +907,16 @@ def auftrag_eingereicht(doc, method=None) -> None:
 		angebotsstatus_korrigieren(name)
 	angebot = frappe.get_doc("Quotation", angebote[0])
 	lead = lead_zum_angebot(angebot)
-	projekt, _neu = projekt_sicherstellen(doc, lead)
-	doc.project = projekt
+	# Projekt automatisch nur für Corevatis-Angebote (A-5); ein vorhandenes (Annahme mit
+	# ``projekt_anlegen``) bleibt
+	projekt = vorhandenes_projekt(doc)
+	if not projekt and ist_corevatis_angebot(angebot):
+		projekt, _neu = projekt_sicherstellen(doc, lead)
+	if projekt:
+		doc.project = projekt
 	if lead:
-		lead_mit_projekt(lead, projekt)
+		if projekt:
+			lead_mit_projekt(lead, projekt)
 		_zustand, warnung = lead_gewonnen(lead)
 		if warnung:
 			frappe.msgprint(warnung, indicator="orange", alert=True)

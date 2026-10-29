@@ -1,12 +1,17 @@
 """Aufgabe 4.4: Angebotsannahme - Kunde aus Lead, Auftrag (AB-), Projekt, Ablehnung, Rechte."""
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, flt, getdate, today
 
-from corevatis_erpnext.angebot import annahme
+from corevatis_erpnext.angebot import annahme, textbausteine
 from corevatis_erpnext.tests import _angebot as td
+from corevatis_erpnext.tests import _parallel
 from corevatis_erpnext.tests._helpers import make_user
+
+METHODE_ANNEHMEN = "/api/method/corevatis_erpnext.angebot.annahme.angebot_annehmen"
 
 BUERO = "cv-test-buero@example.com"
 MEISTER = "cv-test-meister@example.com"
@@ -52,6 +57,8 @@ class TestAngebotAnnahme(IntegrationTestCase):
 			("Sales Order", "cv_titel"),
 			("Sales Order Item", "cv_eventualposition"),
 			("Sales Order Item", "cv_alternativposition"),
+			("Quotation", "cv_lead"),
+			("Sales Order", "cv_lead"),
 		):
 			with self.subTest(doctype=doctype, feld=feld):
 				self.assertTrue(frappe.get_meta(doctype).has_field(feld))
@@ -251,6 +258,189 @@ class TestAngebotAnnahme(IntegrationTestCase):
 		r = self._annehmen()
 		self.assertTrue(r["bereits_angenommen"])
 		self.assertEqual((r["auftrag"], r["projekt"]), (auftrag.name, projekt))
+
+	# --- Review Epic 4 ----------------------------------------------------------------------
+
+	def _zaehler(self, angebot: str) -> tuple[int, int]:
+		auftraege = annahme.auftraege_zum_angebot(angebot)
+		projekte = frappe.db.count("Project", {"sales_order": ["in", auftraege]}) if auftraege else 0
+		return len(auftraege), projekte
+
+	def test_parallel_annehmen_ein_auftrag(self):
+		"""A-1: zwei gleichzeitige Anfragen (Doppelklick/REST-Wiederholung) über die WSGI-App -
+		genau ein Auftrag und ein Projekt; die zweite meldet „bereits angenommen“.
+
+		Beide Anfragen warten nach der Anmeldung (Lese-Snapshot angelegt) aufeinander; die erste
+		hält die Sperre 1,5 s. Ohne neue Transaktion vor der Sperre sähe die zweite den Auftrag
+		der ersten nicht und legte einen zweiten an.
+		"""
+		token = _parallel.api_token(BUERO)
+		frappe.db.commit()  # zweite Verbindung sieht nur bestätigte Daten
+		schranke, langsam = _parallel.gleichzeitig(annahme, "pruefe_rolle", "auftrag_anlegen")
+		with schranke, langsam:
+			antworten = _parallel.parallel_post(
+				METHODE_ANNEHMEN, {"quotation": self.angebot.name, "einreichen": 1}, token
+			)
+		frappe.db.rollback()  # neuer Snapshot im Test-Thread
+		self.assertEqual(
+			[a.status_code for a in antworten], [200, 200], [a.get_data(as_text=True) for a in antworten]
+		)
+		nachrichten = [a.json["message"] for a in antworten]
+		self.assertEqual(sorted(m["bereits_angenommen"] for m in nachrichten), [False, True])
+		self.assertEqual(len({m["auftrag"] for m in nachrichten}), 1)
+		self.assertEqual(len({m["projekt"] for m in nachrichten}), 1)
+		self.assertEqual(self._zaehler(self.angebot.name), (1, 1))
+		self.assertEqual(frappe.db.count("Customer", {"lead_name": self.lead.name}), 1)
+
+	def test_sperre_ist_erster_zugriff_auf_das_angebot(self):
+		"""A-1 (Reihenfolge): ``FOR UPDATE`` auf Quotation vor jedem anderen Lesen des Angebots,
+		Dublettenprüfung auf ``Sales Order Item`` als Locking Read."""
+		abfragen = []
+		original = frappe.db.sql
+
+		def mitschreiben(query, *args, **kwargs):
+			abfragen.append(str(query))
+			return original(query, *args, **kwargs)
+
+		frappe.set_user(BUERO)
+		try:
+			with patch.object(frappe.db, "sql", side_effect=mitschreiben):
+				annahme.angebot_annehmen(self.angebot.name)
+		finally:
+			frappe.set_user("Administrator")
+		angebot = [q for q in abfragen if "`tabQuotation`" in q]
+		self.assertTrue(angebot)
+		self.assertIn("for update", angebot[0].lower(), angebot[0])
+		dublette = next(q for q in abfragen if "`tabSales Order Item`" in q and "prevdoc_docname" in q)
+		self.assertIn("for update", dublette.lower())
+
+	def test_riegel_gegen_zweiten_auftrag(self):
+		"""A-1 (fachlicher Riegel): sieht die Dublettenprüfung den vorhandenen Auftrag nicht
+		(veralteter Snapshot, nachgestellt), bricht die Annahme nach dem Anlegen ab."""
+		erst = self._annehmen(einreichen=0)
+		frappe.db.savepoint("cv_riegel")
+		with patch.object(annahme, "bestehender_auftrag", return_value=None):
+			with self.assertRaises(frappe.DuplicateEntryError):
+				self._annehmen(einreichen=0)
+		frappe.db.rollback(save_point="cv_riegel")
+		self.assertEqual(annahme.auftraege_zum_angebot(self.angebot.name), [erst["auftrag"]])
+
+	def test_kundendublette_gleiche_email(self):
+		"""A-3: Kunde mit Kontakt derselben E-Mail wird übernommen, kein zweiter Kunde."""
+		email = self.lead.email_id
+		kunde = frappe.get_doc(
+			{"doctype": "Customer", "customer_name": "Familie Feucht Bestand", "customer_type": "Individual"}
+		)
+		kunde.customer_group = annahme._kundengruppe(None)
+		kunde.insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "Contact",
+				"first_name": "Bestand",
+				"email_ids": [{"email_id": email, "is_primary": 1}],
+				"links": [{"link_doctype": "Customer", "link_name": kunde.name}],
+			}
+		).insert(ignore_permissions=True)
+		vorher = frappe.db.count("Customer")
+		r = self._annehmen()
+		self.assertEqual((r["kunde"], r["kunde_neu"]), (kunde.name, False))
+		self.assertEqual(frappe.db.count("Customer"), vorher)
+		self.assertTrue(any(kunde.name in w and email in w for w in r["warnungen"]), r["warnungen"])
+		# Objektanschrift hängt jetzt auch am Bestandskunden, der Lead bleibt am Angebot
+		adressen = annahme._verknuepft("Address", "Customer", kunde.name)
+		self.assertTrue(frappe.db.exists("Address", {"name": ["in", adressen], "pincode": "48143"}))
+		angebot = frappe.get_doc("Quotation", self.angebot.name)
+		self.assertEqual((angebot.party_name, angebot.cv_lead), (kunde.name, self.lead.name))
+		self.assertEqual(annahme.lead_zum_angebot(angebot), self.lead.name)
+		self.assertEqual(frappe.db.get_value("Lead", self.lead.name, "cv_status"), "Gewonnen")
+
+	def test_kundendublette_name_und_plz(self):
+		"""A-3: gleicher Name und PLZ in der Anschrift des Kunden → Bestandskunde."""
+		kunde = frappe.get_doc(
+			{"doctype": "Customer", "customer_name": self.lead.lead_name, "customer_type": "Individual"}
+		)
+		kunde.customer_group = annahme._kundengruppe(None)
+		kunde.insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "Address",
+				"address_title": kunde.name,
+				"address_type": "Billing",
+				"address_line1": "Altbau 1",
+				"pincode": "48143",
+				"city": "Münster",
+				"country": "Germany",
+				"links": [{"link_doctype": "Customer", "link_name": kunde.name}],
+			}
+		).insert(ignore_permissions=True)
+		r = self._annehmen()
+		self.assertEqual((r["kunde"], r["kunde_neu"]), (kunde.name, False))
+		self.assertTrue(any("48143" in w for w in r["warnungen"]), r["warnungen"])
+		# andere PLZ: kein Treffer
+		lead = td.lead_mit_angebot_status(
+			first_name=self.lead.first_name,
+			last_name=self.lead.last_name,
+			cv_objekt_adresse="Am Deich 2, 26789 Leer",
+		)
+		self.assertEqual(
+			annahme.bestehender_kunde(lead.name, td.angebot(lead.name, zusatz=False)), (None, None)
+		)
+
+	def test_projekt_nur_fuer_corevatis_angebote(self):
+		"""A-5: gewöhnliches Angebot (ohne Aufmaß) → Auftrag ohne Projekt; mit ``projekt_anlegen``
+		bzw. aus dem Aufmaß → Projekt; ERPNext-Weg ohne Aufmaß → kein Projekt."""
+		self.assertTrue(annahme.ist_corevatis_angebot(self.angebot))
+		ohne = td.angebot(self.lead.name, zusatz=False, corevatis=False)
+		self.assertFalse(annahme.ist_corevatis_angebot(ohne))
+		r = annahme.angebot_annehmen(ohne.name)
+		self.assertTrue(frappe.db.exists("Sales Order", r["auftrag"]))
+		self.assertEqual((r["projekt"], r["projekt_neu"]), (None, False))
+		self.assertFalse(frappe.db.get_value("Project", {"sales_order": r["auftrag"]}))
+		# nachträglich auf Wunsch
+		r2 = annahme.angebot_annehmen(ohne.name, projekt_anlegen=1)
+		self.assertTrue(r2["projekt_neu"])
+		self.assertEqual(frappe.db.get_value("Project", r2["projekt"], "sales_order"), r["auftrag"])
+
+		from erpnext.selling.doctype.quotation.quotation import make_sales_order
+
+		lead2 = td.lead_mit_angebot_status()
+		weiteres = td.angebot(lead2.name, zusatz=False, corevatis=False)
+		auftrag = make_sales_order(weiteres.name)
+		auftrag.delivery_date = add_days(today(), 7)
+		for z in auftrag.items:
+			z.delivery_date = auftrag.delivery_date
+		auftrag.insert(ignore_permissions=True)
+		auftrag.submit()
+		self.assertFalse(frappe.db.get_value("Project", {"sales_order": auftrag.name}))
+
+	def test_eventualposition_ist_kein_ersatz_fuer_die_zeile_davor(self):
+		"""A-2: nach dem Einreichen hat die Normalposition vor der Eventualposition kein
+		``has_alternative_item``; der ERPNext-Weg mit Auswahl der Eventualposition übernimmt die
+		Normalposition trotzdem (vorher fiel sie stillschweigend weg)."""
+		from erpnext.selling.doctype.quotation.quotation import make_sales_order
+
+		angebot = frappe.get_doc("Quotation", self.angebot.name)
+		haupt, eventual, _alternativ = angebot.items
+		self.assertEqual((haupt.has_alternative_item, eventual.is_alternative), (0, 1))
+		self.assertEqual(textbausteine.saetze_ohne_ersatz(angebot), [])
+		self.assertEqual(flt(angebot.net_total), 500.0)  # Summe ohne Eventual-/Alternativposition
+
+		frappe.flags.args = {"selected_items": [{"name": eventual.name}]}
+		try:
+			auftrag = make_sales_order(angebot.name)
+		finally:
+			frappe.flags.pop("args", None)
+		self.assertEqual(
+			sorted(z.item_code for z in auftrag.items), sorted([td.ARTIKEL, td.ARTIKEL_EVENTUAL])
+		)
+		# echte ERPNext-Alternativen (ohne Corevatis-Kennzeichen) behalten ihre Bedeutung
+		doc = frappe.copy_doc(self.angebot)
+		doc.docstatus = 0
+		doc.items[1].cv_eventualposition = 0
+		doc.items[2].cv_alternativposition = 0
+		doc.insert(ignore_permissions=True)
+		doc.submit()
+		self.assertEqual(doc.items[0].has_alternative_item, 1)
 
 	# --- Ablehnung --------------------------------------------------------------------------
 

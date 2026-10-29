@@ -9,6 +9,8 @@ FIRMA_TEMPLATE = "Hülshoff Sanierungstechnik"
 ARTIKEL = "_TEST-CV-ANNAHME-IA"
 ARTIKEL_EVENTUAL = "_TEST-CV-ANNAHME-AA"
 ARTIKEL_ALTERNATIV = "_TEST-CV-ANNAHME-HS"
+# Angebote aus dem Aufmaß bekommen bei der Annahme immer ein Projekt (Review Epic 4 A-5)
+AUFMASS = "_TEST-CV-AUFMASS-ANNAHME"
 
 
 def firma() -> str:
@@ -54,15 +56,29 @@ def ensure_artikel() -> None:
 def lead_mit_angebot_status(**werte):
 	werte.setdefault("cv_objekt_adresse", "Kellerweg 7, 48143 Münster")
 	werte.setdefault("mobile_no", "0170 1234567")
+	# eindeutiger Name: gleicher Name + PLZ gilt als Kundendublette (Review Epic 4 A-3)
+	werte.setdefault("last_name", f"Musterfrau {frappe.generate_hash(length=6)}")
 	lead = make_lead(**werte)
 	# Workflow-Zustand „Angebot“ (1.4) - direkt gesetzt, die Übergänge prüft test_lead_workflow
 	frappe.db.set_value("Lead", lead.name, "cv_status", "Angebot", update_modified=False)
 	return frappe.get_doc("Lead", lead.name)
 
 
-def angebot(party: str, quotation_to: str = "Lead", zusatz: bool = True, tage_alt: int = 0, **werte):
-	"""Eingereichtes Angebot: Hauptposition 10 x 50 €, optional Eventual- und Alternativposition."""
+def angebot(
+	party: str,
+	quotation_to: str = "Lead",
+	zusatz: bool = True,
+	tage_alt: int = 0,
+	corevatis: bool = True,
+	**werte,
+):
+	"""Eingereichtes Angebot: Hauptposition 10 x 50 €, optional Eventual- und Alternativposition.
+
+	``corevatis``: Angebot aus dem Aufmaß (``cv_aufmass`` gesetzt) - sonst ein gewöhnliches Angebot.
+	"""
 	company = firma()
+	if corevatis and frappe.get_meta("Quotation").has_field("cv_aufmass"):
+		werte.setdefault("cv_aufmass", AUFMASS)
 	datum = add_days(today(), -tage_alt)
 	zeilen = [{"item_code": ARTIKEL, "qty": 10, "rate": 50}]
 	if zusatz:

@@ -15,12 +15,30 @@ Die Feldnamen sind verbindlich und dürfen nicht umbenannt werden.
   ERPNext hat zusätzlich ``Quotation Item.is_alternative`` (Position zählt nicht zur Summe);
   der Generator setzt beide Kennzeichen nicht, das Büro pflegt sie im Desk.
 
+**Feldrechte (Review Epic 4, G-1):** ``cv_kalkulation_json`` (Einkaufspreise, Montageminuten,
+Zuschläge, Deckungsbeitrag) und ``cv_einzelkosten`` (Herstellkosten je Einheit) liegen auf
+``PERMLEVEL_KALKULATION`` = 2. Ebene 1 genügt nicht: ERPNext gibt Sales User, Maintenance
+User/Manager und Sales Manager an Quotation schon Leserecht auf Ebene 1. Ebene 2 lesen (und am
+Beleg schreiben - der Generator legt Angebote mit den Rechten des Benutzers an) nur Büro und
+Meister (``FELDRECHTE``, ``ensure_feldrechte``); Administrator sieht alles. Der Spiegel (4.4) übernimmt das
+``permlevel`` an Sales Order / Sales Order Item. Das Druckformat druckt beide Felder nicht.
+
 Labels sind englische Quelltexte, die deutsche Oberfläche kommt aus ``translations/de.csv``.
 """
 
+import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+from frappe.utils import cint
 
 MODULE = "Corevatis ERPNext"
+PERMLEVEL_KALKULATION = 2
+# Doctype -> Rolle -> Rechte auf PERMLEVEL_KALKULATION. Schreiben: wer den Beleg mit eigenen
+# Rechten anlegt (Generator am Angebot; Büro über „Erstellen → Auftrag“), sonst setzt Frappe die
+# Werte beim Anlegen zurück (``validate_higher_perm_levels``). Meister liest Aufträge nur.
+FELDRECHTE = {
+	"Quotation": {"Büro": ("read", "write"), "Meister": ("read", "write")},
+	"Sales Order": {"Büro": ("read", "write"), "Meister": ("read",)},
+}
 
 QUOTATION_FELDER = (
 	"cv_titel",
@@ -126,6 +144,7 @@ def quotation_fields() -> list[dict]:
 			"fieldtype": "Section Break",
 			"label": "Costing (Corevatis)",
 			"collapsible": 1,
+			"permlevel": PERMLEVEL_KALKULATION,
 			"insert_after": "supplier_quotation",
 		},
 		{
@@ -137,6 +156,7 @@ def quotation_fields() -> list[dict]:
 			"read_only": 1,
 			"no_copy": 1,
 			"print_hide": 1,
+			"permlevel": PERMLEVEL_KALKULATION,
 			"insert_after": "cv_section_kalkulation",
 		},
 	]
@@ -201,6 +221,7 @@ def quotation_item_fields() -> list[dict]:
 			"description": "Material and labour per unit without surcharges",
 			"read_only": 1,
 			"print_hide": 1,
+			"permlevel": PERMLEVEL_KALKULATION,
 			"insert_after": "cv_mengen_herkunft",
 		},
 		{
@@ -226,3 +247,73 @@ def ensure_angebot_felder() -> None:
 		{"Quotation": quotation_fields(), "Quotation Item": quotation_item_fields()},
 		update=True,
 	)
+	ensure_feldrechte()
+
+
+def _hat_grundrecht(doctype: str, role: str) -> bool:
+	"""Rolle hat Ebene 0 am Doctype (Frappe verlangt Ebene 0 vor höheren Ebenen)."""
+	if frappe.db.exists("Custom DocPerm", {"parent": doctype}):
+		return bool(frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 0}))
+	return bool(frappe.db.exists("DocPerm", {"parent": doctype, "role": role, "permlevel": 0}))
+
+
+def feldrechte_fehlend() -> list[str]:
+	"""Prüfpunkte für ``verify_site_template``: fehlende Rechte auf Ebene 2 (leer = in Ordnung)."""
+	fehlend = []
+	for doctype, rollen in FELDRECHTE.items():
+		for role, rechte in rollen.items():
+			if not frappe.db.exists("Role", role) or not _hat_grundrecht(doctype, role):
+				continue
+			zeile = frappe.db.get_value(
+				"Custom DocPerm",
+				{"parent": doctype, "role": role, "permlevel": PERMLEVEL_KALKULATION, "if_owner": 0},
+				list(rechte),
+				as_dict=True,
+			)
+			luecken = [r for r in rechte if not (zeile and cint(zeile.get(r)))]
+			if luecken:
+				fehlend.append(f"{role} auf {doctype} Ebene {PERMLEVEL_KALKULATION}: {', '.join(luecken)}")
+	return fehlend
+
+
+def ensure_feldrechte() -> list[str]:
+	"""Büro und Meister lesen (und schreiben laut ``FELDRECHTE``) die Kalkulationsfelder (Ebene 2).
+
+	Nur für Rollen mit Ebene 0 am Doctype - auf einer frischen Site also erst, nachdem das
+	Site-Template die Rollenrechte gesetzt hat (es ruft diese Funktion danach auf). Vorher
+	übernimmt ``setup_custom_perms`` die Standardrechte nach Custom DocPerm (wie der Role
+	Permission Manager und das Site-Template). Rückgabe: Änderungen als Text.
+	"""
+	from frappe.permissions import setup_custom_perms
+
+	geaendert = []
+	for doctype, rollen in FELDRECHTE.items():
+		if not frappe.db.exists("DocType", doctype):
+			continue
+		for role, rechte in rollen.items():
+			if not frappe.db.exists("Role", role) or not _hat_grundrecht(doctype, role):
+				continue
+			setup_custom_perms(doctype)
+			filters = {"parent": doctype, "role": role, "permlevel": PERMLEVEL_KALKULATION, "if_owner": 0}
+			name = frappe.db.get_value("Custom DocPerm", filters)
+			if name:
+				doc = frappe.get_doc("Custom DocPerm", name)
+				luecken = [r for r in rechte if not cint(doc.get(r))]
+				if not luecken:
+					continue
+				for recht in luecken:
+					doc.set(recht, 1)
+				doc.save(ignore_permissions=True)
+			else:
+				frappe.get_doc(
+					{
+						"doctype": "Custom DocPerm",
+						"parenttype": "DocType",
+						"parentfield": "permissions",
+						**filters,
+						**{recht: 1 for recht in rechte},
+					}
+				).insert(ignore_permissions=True)
+			geaendert.append(f"{role} auf {doctype} Ebene {PERMLEVEL_KALKULATION}: {', '.join(rechte)}")
+			frappe.clear_cache(doctype=doctype)
+	return geaendert

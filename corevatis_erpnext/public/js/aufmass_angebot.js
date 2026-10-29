@@ -15,7 +15,7 @@
 		});
 	}
 
-	function erzeugen(frm, werte, neu_erzeugen) {
+	function erzeugen(frm, werte, neu_erzeugen, bestaetigen) {
 		return frappe
 			.call({
 				method: METHODE,
@@ -24,15 +24,28 @@
 					schema: werte.schema || null,
 					erschwernis_prozent: werte.erschwernis_prozent || null,
 					neu_erzeugen: neu_erzeugen ? 1 : 0,
+					bestaetigen: bestaetigen ? 1 : 0,
 				},
 				freeze: true,
 				freeze_message: __("Angebot wird kalkuliert …"),
 			})
 			.then((r) => {
 				const m = r.message || {};
+				if (m.bestaetigung_noetig) {
+					// Review Epic 4 G-2: von Hand ergänzte Positionen gehen beim Ersetzen verloren
+					const liste = (m.manuelle_positionen || []).map((p) => `<li>${frappe.utils.escape_html(p)}</li>`).join("");
+					frappe.confirm(
+						`${frappe.utils.escape_html(
+							__("Der Entwurf {0} enthält von Hand ergänzte Positionen. Beim Ersetzen gehen sie verloren:", [m.angebot])
+						)}<ul>${liste}</ul>${frappe.utils.escape_html(__("Trotzdem ersetzen?"))}`,
+						() => erzeugen(frm, werte, true, true),
+						() => frappe.set_route("Form", "Quotation", m.angebot)
+					);
+					return;
+				}
 				if (!m.neu) {
 					frappe.confirm(
-						__("Zu diesem Aufmaß gibt es schon das Angebot {0}. Den Entwurf mit neuer Kalkulation ersetzen?", [
+						__("Zu diesem Aufmaß gibt es schon das Angebot {0}. Den Entwurf mit neuer Kalkulation ersetzen (alle Positionen werden neu berechnet)?", [
 							m.angebot,
 						]),
 						() => erzeugen(frm, werte, true),

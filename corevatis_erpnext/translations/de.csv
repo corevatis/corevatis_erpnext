@@ -96,9 +96,11 @@ Maximum Follow-ups per Quotation,Höchstens Nachfass-Aufgaben je Angebot
 Also Expired Quotations,Auch abgelaufene Angebote
 Also follow up quotations whose validity (Valid Till) has passed.,"Auch Angebote nachfassen, deren Gültigkeit („Gültig bis“) abgelaufen ist."
 Assign Follow-up to,Nachfassen zuweisen an
-"Rolle Büro: the creator of the quotation if they have the role Büro, otherwise all active users with the role Büro.","Rolle Büro: Ersteller des Angebots, wenn er die Rolle Büro hat, sonst alle aktiven Benutzer mit der Rolle Büro."
+"Rolle Büro: one task for the creator of the quotation (any active user except Administrator), otherwise for the first active user with the role Büro.","Rolle Büro: eine Aufgabe für den Ersteller des Angebots (jeder aktive Benutzer außer Administrator), sonst für den ersten aktiven Benutzer mit der Rolle Büro."
 Follow-up User,Benutzer für das Nachfassen
 Follow-up Email,Nachfass-E-Mail
 Queue Follow-up Email,Nachfass-E-Mail in die Warteschlange legen
 "Puts a follow-up email to the quotation contact into the email queue. Without an outgoing email account nothing is sent (status Not Sent).","Legt eine Nachfass-E-Mail an den Kontakt des Angebots in die E-Mail-Warteschlange. Ohne ausgehendes E-Mail-Konto wird nichts versendet (Status „Not Sent“)."
 Empty: “Angebot Nachfassen”,Leer: „Angebot Nachfassen“
+Draft {0} contains manually added items that will be lost when it is replaced: {1},"Der Entwurf {0} enthält von Hand ergänzte Positionen, die beim Ersetzen verloren gehen: {1}"
+Company {0} has no services for measurement {1}; the quotation uses company {2}.,"Firma {0} hat keine Leistungen für das Aufmaß {1}; das Angebot läuft über die Firma {2}."
