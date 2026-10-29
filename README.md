@@ -42,7 +42,7 @@ BOM (Kostenkomponente „Lohn Montage“ legt die App selbst an) – im Desk üb
 Dateinamen einspielbar (BOM mit „Submit After Import“; den Dialog **Data Import** öffnet in
 Frappe v16 nur der **System Manager**, Büro/Meister nicht) oder per Importer. 50
 Leistungspositionen (48 mit Stückliste, davon Bodenabdichtung IA-08/IA-09 mit Regel `bodenflaeche`: Material zu `Standard-Einkauf` + Operation „Montage“
-in min/Einheit), 32 Materialien, Preisliste `Standard-Verkauf`. Alle Preise und Zeiten sind
+in min/Einheit), 32 Materialien (29 mit EAN, `09_barcode.csv`, 3.11), Preisliste `Standard-Verkauf`. Alle Preise und Zeiten sind
 gekennzeichnete Annahmen (`ANNAHME 2.3`), bis Hülshoffs Angebote vorliegen. Der Importer ist
 idempotent und überschreibt abweichende Datensätze (z. B. im Desk geänderte Preise) nur mit
 `"force": true`; Stücklisten bekommen dann eine neue Standard-Version. Herstellkosten rechnet
@@ -168,6 +168,32 @@ Timesheets bleiben Entwurf, das Büro reicht sie im Desk ein.
   Automatik je Teil, Teamgröße (2), Tagesarbeitszeit (8 h), Arbeitsbeginn (07:00), Art
   (Purchase / Material Transfer Hauptlager → Fahrzeug), Verschnitt (5 %), Bestand berücksichtigen,
   Haupt- und Fahrzeuglager.
+
+## Materialentnahme aus dem Fahrzeuglager (3.11)
+
+Modul `corevatis_erpnext.material` - Adapter für die Mobile-API des Kerns
+(`corevatis.api.v1.material_lager`, `material_bestand`, Sync-Entität `material_entnahme`; Aufruf
+per `frappe.get_attr`, kein Import):
+
+- **Fahrzeuglager je Monteur:** Custom Field `Employee.cv_fahrzeuglager` (Link Warehouse); leer =
+  Lager „Fahrzeug“ der Firma des Mitarbeiters (Site-Template: `Fahrzeug - HST`). Weitere
+  Fahrzeuge = weitere Lager (z. B. unter „Alle Lager“) und am Employee eintragen.
+- **Bestand:** Lagerartikel mit `Bin.actual_qty`, Lagereinheit, ganzzahlige Einheit, EANs aus
+  `Item Barcode`.
+- **Entnahme:** Stock Entry „Material Issue“ aus dem Lager, **eingereicht** (Bestand sinkt
+  sofort), Projekt am Beleg und an den Zeilen, `cv_task`, `cv_mitarbeiter`; Idempotenz über
+  `Stock Entry.cv_sync_key` (zusätzlich zum `Sync Journal` des Kerns). Menge über Bestand wird
+  abgelehnt (`bestand_unzureichend`), außer ERPNext erlaubt negativen Bestand (Stock Settings
+  bzw. Artikel) - dann gebucht mit Hinweis.
+- **EANs im Katalog:** optionale `katalog/daten/abdichtung/09_barcode.csv` (29 Materialien,
+  interne EAN-13 aus dem GS1-Bereich `20…` als Annahme bis zu den Herstellercodes). Der
+  Importer ergänzt fehlende Barcodes an vorhandenen Artikeln, überschreibt nichts; im Desk
+  stehen sie am Artikel unter „Barcodes“.
+- **Testdaten** (nicht Produktcode): `bench --site <site> execute
+  corevatis_erpnext.tests.material_testdaten.fahrzeug_auffuellen --kwargs '{"warehouse": "Fahrzeug - HST"}'`
+  füllt acht Materialien per „Material Receipt“ auf eine Zielmenge auf (mehrfach aufrufbar).
+
+Doku: `docs/3.11-materialentnahme.md` im Repo Handwerker.
 
 ## Lizenz
 

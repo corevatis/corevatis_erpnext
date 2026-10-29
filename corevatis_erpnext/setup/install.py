@@ -49,6 +49,10 @@ def after_install() -> None:
 	from corevatis_erpnext.zeiterfassung import ensure_setup as ensure_zeiterfassung
 
 	ensure_zeiterfassung()
+	# Materialentnahme (3.11): Employee.cv_fahrzeuglager, Stock Entry cv_task/cv_mitarbeiter/cv_sync_key
+	from corevatis_erpnext.material import ensure_setup as ensure_material
+
+	ensure_material()
 	ensure_planung_setup()
 
 
@@ -94,6 +98,11 @@ def after_migrate() -> None:
 	ensure_zeiterfassung()
 	# Planung (5.1): Task/Material Request cv_auftrag, cv_verfahren, cv_sollstunden, cv_positionen
 	ensure_planung_setup()
+
+	# Materialentnahme (3.11): Employee.cv_fahrzeuglager, Stock Entry cv_task/cv_mitarbeiter/cv_sync_key
+	from corevatis_erpnext.material import ensure_setup as ensure_material
+
+	ensure_material()
 
 
 def ensure_planung_setup() -> None:

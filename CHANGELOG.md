@@ -6,6 +6,20 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (3.11 Materialentnahme)
+
+- `corevatis_erpnext.material`: Fahrzeuglager je Mitarbeiter (`Employee.cv_fahrzeuglager`,
+  Rückfall Lager „Fahrzeug“ der Firma), Bestand mit Einheit und EAN, Entnahme als eingereichter
+  Stock Entry „Material Issue“ mit Projekt/Task/Mitarbeiter, idempotent über
+  `Stock Entry.cv_sync_key`, Fehler mit maschinenlesbarem Grund (`MaterialFehler.grund`).
+- Custom Fields `Employee.cv_fahrzeuglager`, `Stock Entry.cv_task`/`cv_mitarbeiter`/`cv_sync_key`
+  (after_install/after_migrate).
+- Katalog: optionale `09_barcode.csv` mit EAN-13 für 29 Materialien; der Importer ergänzt
+  fehlende Barcodes, ohne zu überschreiben.
+- Testdaten-Helfer `tests.material_testdaten.fahrzeug_auffuellen` (Anfangsbestand per
+  Material Receipt), Tests `test_material` (Bestand, Idempotenz dreifach, Fehler, negativer
+  Bestand).
+
 ### Neu (Aufgabe 3.9)
 
 - **Zeiterfassung** `corevatis_erpnext.zeiterfassung` für die Mobile-API des Kerns
