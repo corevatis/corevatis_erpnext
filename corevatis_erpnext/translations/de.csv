@@ -117,3 +117,30 @@ A booking is already running.,Es läuft bereits eine Buchung.
 This booking key is already used.,Dieser Buchungsschlüssel ist bereits vergeben.
 Bookings are only possible within the last {0} days.,Buchungen sind nur für die letzten {0} Tage möglich.
 A booking may last at most {0} hours.,Eine Buchung darf höchstens {0} Stunden dauern.
+Corevatis Planung Einstellungen,Corevatis Planung Einstellungen
+Settings for work packages and material requirements from sales orders (Corevatis),Einstellungen für Arbeitspakete und Materialbedarf aus Aufträgen (Corevatis)
+Work Packages,Arbeitspakete
+Create Work Packages on Submit,Arbeitspakete beim Einreichen erzeugen
+"When a sales order with a project is submitted: one task per remediation method with target hours from the BOMs.","Beim Einreichen eines Auftrags mit Projekt: je Verfahren eine Aufgabe mit Sollstunden aus den Stücklisten."
+Team Size,Teamgröße
+"Fitters working on a site at the same time. Duration of a work package = target hours / (team size)","Monteure gleichzeitig auf der Baustelle. Dauer eines Arbeitspakets = Sollstunden ÷ Teamgröße"
+Daily Working Hours,Tagesarbeitszeit (h)
+"Working hours per day and fitter (Monday to Friday, holidays of the company's holiday list are skipped)","Arbeitsstunden je Tag und Monteur (Montag bis Freitag, Feiertage aus der Feiertagsliste der Firma entfallen)"
+Start of Work,Arbeitsbeginn
+Material Requirements,Materialbedarf
+Create Material Request on Submit,Materialanforderung beim Einreichen erzeugen
+"When a sales order with a project is submitted: one draft material request with the aggregated BOM materials.","Beim Einreichen eines Auftrags mit Projekt: eine Materialanforderung (Entwurf) mit dem zusammengefassten Material der Stücklisten."
+Material Request Type,Art der Materialanforderung
+"Purchase: order into the main warehouse. Material Transfer: from the main warehouse to the vehicle.","Einkauf: Bestellvorschlag ins Hauptlager. Umlagerung: vom Hauptlager ins Fahrzeug."
+Waste Allowance (%),Verschnitt (%)
+Added to every material quantity from the BOMs,Zuschlag auf jede Materialmenge aus den Stücklisten
+Consider Current Stock,Bestand berücksichtigen
+Request only the quantity not covered by the projected stock of the target warehouse,"Nur die Menge anfordern, die der voraussichtliche Bestand des Ziellagers nicht deckt"
+Main Warehouse,Hauptlager
+"Empty: default warehouse of the company (Hauptlager)","Leer: Standardlager der Firma (Hauptlager)"
+Vehicle Warehouse,Fahrzeuglager
+"Target of a material transfer. Empty: warehouse “Fahrzeug” of the company","Ziel einer Umlagerung. Leer: Lager „Fahrzeug“ der Firma"
+Work Package (Corevatis),Arbeitspaket (Corevatis)
+Target Hours (BOM),Sollstunden (Stückliste)
+"Assembly minutes per unit from the BOMs x quantity, summed","Montageminuten je Einheit aus den Stücklisten × Menge, summiert"
+Positions,Positionen

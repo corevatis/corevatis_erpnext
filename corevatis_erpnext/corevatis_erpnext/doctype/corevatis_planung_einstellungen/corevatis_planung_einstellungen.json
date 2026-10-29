@@ -1,0 +1,153 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-29 18:00:00.000000",
+ "description": "Settings for work packages and material requirements from sales orders (Corevatis)",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "arbeitspakete_section",
+  "arbeitspakete_automatisch",
+  "teamgroesse",
+  "tagesarbeitszeit",
+  "arbeitsbeginn",
+  "material_section",
+  "materialbedarf_automatisch",
+  "material_request_typ",
+  "verschnitt_prozent",
+  "bestand_beruecksichtigen",
+  "column_break_lager",
+  "lager_haupt",
+  "lager_fahrzeug"
+ ],
+ "fields": [
+  {
+   "fieldname": "arbeitspakete_section",
+   "fieldtype": "Section Break",
+   "label": "Work Packages"
+  },
+  {
+   "default": "1",
+   "description": "When a sales order with a project is submitted: one task per remediation method with target hours from the BOMs.",
+   "fieldname": "arbeitspakete_automatisch",
+   "fieldtype": "Check",
+   "label": "Create Work Packages on Submit"
+  },
+  {
+   "default": "2",
+   "description": "Fitters working on a site at the same time. Duration of a work package = target hours / (team size)",
+   "fieldname": "teamgroesse",
+   "fieldtype": "Int",
+   "label": "Team Size",
+   "non_negative": 1
+  },
+  {
+   "default": "8",
+   "description": "Working hours per day and fitter (Monday to Friday, holidays of the company's holiday list are skipped)",
+   "fieldname": "tagesarbeitszeit",
+   "fieldtype": "Float",
+   "label": "Daily Working Hours",
+   "non_negative": 1
+  },
+  {
+   "default": "07:00:00",
+   "fieldname": "arbeitsbeginn",
+   "fieldtype": "Time",
+   "label": "Start of Work"
+  },
+  {
+   "fieldname": "material_section",
+   "fieldtype": "Section Break",
+   "label": "Material Requirements"
+  },
+  {
+   "default": "1",
+   "description": "When a sales order with a project is submitted: one draft material request with the aggregated BOM materials.",
+   "fieldname": "materialbedarf_automatisch",
+   "fieldtype": "Check",
+   "label": "Create Material Request on Submit"
+  },
+  {
+   "default": "Purchase",
+   "description": "Purchase: order into the main warehouse. Material Transfer: from the main warehouse to the vehicle.",
+   "fieldname": "material_request_typ",
+   "fieldtype": "Select",
+   "label": "Material Request Type",
+   "options": "Purchase\nMaterial Transfer"
+  },
+  {
+   "default": "5",
+   "description": "Added to every material quantity from the BOMs",
+   "fieldname": "verschnitt_prozent",
+   "fieldtype": "Percent",
+   "label": "Waste Allowance (%)"
+  },
+  {
+   "default": "0",
+   "description": "Request only the quantity not covered by the projected stock of the target warehouse",
+   "fieldname": "bestand_beruecksichtigen",
+   "fieldtype": "Check",
+   "label": "Consider Current Stock"
+  },
+  {
+   "fieldname": "column_break_lager",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Empty: default warehouse of the company (Hauptlager)",
+   "fieldname": "lager_haupt",
+   "fieldtype": "Link",
+   "label": "Main Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Target of a material transfer. Empty: warehouse “Fahrzeug” of the company",
+   "fieldname": "lager_fahrzeug",
+   "fieldtype": "Link",
+   "label": "Vehicle Warehouse",
+   "options": "Warehouse"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-29 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Corevatis Planung Einstellungen",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 0,
+   "print": 0,
+   "read": 1,
+   "role": "System Manager",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 0,
+   "print": 0,
+   "read": 1,
+   "role": "Büro",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 0,
+   "print": 0,
+   "read": 1,
+   "role": "Meister",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

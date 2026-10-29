@@ -152,6 +152,23 @@ window.addEventListener("message", function (e) {
 Pause ist nicht abrechenbar (`is_billable` 0), Arbeits- und Fahrzeit sind abrechenbar. Die
 Timesheets bleiben Entwurf, das Büro reicht sie im Desk ein.
 
+## Arbeitspakete und Materialbedarf aus dem Auftrag (Epic 5)
+
+- **Sales Order einreichen** (Hook nach dem Projekt aus 4.4, nur mit Projekt): je Verfahren ein
+  **Task** am Projekt („<Verfahren> – <Räume, Bauteile>“, Sollstunden = Montageminuten der
+  Stückliste × Menge, Reihenfolge und `depends_on` nach Bauablauf, Termine fortlaufend ab
+  Projektstart mit Sollstunden ÷ Teamgröße und Tagesarbeitszeit) und eine **Material Request**
+  (Entwurf, Standard „Purchase“ ins Hauptlager, Material der Stücklisten aggregiert + Verschnitt,
+  `project`/`sales_order` je Position, `cv_auftrag`). Ein Fehler hält das Einreichen nicht auf.
+- **Buttons** „Planung → Arbeitspakete erzeugen / Materialbedarf erzeugen“ an Auftrag und Projekt
+  (Büro/Meister): `POST /api/method/corevatis_erpnext.planung.tasks_erzeugen` bzw.
+  `…planung.materialbedarf_erzeugen` mit `sales_order` oder `project`; idempotent, ohne Projekt
+  nur ein Hinweis.
+- Einstellungen im Single **Corevatis Planung Einstellungen** (`/app/corevatis-planung-einstellungen`):
+  Automatik je Teil, Teamgröße (2), Tagesarbeitszeit (8 h), Arbeitsbeginn (07:00), Art
+  (Purchase / Material Transfer Hauptlager → Fahrzeug), Verschnitt (5 %), Bestand berücksichtigen,
+  Haupt- und Fahrzeuglager.
+
 ## Lizenz
 
 Copyright (C) 2026 Corevatis
@@ -183,9 +200,11 @@ corevatis_erpnext/
                         Custom Fields cv_termin/cv_galerie (setup.py)
   crm/vorlagen/         Email Templates „Terminbestätigung Besichtigung“, „Angebot Nachfassen“
   angebot/              Angebot: Preis-Hinweis, Annahme/Ablehnung (4.4), Nachfassen (4.5), Feld-Spiegel
+  planung/              Auftrag → Arbeitspakete (Task) und Materialbedarf (Material Request) (5.1)
   public/js/            Desk-Skripte (hooks.doctype_js): galerie.js, lead_galerie.js, lead_termin.js,
-                        quotation_annahme.js
-  corevatis_erpnext/    Modul "Corevatis ERPNext" (Single „Corevatis Vertrieb Einstellungen“)
+                        quotation_annahme.js, planung.js
+  corevatis_erpnext/    Modul "Corevatis ERPNext" (Singles „Corevatis Vertrieb Einstellungen“,
+                        „Corevatis Planung Einstellungen“)
   translations/de.csv   deutsche Übersetzungen
   tests/                Installationstests
 ```
