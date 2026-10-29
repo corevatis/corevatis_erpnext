@@ -351,6 +351,8 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 			anzahl_seiten, texte, inhalt = self.pdf(doc)
 			self.keine_verwaiste_zwischensumme(texte, anzahl)
 			if anzahl_seiten > seiten:
+				if treffer is None:  # Diagnose: schon das kleinste Angebot ist zu lang
+					self.muster_speichern(f"{name}-zu-lang", inhalt)
 				break
 			if anzahl_seiten == seiten:
 				treffer = (doc, texte, inhalt)
@@ -486,7 +488,12 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		self.assertTrue(flt(doc.discount_amount))
 		netto_anteil = flt(doc.total - doc.net_total, 2)
 		self.assertTrue(0 < netto_anteil < flt(doc.discount_amount))
-		self.assertEqual(flt(doc.grand_total, 2), flt(doc.net_total + doc.total_taxes_and_charges, 2))
+		# ERPNext: Steuer nach Nachlass steht in tax_amount_after_discount_amount (tax_amount ist
+		# der Betrag vor dem Nachlass) - der Druck muss diesen Wert zeigen
+		steuer = doc.taxes[0]
+		self.assertEqual(
+			flt(doc.grand_total, 2), flt(doc.net_total + steuer.tax_amount_after_discount_amount, 2)
+		)
 		html = self.html(doc)
 		self.assertIn("Netto-Anteil", html)
 		self.assertNotIn("None", html)
@@ -497,10 +504,12 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 			frappe.utils.fmt_money(netto_anteil, currency=doc.currency),
 			doc.get_formatted("discount_amount"),
 			doc.get_formatted("net_total"),
-			doc.taxes[0].get_formatted("tax_amount"),
+			steuer.get_formatted("tax_amount_after_discount_amount"),
 			doc.get_formatted("grand_total"),
 		):
 			self.assertIn(" ".join(wert.split()), alles)
+		if flt(steuer.tax_amount) != flt(steuer.tax_amount_after_discount_amount):
+			self.assertNotIn(" ".join(steuer.get_formatted("tax_amount").split()), alles)
 
 	def test_maskierung(self):
 		img = "<img src=x onerror=alert(1)>"
