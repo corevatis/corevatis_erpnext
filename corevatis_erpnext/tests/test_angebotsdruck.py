@@ -436,7 +436,7 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		for teil in (
 			"1.1",
 			"2.1",
-			"3.2",
+			"3.1",
 			"Keller 1 \u2013 Außenwand innen",
 			"Zusammenstellung",
 			"Eventualposition",
