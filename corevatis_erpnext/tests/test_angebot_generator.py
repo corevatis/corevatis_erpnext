@@ -63,7 +63,9 @@ def testaufmass(name="AUF-TEST-4.1", **werte) -> frappe._dict:
 		)
 		for i, code in enumerate(SOLL)
 	]
-	return frappe._dict(name=name, objekt="OBJ-TEST-1", referenz_doctype=None, positionen=zeilen, **werte)
+	daten = {"name": name, "objekt": "OBJ-TEST-1", "referenz_doctype": None, "positionen": zeilen}
+	daten.update(werte)
+	return frappe._dict(daten)
 
 
 class KernStellvertreter:
