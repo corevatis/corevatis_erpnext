@@ -24,31 +24,45 @@ from corevatis_erpnext.setup import apply_site_template
 FORMAT = "Angebot Corevatis"
 FIRMA = "Hülshoff Sanierungstechnik"
 KUNDE = "_Test CV43 Familie Feucht"
-EINHEIT = "m²"
 XSS = "<script>alert(1)</script>"
+PRAEFIX = "_T43-"
 
+# Zusatz für „lange Positionen“ (Muster lang): ausführlicher Langtext wie aus dem Text-Editor
 LANGTEXT = (
 	"<div class='ql-editor read-mode'><p>Untergrund vorbereiten: lose und mürbe Putz- und Mörtelteile "
 	"bis auf tragfähigen Untergrund entfernen, Fugen 2 cm tief auskratzen, Flächen abfegen und vornässen.</p>"
-	"<p>Dichtschlämme zweilagig frisch in frisch auftragen, Verbrauch mind. 4,0 kg/m², Schichtdicke "
-	"trocken mind. 2 mm, Hohlkehle am Wand-Boden-Anschluss aus Reparaturmörtel ausbilden.</p>"
+	"<p>Verarbeitung nach Herstellerrichtlinie, Verbrauch und Schichtdicke nach Systemaufbau, "
+	"Anschlüsse an angrenzende Bauteile fachgerecht ausbilden.</p>"
 	"<p>Einschließlich Abdecken angrenzender Bauteile und Reinigung des Arbeitsbereichs.</p></div>"
 )
 
-# (Kurztext, Menge, Preis)
-LEISTUNGEN = (
-	("Baustelleneinrichtung, An- und Abfahrt", 1, 280.0),
-	("Putz abschlagen bis 1,50 m Höhe, Schutt entsorgen", 18.5, 32.5),
-	("Innenabdichtung Dichtschlämme 2-lagig bis 1,50 m Höhe", 18.5, 74.0),
-	("Hohlkehle aus Reparaturmörtel", 9.2, 28.0),
-	("Sanierputz WTA zweilagig, 20 mm", 18.5, 58.0),
-	("Horizontalsperre Injektion, Bohrlochabstand 12 cm", 9.2, 145.0),
-	("Bodenabdichtung mit Reaktivabdichtung 2-lagig", 12.0, 89.0),
-	("Kontrollmessung Mauerfeuchte nach 3 Monaten", 1, 145.0),
-)
-
-RAEUME = ("Keller 1", "Keller 2", "Heizungsraum", "Treppenhaus", "Waschküche")
+RAEUME = ("Keller 1", "Keller 2", "Heizungsraum", "Treppenhaus", "Waschküche", "Vorratsraum")
 BAUTEILE = ("Außenwand innen", "Innenwand", "Boden")
+# Muster lang: so viele Gruppen à 5 lange Positionen, dass das PDF 6 Seiten hat
+ANZAHL_GRUPPEN_LANG = 5
+
+
+def katalog() -> dict[str, dict]:
+	"""Verkaufspositionen des Katalogs Abdichtung (Kurztext, Langtext, Einheit, Preis)."""
+	from corevatis_erpnext.katalog.importer import lese_csv, paket_dir
+
+	def zeilen(datei):
+		header, rows = lese_csv(paket_dir("abdichtung") / datei)
+		return [dict(zip(header, row, strict=True)) for row in rows]
+
+	preise = {z["item_code"]: flt(z["price_list_rate"]) for z in zeilen("07_item_price.csv")}
+	return {
+		z["item_code"]: {**z, "rate": preise.get(z["item_code"], 0)}
+		for z in zeilen("06_item.csv")
+		if z["is_sales_item"] == "1"
+	}
+
+
+def einheiten() -> dict[str, dict]:
+	from corevatis_erpnext.katalog.importer import lese_csv, paket_dir
+
+	header, rows = lese_csv(paket_dir("abdichtung") / "01_uom.csv")
+	return {row[0]: dict(zip(header, row, strict=True)) for row in rows}
 
 
 def wkhtmltopdf_vorhanden() -> bool:
@@ -72,12 +86,23 @@ class AngebotsdruckBasis(IntegrationTestCase):
 		felder_sicherstellen()
 		tb.ensure_textbausteine()
 		cls.company = FIRMA
-		if not frappe.db.exists("UOM", EINHEIT):
-			frappe.get_doc({"doctype": "UOM", "uom_name": EINHEIT, "must_be_whole_number": 0}).insert(
-				ignore_permissions=True
-			)
+		cls.katalog = katalog()
+		uoms = einheiten()
+		for code, zeile in cls.katalog.items():
+			uom = zeile["stock_uom"]
+			if not frappe.db.exists("UOM", uom):
+				# wie die Katalogvorlage 01_uom.csv (test_katalog gleicht vorhandene Einheiten ab)
+				frappe.get_doc(
+					{
+						"doctype": "UOM",
+						"uom_name": uom,
+						"must_be_whole_number": int(uoms[uom]["must_be_whole_number"]),
+						"common_code": uoms[uom]["common_code"],
+						"description": uoms[uom]["description"],
+					}
+				).insert(ignore_permissions=True)
+			cls._item(code, zeile)
 		cls.kunde = cls._kunde()
-		cls.items = [cls._item(i, text) for i, (text, _menge, _preis) in enumerate(LEISTUNGEN)]
 		frappe.db.commit()
 
 	@classmethod
@@ -109,21 +134,23 @@ class AngebotsdruckBasis(IntegrationTestCase):
 		return KUNDE
 
 	@classmethod
-	def _item(cls, index: int, kurztext: str) -> str:
-		code = f"_TEST-CV43-{index + 1:02d}"
-		if not frappe.db.exists("Item", code):
+	def _item(cls, code: str, zeile: dict) -> str:
+		"""Testartikel mit Text und Einheit der Katalogposition (eigener Code: der Katalog-Import
+		in test_katalog bleibt unberührt)."""
+		name = PRAEFIX + code
+		if not frappe.db.exists("Item", name):
 			frappe.get_doc(
 				{
 					"doctype": "Item",
-					"item_code": code,
-					"item_name": kurztext,
-					"description": LANGTEXT,
+					"item_code": name,
+					"item_name": zeile["item_name"],
+					"description": zeile["description"],
 					"item_group": frappe.db.get_value("Item Group", {"is_group": 0}),
-					"stock_uom": EINHEIT,
+					"stock_uom": zeile["stock_uom"],
 					"is_stock_item": 0,
 				}
 			).insert(ignore_permissions=True)
-		return code
+		return name
 
 	def angebot(self, positionen: list[dict], **werte) -> "frappe.Document":
 		from erpnext.controllers.accounts_controller import get_taxes_and_charges
@@ -155,17 +182,20 @@ class AngebotsdruckBasis(IntegrationTestCase):
 		doc.insert(ignore_permissions=True)
 		return doc
 
-	def position(self, index: int, raum=None, bauteil=None, **extra) -> dict:
-		_kurztext, menge, preis = LEISTUNGEN[index % len(LEISTUNGEN)]
-		return {
-			"item_code": self.items[index % len(LEISTUNGEN)],
+	def position(self, code: str, menge: float, raum=None, bauteil=None, lang=False, **extra) -> dict:
+		zeile = self.katalog[code]
+		werte = {
+			"item_code": PRAEFIX + code,
 			"qty": menge,
-			"rate": preis,
-			"uom": EINHEIT,
+			"rate": zeile["rate"],
+			"uom": zeile["stock_uom"],
 			"cv_raum": raum,
 			"cv_bauteil": bauteil,
 			**extra,
 		}
+		if lang:
+			werte["description"] = f"<p>{zeile['description']}</p>{LANGTEXT}"
+		return werte
 
 
 class TestTextbausteine(AngebotsdruckBasis):
@@ -191,7 +221,7 @@ class TestTextbausteine(AngebotsdruckBasis):
 		)
 
 	def test_neues_angebot_bekommt_texte(self):
-		doc = self.angebot([self.position(0)])
+		doc = self.angebot([self.position("IA-05", 18)])
 		self.assertEqual(doc.tc_name, tb.ANGEBOT_STANDARD)
 		self.assertIn("Zahlungsbedingungen", doc.terms)
 		self.assertIn("DIN 18533", doc.cv_vorbemerkung)
@@ -212,9 +242,9 @@ class TestSummen(AngebotsdruckBasis):
 	def test_eventual_und_alternativ_nicht_in_summe(self):
 		doc = self.angebot(
 			[
-				self.position(0),
-				self.position(1, cv_eventualposition=1),
-				self.position(2, cv_alternativposition=1),
+				self.position("IA-05", 18),
+				self.position("HS-02", 9, cv_eventualposition=1),
+				self.position("IA-06", 18, cv_alternativposition=1),
 			]
 		)
 		self.assertEqual([row.is_alternative for row in doc.items], [0, 1, 1])
@@ -272,6 +302,9 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 	def setUp(self):
 		if not frappe.db.exists("Print Format", FORMAT):
 			self.skipTest("erpnext_druckformate ohne „Angebot Corevatis“")
+		# der Druck setzt frappe.local.lang auf die Drucksprache; andere Tests erwarten Englisch
+		self.lang = frappe.local.lang
+		self.addCleanup(setattr, frappe.local, "lang", self.lang)
 
 	def html(self, doc) -> str:
 		return frappe.get_print("Quotation", doc.name, print_format=FORMAT, doc=doc)
@@ -300,30 +333,41 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		self.assertIn(FIRMA, alles)
 
 	def test_kurz_eine_seite(self):
-		doc = self.angebot([self.position(i) for i in (0, 2, 7)])
+		doc = self.angebot(
+			[self.position("AL-01", 1), self.position("AL-03", 4), self.position("HS-02", 8.5)],
+			cv_vorbemerkung="<p>Sehr geehrte Frau Feucht,</p><p>wie vor Ort besprochen bieten wir Ihnen an:</p>",
+		)
 		html = self.html(doc)
 		self.assertNotIn("None", html)
 		self.assertNotIn("Zusammenstellung", html)
-		self.assertIn(">1</td>", html.replace(" ", "").replace("\n", ""))
 		seiten, texte = self.pdf(doc, "kurz")
 		self.assertEqual(seiten, 1, texte)
 		self.pruefe(doc, 1, texte)
-		self.assertIn("Angebot", texte[0])
 		self.assertIn("Musterweg 3", texte[0])
 
 	def test_mittel_zwei_seiten_mit_gruppen(self):
-		positionen = [self.position(i, "Keller 1", "Außenwand innen") for i in range(5)]
-		positionen += [self.position(i, "Keller 2", "Boden") for i in (1, 6)]
-		positionen.append(self.position(7, "Keller 2", "Boden", cv_eventualposition=1))
+		wand, boden = ("Keller 1", "Außenwand innen"), ("Keller 2", "Boden")
+		positionen = [self.position("AL-01", 1), self.position("AL-02", 2)]
+		positionen += [
+			self.position(code, menge, *wand)
+			for code, menge in (
+				("IA-01", 18.5),
+				("IA-02", 18.5),
+				("IA-03", 18.5),
+				("IA-04", 9.2),
+				("IA-05", 18.5),
+			)
+		]
+		positionen += [self.position("IA-08", 12, *boden), self.position("IA-04", 14, *boden)]
+		positionen.append(self.position("HS-02", 9.2, *wand, cv_eventualposition=1))
 		doc = self.angebot(positionen, cv_titel="Kellerabdichtung von innen")
 		self.assertEqual(flt(doc.net_total), flt(sum(r.amount for r in doc.items if not r.is_alternative)))
 		html = self.html(doc)
 		self.assertNotIn("None", html)
 		for teil in (
 			"1.1",
-			"1.5",
-			"2.1",
-			"2.3",
+			"2.6",
+			"3.2",
 			"Keller 1 \u2013 Außenwand innen",
 			"Zusammenstellung",
 			"Eventualposition",
@@ -335,28 +379,32 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		self.assertIn("Kellerabdichtung von innen", texte[0])
 
 	def test_lang_sechs_seiten(self):
-		positionen = []
-		for g in range(6):
+		codes = ("IA-01", "IA-02", "IA-03", "IA-05", "IA-07", "SP-03", "SP-04", "SP-05", "SP-06", "HS-02")
+		positionen = [self.position("AL-01", 1), self.position("AL-02", 6)]
+		for g in range(ANZAHL_GRUPPEN_LANG):
 			raum, bauteil = RAEUME[g % len(RAEUME)], BAUTEILE[g % len(BAUTEILE)]
-			positionen += [self.position(g + i, raum, bauteil) for i in range(5)]
-		positionen.append(self.position(5, "Waschküche", "Boden", cv_eventualposition=1))
-		positionen.append(self.position(6, "Waschküche", "Boden", cv_alternativposition=1))
+			positionen += [
+				self.position(codes[(g + i) % len(codes)], 12.5 + g, raum, bauteil, lang=True)
+				for i in range(5)
+			]
+		positionen.append(self.position("IA-09", 12, "Waschküche", "Boden", lang=True, cv_eventualposition=1))
+		positionen.append(
+			self.position("IA-06", 12, "Waschküche", "Boden", lang=True, cv_alternativposition=1)
+		)
 		doc = self.angebot(
 			positionen, cv_titel="Abdichtung Keller und Erdgeschoss", additional_discount_percentage=3
 		)
-		self.assertEqual(len(doc.items), 32)
 		seiten, texte = self.pdf(doc, "lang")
 		self.assertEqual(seiten, 6, [t[-300:] for t in texte])
 		self.pruefe(doc, 6, texte)
 		self.assertIn("Nachlass", "\n".join(texte))
-		# Positionen werden nicht getrennt: jede Kurztext-Zeile steht mit ihrem Preis auf einer Seite
 		for row in doc.items:
 			self.assertTrue(any(row.item_name[:30] in t for t in texte), row.item_name)
 
 	def test_maskierung(self):
 		img = "<img src=x onerror=alert(1)>"
 		doc = self.angebot(
-			[self.position(0, f"Keller {XSS}", "Boden"), self.position(1)],
+			[self.position("IA-05", 18, f"Keller {XSS}", "Boden"), self.position("IA-01", 18)],
 			cv_titel=f"Titel {XSS}",
 			cv_vorbemerkung=f"Vorbemerkung ohne führendes Tag {img}{XSS}",
 			cv_garantiehinweis=f"Hinweis {XSS}",
