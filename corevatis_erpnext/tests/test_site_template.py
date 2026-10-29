@@ -284,7 +284,9 @@ class TestSiteTemplate(IntegrationTestCase):
 	def test_print_formats_if_installed(self):
 		if not frappe.db.exists("Print Format", "Angebot"):
 			self.skipTest("erpnext_druckformate nicht installiert")
-		self.assertEqual(frappe.get_meta("Quotation").default_print_format, "Angebot")
+		# Hülshoff: „Angebot Corevatis“ (4.3), sobald erpnext_druckformate es mitbringt
+		erwartet = "Angebot Corevatis" if frappe.db.exists("Print Format", "Angebot Corevatis") else "Angebot"
+		self.assertEqual(frappe.get_meta("Quotation").default_print_format, erwartet)
 		self.assertEqual(frappe.get_meta("Sales Invoice").default_print_format, "Ausgangsrechnung")
 
 	def test_permissions_by_role(self):

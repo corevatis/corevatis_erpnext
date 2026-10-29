@@ -92,7 +92,11 @@ doc_events = {
 		"before_insert": "corevatis_erpnext.setup.naming.set_return_naming_series",
 	},
 	# Befunde mvp-test: Hinweis auf Positionen ohne Preis (falsche Preisliste)
+	# Angebotsdruck (4.3): Textbausteine in leere Felder, Eventual-/Alternativpositionen
+	# als is_alternative (nicht in der Summe) - vor der Summenberechnung
 	"Quotation": {
+		"before_insert": "corevatis_erpnext.angebot.textbausteine.standard_texte",
+		"before_validate": "corevatis_erpnext.angebot.textbausteine.kennzeichen_ausserhalb_summe",
 		"validate": "corevatis_erpnext.angebot.pruefung.positionen_ohne_preis",
 		# 4.4: über ERPNext „Als verloren festlegen“ verloren -> Lead „Verloren“
 		"on_update_after_submit": "corevatis_erpnext.angebot.annahme.angebot_aktualisiert",

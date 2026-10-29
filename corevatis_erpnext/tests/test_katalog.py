@@ -351,7 +351,11 @@ class TestKatalogImport(IntegrationTestCase):
 				# nur die schon vorhandenen Einheiten scheitern (Dubletten), alle anderen kommen an
 				self.assertEqual(ergebnis.status, "Partial Success", f"{datei}: {ergebnis}")
 				self.assertEqual(len(ergebnis.fehler), len(self.vorhandene_einheiten), ergebnis.fehler)
-				self.assertTrue(all("already exists" in f for f in ergebnis.fehler), ergebnis.fehler)
+				# Meldung in der Sprache des Laufs (Druck-Tests 4.3 rendern deutsch)
+				self.assertTrue(
+					all("already exists" in f or "existiert bereits" in f for f in ergebnis.fehler),
+					ergebnis.fehler,
+				)
 				continue
 			self.assertEqual(ergebnis.status, "Success", f"{datei}: {ergebnis}")
 			self.assertFalse(ergebnis.fehler, datei)
