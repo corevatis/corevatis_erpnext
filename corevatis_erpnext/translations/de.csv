@@ -67,3 +67,17 @@ Unit Production Cost,Einzelkosten
 Material and labour per unit without surcharges,Material und Lohn je Einheit ohne Zuschläge
 Optional Position,Eventualposition
 Alternative Position,Alternativposition
+Offer,Angebot
+Remediation,Sanierung
+Method {0}: no active quantity rule with a service item - add items manually.,Verfahren {0}: keine aktive Leistungsregel mit Leistungsposition – Positionen von Hand ergänzen.
+Item {0} not found or disabled - skipped.,Artikel {0} nicht gefunden oder deaktiviert – übersprungen.
+Item {0} has no quantity rule - skipped.,Artikel {0} hat keine Leistungsregel – übersprungen.
+Item {0} has no submitted BOM for {1} - skipped.,Artikel {0} hat keine gebuchte Stückliste für {1} – übersprungen.
+No company found (set a default company).,Keine Firma gefunden (Standardfirma festlegen).
+Calculation failed.,Kalkulation fehlgeschlagen.
+Calculation failed,Kalkulation fehlgeschlagen
+The Corevatis core app is not installed (Aufmaß missing).,Die Corevatis-Kern-App ist nicht installiert (Aufmaß fehlt).
+Quotation {0} already exists for measurement {1}.,Zum Aufmaß {1} gibt es schon das Angebot {0}.
+Quotation {0} is already submitted; amend it instead of regenerating.,Angebot {0} ist bereits gebucht; bitte abändern statt neu erzeugen.
+No services found for measurement {0}.,Keine Leistungen zum Aufmaß {0} gefunden.
+No sales tax template {0} for company {1}.,Keine Verkaufs-Steuervorlage {0} für die Firma {1}.

@@ -55,6 +55,15 @@ doctype_js = {
 		"public/js/lead_galerie.js",
 		"public/js/lead_termin.js",
 	],
+	# Angebot aus dem Aufmaß (4.1): Doctype Aufmass aus corevatis, ohne Kern lädt es nie
+	"Aufmass": "public/js/aufmass_angebot.js",
+}
+
+# Verbindungen: Angebote am Objekt und am Aufmaß (Kern-Doctypes, Quotation.cv_objekt/cv_aufmass);
+# am Lead zeigt ERPNext die Angebote schon (party_name)
+override_doctype_dashboards = {
+	"Objekt": "corevatis_erpnext.angebot.generator.objekt_dashboard",
+	"Aufmass": "corevatis_erpnext.angebot.generator.aufmass_dashboard",
 }
 
 # Document Events
