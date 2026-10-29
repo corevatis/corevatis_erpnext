@@ -45,6 +45,10 @@ def after_install() -> None:
 	ensure_textbausteine()
 
 	ensure_angebot_setup()
+	# Zeiterfassung (3.9): Activity Types Arbeitszeit/Fahrzeit/Pause, Timesheet Detail.cv_sync_key
+	from corevatis_erpnext.zeiterfassung import ensure_setup as ensure_zeiterfassung
+
+	ensure_zeiterfassung()
 
 
 def after_migrate() -> None:
@@ -83,6 +87,10 @@ def after_migrate() -> None:
 	# Angebotsannahme/Nachfassen (4.4/4.5) zuletzt: der Spiegel Quotation -> Sales Order
 	# übernimmt die cv_*-Felder, die andere Schritte am Angebot angelegt haben
 	ensure_angebot_setup()
+	# Zeiterfassung (3.9): Activity Types Arbeitszeit/Fahrzeit/Pause, Timesheet Detail.cv_sync_key
+	from corevatis_erpnext.zeiterfassung import ensure_setup as ensure_zeiterfassung
+
+	ensure_zeiterfassung()
 
 
 def ensure_angebot_setup() -> None:
