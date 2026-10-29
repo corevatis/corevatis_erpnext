@@ -28,12 +28,13 @@ bench --site <site> execute corevatis_erpnext.katalog.importieren --kwargs '{"fi
 bench --site <site> execute corevatis_erpnext.katalog.uebersicht --kwargs '{"firma": "Hülshoff Sanierungstechnik"}'
 ```
 
-Paket `katalog/daten/abdichtung/` (Aufgabe 2.3): `00_leistungsregel.csv` (fünf allgemeine
-Leistungsregeln, nur mit installiertem `corevatis`) und acht Data-Import-Vorlagen (CSV, Feldnamen als
+Paket `katalog/daten/abdichtung/` (Aufgabe 2.3): `00_leistungsregel.csv` (sechs allgemeine
+Leistungsregeln, je Regelart eine, nur mit installiertem `corevatis`) und acht Data-Import-Vorlagen (CSV, Feldnamen als
 Spaltenköpfe) für UOM, Item Group, Price List, Workstation, Operation, Item, Item Price und
 BOM (Kostenkomponente „Lohn Montage“ legt die App selbst an) – im Desk über **Data Import** in der Reihenfolge der
-Dateinamen einspielbar (BOM mit „Submit After Import“) oder per Importer. 48
-Leistungspositionen (46 mit Stückliste: Material zu `Standard-Einkauf` + Operation „Montage“
+Dateinamen einspielbar (BOM mit „Submit After Import“; den Dialog **Data Import** öffnet in
+Frappe v16 nur der **System Manager**, Büro/Meister nicht) oder per Importer. 50
+Leistungspositionen (48 mit Stückliste, davon Bodenabdichtung IA-08/IA-09 mit Regel `bodenflaeche`: Material zu `Standard-Einkauf` + Operation „Montage“
 in min/Einheit), 32 Materialien, Preisliste `Standard-Verkauf`. Alle Preise und Zeiten sind
 gekennzeichnete Annahmen (`ANNAHME 2.3`), bis Hülshoffs Angebote vorliegen. Der Importer ist
 idempotent und überschreibt abweichende Datensätze (z. B. im Desk geänderte Preise) nur mit

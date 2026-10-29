@@ -38,7 +38,7 @@ VERFAHREN = (
 	"Spezialabdichtung",
 	"Sonstiges",
 )
-REGELN = ("wandflaeche_netto", "laufmeter", "grabvolumen", "stueck", "pauschale")
+REGELN = ("wandflaeche_netto", "laufmeter", "grabvolumen", "stueck", "pauschale", "bodenflaeche")
 CV_FELDER = ("cv_gewerk", "cv_verfahren", "cv_leistungsregel")
 
 # Drei Beispiel-Stücklisten, von Hand gerechnet (Rechenweg in docs/2.3-leistungskatalog.md):
@@ -118,8 +118,8 @@ class TestKatalogVorlagen(UnitTestCase):
 		material = [c for c, z in self.items.items() if z["is_stock_item"] == "1"]
 		self.assertGreaterEqual(len(self.boms), 30)
 		self.assertLessEqual(len(leistungen), 50)
-		self.assertEqual(len(leistungen), 48)
-		self.assertEqual(len(self.boms), 46)
+		self.assertEqual(len(leistungen), 50)
+		self.assertEqual(len(self.boms), 48)
 		self.assertEqual(len(material), 32)
 		# jedes Verfahren aus 2.2 hat Leistungspositionen mit Stückliste („Sonstiges“: Allgemeines)
 		verfahren = {self.items[c]["cv_verfahren"] for c in self.boms}
@@ -160,9 +160,16 @@ class TestKatalogVorlagen(UnitTestCase):
 			"grabvolumen": "m³ Grabvolumen",
 			"stueck": "Stück",
 			"pauschale": "Pauschale",
+			"bodenflaeche": "Bodenfläche",
 		}
 		for name, z in regeln.items():
 			self.assertEqual(z["regelart"], regelarten[name])
+		# Bodenabdichtung (Review Epic 2, D-1): Fläche aus der Regelart bodenflaeche
+		boden = sorted(c for c, z in self.items.items() if z["cv_leistungsregel"] == "bodenflaeche")
+		self.assertEqual(boden, ["IA-08", "IA-09"])
+		for code in boden:
+			self.assertEqual(self.items[code]["stock_uom"], "m²", code)
+			self.assertIn(code, self.boms, code)
 
 	def test_stuecklisten_konsistent(self):
 		for item, bom in self.boms.items():
@@ -323,8 +330,8 @@ class TestKatalogImport(IntegrationTestCase):
 			self.assertEqual(ergebnis.status, "Success", f"{datei}: {ergebnis}")
 			self.assertFalse(ergebnis.fehler, datei)
 			self.assertIn(ergebnis.warnings or "", ("", "[]"), datei)
-		self.assertEqual(self.data_imports["08_bom.csv"].payload_count, 46)
-		self.assertEqual(self.data_imports["06_item.csv"].payload_count, 80)
+		self.assertEqual(self.data_imports["08_bom.csv"].payload_count, 48)
+		self.assertEqual(self.data_imports["06_item.csv"].payload_count, 82)
 
 	def test_vorlagen_spalten_wie_template_download(self):
 		"""Jede Spalte entspricht einer Spalte der Data-Import-Vorlage aus dem Desk (Exporter)."""
@@ -393,8 +400,8 @@ class TestKatalogImport(IntegrationTestCase):
 			if not frappe.db.exists("DocType", "Leistungsregel"):
 				self.assertEqual(len(ergebnis["optional_uebersprungen"]), 1)
 			# 8 UOM + 9 Item Group + 2 Price List + 1 Workstation + 1 Operation
-			# + 80 Item + 80 Item Price + 46 BOM
-			self.assertEqual(ergebnis["unveraendert"], 227)
+			# + 82 Item + 82 Item Price + 48 BOM
+			self.assertEqual(ergebnis["unveraendert"], 233)
 
 	def test_importer_legt_fehlendes_an(self):
 		with self.savepoint():
@@ -556,7 +563,7 @@ class TestKatalogImport(IntegrationTestCase):
 
 	def test_uebersicht(self):
 		zeilen_ = {z["item_code"]: z for z in uebersicht(firma=FIRMA)}
-		self.assertEqual(len(zeilen_), 48)
+		self.assertEqual(len(zeilen_), 50)
 		for item, soll in BEISPIELE.items():
 			self.assertEqual(zeilen_[item]["herstellkosten"], soll["hk"])
 			self.assertEqual(zeilen_[item]["verkaufspreis"], soll["vk"])
