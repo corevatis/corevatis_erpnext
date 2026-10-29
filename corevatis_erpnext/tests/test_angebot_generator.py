@@ -307,6 +307,9 @@ class TestAngebotGenerator(IntegrationTestCase):
 		self.assertEqual(
 			generator.aufmass_dashboard({})["non_standard_fieldnames"], {"Quotation": "cv_aufmass"}
 		)
+		# Desk-Zähler brauchen ``fieldname`` (mvp-test: Aufmaß zeigte „Angebot“ ohne Zahl)
+		self.assertEqual(generator.aufmass_dashboard({})["fieldname"], "cv_aufmass")
+		self.assertEqual(data["fieldname"], "objekt")
 		hooks = frappe.get_hooks("override_doctype_dashboards", app_name="corevatis_erpnext")
 		self.assertEqual(hooks["Objekt"], ["corevatis_erpnext.angebot.generator.objekt_dashboard"])
 		self.assertIn(

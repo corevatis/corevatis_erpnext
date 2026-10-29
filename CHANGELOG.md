@@ -6,6 +6,11 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Behoben (Verifikation Epic 4 auf mvp-test)
+
+- Aufmaß: Die Verbindung „Angebot“ zeigt jetzt die Anzahl. Ohne `fieldname` im Dashboard lud
+  der Desk keine Zähler; das Kern-Doctype Aufmaß hat kein eigenes Dashboard.
+
 ### Neu (4.3, Angebotsdruck)
 
 - Textbausteine (Terms and Conditions, `angebot.textbausteine`, create-if-missing in
