@@ -498,6 +498,9 @@ class TestKatalogImport(IntegrationTestCase):
 		# Befund mvp-test: neues Angebot zog „Standard Selling“, Positionen mit 0,00 €
 		self.assertEqual(frappe.db.get_single_value("Selling Settings", "selling_price_list"), VERKAUF)
 		self.assertEqual(frappe.db.get_single_value("Buying Settings", "buying_price_list"), EINKAUF)
+		# Site-Default, den das Desk-Formular liest (frappe.defaults)
+		self.assertEqual(frappe.db.get_default("selling_price_list"), VERKAUF)
+		self.assertEqual(frappe.db.get_default("buying_price_list"), EINKAUF)
 		self.assertEqual(standard_preislisten(), [])
 
 	def test_unbekanntes_paket(self):

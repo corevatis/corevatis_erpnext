@@ -8,6 +8,8 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ### Geändert (Befunde mvp-test, Angebot)
 
+- Nachprüfung: Standard-Preisliste auch als Site-Default (`frappe.defaults`), den das Desk-Formular liest;
+  Patch `v0_4.preislisten_standardwert` (vorher zog ein neues Angebot weiter „Standard Selling“).
 - Steuern: eigene Verkaufs-Steuervorlage „Umsatzsteuer 19 %“ je Firma (eine Zeile, fester
   Satz 19 % auf 1776/3806), Standard statt der ERPNext-Vorlage „Lieferung oder sonstige
   Leistung im Inland“ (zwei Zeilen 19 %/7 % mit Satz 0, Satz aus der Artikelsteuer; im Angebot

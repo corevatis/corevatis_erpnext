@@ -270,6 +270,13 @@ def standard_preislisten(daten: dict | None = None, paket: str = "abdichtung") -
 		if aktuell != name and aktuell in (None, "", erpnext_vorgabe):
 			frappe.db.set_single_value(einstellung, feld, name)
 			changes.append(f"{einstellung}: Standard-Preisliste {name} (statt {aktuell or 'leer'})")
+			aktuell = name
+		# Das Desk-Formular liest den Site-Default (frappe.defaults), nicht das Single.
+		# ERPNext setzt ihn nur in Selling/Buying Settings.on_update - set_single_value
+		# übergeht das (Nachprüfung mvp-test: Angebot zog weiter „Standard Selling“).
+		if aktuell == name and frappe.db.get_default(feld) != name:
+			frappe.db.set_default(feld, name)
+			changes.append(f"{einstellung}: Standardwert {feld} = {name}")
 	return changes
 
 
