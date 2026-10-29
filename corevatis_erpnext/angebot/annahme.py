@@ -331,7 +331,7 @@ def kunde_sicherstellen(angebot, lead: str | None, warnungen: list[str]) -> tupl
 
 	vorhanden = frappe.db.get_value("Customer", {"lead_name": lead}, "name")
 	if vorhanden:
-		_angebot_auf_kunde(angebot, vorhanden)
+		_angebot_auf_kunde(angebot, vorhanden, lead)
 		return vorhanden, False
 
 	dublette, grund = bestehender_kunde(lead, angebot)
@@ -340,7 +340,7 @@ def kunde_sicherstellen(angebot, lead: str | None, warnungen: list[str]) -> tupl
 		# keinen zweiten Kontakt anlegen (der Kunde hat ihn schon)
 		_anschrift_und_kontakt(lead, angebot, warnungen, kontakt=False)
 		_adressen_an_kunde(lead, dublette)
-		_angebot_auf_kunde(angebot, dublette)
+		_angebot_auf_kunde(angebot, dublette, lead)
 		warnungen.append(
 			_("Bestehender Kunde {0} übernommen ({1}) - es wurde kein zweiter Kunde angelegt.").format(
 				dublette, grund
@@ -369,7 +369,7 @@ def kunde_sicherstellen(angebot, lead: str | None, warnungen: list[str]) -> tupl
 			title=_("Kunde fehlt"),
 		)
 	_hauptadresse_und_kontakt(kunde, adresse, kontakt)
-	_angebot_auf_kunde(angebot, kunde.name)
+	_angebot_auf_kunde(angebot, kunde.name, lead)
 	return kunde.name, True
 
 
@@ -402,16 +402,31 @@ def _hauptadresse_und_kontakt(kunde, adresse: str | None, kontakt: str | None) -
 		kunde.db_set(werte, update_modified=False)
 
 
-def _angebot_auf_kunde(angebot, kunde: str) -> None:
+def _angebot_auf_kunde(angebot, kunde: str, lead: str | None = None) -> None:
 	"""ERPNext stellt Angebote des Leads beim Anlegen des Kunden um (``Customer.update_lead_status``),
 	aber nur mit Schreibrecht des Benutzers - hier für *dieses* Angebot ausdrücklich. Der Lead
-	bleibt in ``cv_lead`` (ein übernommener Bestandskunde hat einen anderen ``lead_name``)."""
-	alt = frappe.db.get_value("Quotation", angebot.name, ["quotation_to", "party_name"], as_dict=True)
-	if alt and alt.quotation_to == "Lead":
+	bleibt in ``cv_lead`` (ein übernommener Bestandskunde hat einen anderen ``lead_name``).
+
+	``lead`` ist die vor dem Anlegen des Kunden gemerkte Anfrage: Hat ERPNext das Angebot schon
+	umgestellt, steht dort kein Lead mehr (Nachprüfung mvp-test). Server-Setzpfad per
+	``db.set_value`` - ``cv_lead_schuetzen`` verwirft nur Änderungen über ``save``."""
+	alt = (
+		frappe.db.get_value(
+			"Quotation", angebot.name, ["quotation_to", "party_name", FELD_LEAD], as_dict=True
+		)
+		if frappe.db.has_column("Quotation", FELD_LEAD)
+		else frappe.db.get_value("Quotation", angebot.name, ["quotation_to", "party_name"], as_dict=True)
+	)
+	if not alt:
+		return
+	werte = {}
+	if alt.quotation_to == "Lead":
 		werte = {"quotation_to": "Customer", "party_name": kunde}
-		if frappe.db.has_column("Quotation", FELD_LEAD):
-			werte[FELD_LEAD] = alt.party_name
-			angebot.set(FELD_LEAD, alt.party_name)
+		lead = lead or alt.party_name
+	if lead and FELD_LEAD in alt and not alt.get(FELD_LEAD):
+		werte[FELD_LEAD] = lead
+		angebot.set(FELD_LEAD, lead)
+	if werte:
 		frappe.db.set_value("Quotation", angebot.name, werte, update_modified=False)
 	angebot.quotation_to, angebot.party_name = "Customer", kunde
 

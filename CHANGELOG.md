@@ -6,6 +6,12 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Behoben (Nachprüfung mvp-test)
+
+- Angebotsannahme: `Quotation.cv_lead` und der Spiegel `Sales Order.cv_lead` blieben leer, weil
+  ERPNext (`Customer.update_lead_status`) das Angebot beim Anlegen des Kunden schon auf den
+  Kunden umstellt. Der Lead wird jetzt vorher gemerkt und serverseitig gesetzt.
+
 ### Behoben (Review Epic 4)
 
 - **A-1** Angebotsannahme und Nachfassen: parallele Aufrufe (Doppelklick, REST-Wiederholung,
