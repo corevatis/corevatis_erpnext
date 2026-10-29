@@ -156,6 +156,7 @@ jobs:
           bench build --app frappe
           # wkhtmltopdf lädt print.bundle.css über host_name: Webserver der Test-Bench
           bench --site test_site set-config host_name "http://127.0.0.1:8000"
+          bench use test_site
           nohup bench serve --port 8000 > serve.log 2>&1 &
           for i in $(seq 1 30); do curl -sf -o /dev/null http://127.0.0.1:8000/api/method/ping && break; sleep 2; done
           curl -sf -o /dev/null -w "Assets: %{http_code}\n" "http://127.0.0.1:8000/assets/frappe/images/frappe-favicon.svg" || true
