@@ -9,6 +9,7 @@ oder ohne wkhtmltopdf werden die Drucktests übersprungen.
 """
 
 import os
+import re
 import shutil
 from io import BytesIO
 from pathlib import Path
@@ -348,6 +349,7 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		for anzahl in range(von, bis + 1):
 			doc = baue(anzahl)
 			anzahl_seiten, texte, inhalt = self.pdf(doc)
+			self.keine_verwaiste_zwischensumme(texte, anzahl)
 			if anzahl_seiten > seiten:
 				break
 			if anzahl_seiten == seiten:
@@ -356,6 +358,19 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		doc, texte, inhalt = treffer
 		self.muster_speichern(name, inhalt)
 		return doc, texte
+
+	def keine_verwaiste_zwischensumme(self, texte: list[str], anzahl=None):
+		"""Review Epic 4 P-2: auf keiner Folgeseite folgt dem wiederholten Tabellenkopf direkt eine
+		Zwischensumme („Summe <Nr> …“) - die letzte Position der Gruppe steht immer mit auf der Seite."""
+		for nr, text in enumerate(texte[1:], start=2):
+			zeilen = [z.strip() for z in text.splitlines() if z.strip()]
+			kopf = next((i for i, z in enumerate(zeilen) if "Gesamtpreis" in z), None)
+			if kopf is None or kopf + 1 >= len(zeilen):
+				continue
+			self.assertFalse(
+				re.match(r"Summe \d", zeilen[kopf + 1]),
+				f"Seite {nr} beginnt mit der Zwischensumme ({anzahl} Positionen): {zeilen[kopf + 1]}",
+			)
 
 	def pruefe(self, doc, seiten: int, texte: list[str]):
 		self.assertEqual(len(texte), seiten)
@@ -459,6 +474,33 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		self.assertIn("Nachlass", alles)
 		self.assertIn("Zusammenstellung", alles)
 		self.assertIn("Alternativposition", alles)
+
+	def test_nachlass_auf_bruttosumme(self):
+		"""Review Epic 4 P-1: Nachlass auf „Grand Total“ - ERPNext verteilt ihn auf die Netto-
+		beträge; der Druck zeigt den Netto-Anteil vor der Nettosumme, jede Zeile geht auf."""
+		doc = self.angebot(
+			[self.position("AL-03", 4), self.position("IA-05", 10, "Keller 1", "Außenwand innen")],
+			apply_discount_on="Grand Total",
+			additional_discount_percentage=3,
+		)
+		self.assertTrue(flt(doc.discount_amount))
+		netto_anteil = flt(doc.total - doc.net_total, 2)
+		self.assertTrue(0 < netto_anteil < flt(doc.discount_amount))
+		self.assertEqual(flt(doc.grand_total, 2), flt(doc.net_total + doc.total_taxes_and_charges, 2))
+		html = self.html(doc)
+		self.assertIn("Netto-Anteil", html)
+		self.assertNotIn("None", html)
+		_seiten, texte, _pdf = self.pdf(doc, "nachlass-brutto")
+		alles = " ".join(" ".join(texte).split())
+		for wert in (
+			doc.get_formatted("total"),
+			frappe.utils.fmt_money(netto_anteil, currency=doc.currency),
+			doc.get_formatted("discount_amount"),
+			doc.get_formatted("net_total"),
+			doc.taxes[0].get_formatted("tax_amount"),
+			doc.get_formatted("grand_total"),
+		):
+			self.assertIn(" ".join(wert.split()), alles)
 
 	def test_maskierung(self):
 		img = "<img src=x onerror=alert(1)>"
