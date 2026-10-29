@@ -1,0 +1,79 @@
+{
+ "charts": [],
+ "content": "[{\"id\": \"cvmbcb0\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Meine Baustellen heute\", \"col\": 12}}, {\"id\": \"cvmbsp0\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvmbsc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Meine Aufgaben\", \"col\": 4}}, {\"id\": \"cvmbsc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Arbeitspakete\", \"col\": 4}}, {\"id\": \"cvmbsc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Baustellen\", \"col\": 4}}, {\"id\": \"cvmbsc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Zeiterfassung\", \"col\": 4}}, {\"id\": \"cvmbsc4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Termine\", \"col\": 4}}]",
+ "creation": "2026-10-29 18:00:00.000000",
+ "custom_blocks": [
+  {
+   "custom_block_name": "Meine Baustellen heute",
+   "label": "Meine Baustellen heute"
+  }
+ ],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 1,
+ "icon": "tool",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Meine Baustellen",
+ "links": [],
+ "modified": "2026-10-29 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Meine Baustellen",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [
+  {
+   "role": "Monteur"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": -0.5,
+ "shortcuts": [
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Meine Aufgaben",
+   "link_to": "ToDo",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Arbeitspakete",
+   "link_to": "Task",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "label": "Baustellen",
+   "link_to": "Project",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Zeiterfassung",
+   "link_to": "Timesheet",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "Calendar",
+   "label": "Termine",
+   "link_to": "Event",
+   "type": "DocType"
+  }
+ ],
+ "standard": 1,
+ "title": "Meine Baustellen",
+ "type": "Workspace"
+}

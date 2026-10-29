@@ -1,0 +1,10 @@
+.cv-mb { padding: 4px 2px; }
+.cv-mb-titel { font-size: var(--text-lg, 16px); font-weight: 600; margin-bottom: 10px; color: var(--heading-color, var(--text-color)); }
+.cv-mb-projekt { border: 1px solid var(--border-color, #d1d8dd); border-radius: var(--border-radius-md, 8px);
+	padding: 10px 12px; margin-bottom: 10px; background: var(--fg-color, #fff); }
+.cv-mb-projekt-name { font-weight: 600; cursor: pointer; }
+.cv-mb-eintrag { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0;
+	border-top: 1px solid var(--border-color, #ebeef0); cursor: pointer; font-size: var(--text-md, 13px); }
+.cv-mb-eintrag:first-of-type { border-top: 0; }
+.cv-mb-klein { color: var(--text-muted); font-size: var(--text-sm, 12px); }
+.cv-mb-abschnitt { font-weight: 500; color: var(--text-muted); margin: 14px 0 6px; }

@@ -1,0 +1,267 @@
+{
+ "charts": [],
+ "content": "[{\"id\": \"cvvgcb0\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Vorgänge Übersicht\", \"col\": 12}}, {\"id\": \"cvvgnc0\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Vorgänge offen\", \"col\": 4}}, {\"id\": \"cvvgnc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Vorgänge überfällig\", \"col\": 4}}, {\"id\": \"cvvgnc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Vorgänge: Betrieb am Zug\", \"col\": 4}}, {\"id\": \"cvvgnc3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Offene Termine\", \"col\": 6}}, {\"id\": \"cvvgnc4\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Angebote offen\", \"col\": 6}}, {\"id\": \"cvvgsp0\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvvgsc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Vorgangsliste\", \"col\": 3}}, {\"id\": \"cvvgsc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Neue Anfrage\", \"col\": 3}}, {\"id\": \"cvvgsc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Offene Anfragen\", \"col\": 3}}, {\"id\": \"cvvgsc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Termine\", \"col\": 3}}, {\"id\": \"cvvgsc4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Objekte\", \"col\": 3}}, {\"id\": \"cvvgsc5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Aufmaße\", \"col\": 3}}, {\"id\": \"cvvgsc6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Angebote\", \"col\": 3}}, {\"id\": \"cvvgsc7\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Aufträge\", \"col\": 3}}, {\"id\": \"cvvgsc8\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Projekte\", \"col\": 3}}, {\"id\": \"cvvgsc9\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Rechnungen\", \"col\": 3}}, {\"id\": \"cvvgsp1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvvgcd0\", \"type\": \"card\", \"data\": {\"card_name\": \"Vorgang\", \"col\": 4}}, {\"id\": \"cvvgcd1\", \"type\": \"card\", \"data\": {\"card_name\": \"Einstellungen\", \"col\": 4}}]",
+ "creation": "2026-10-29 18:00:00.000000",
+ "custom_blocks": [
+  {
+   "custom_block_name": "Vorgänge Übersicht",
+   "label": "Vorgänge Übersicht"
+  }
+ ],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 1,
+ "icon": "list",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Vorgänge",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Vorgang",
+   "link_count": 8,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Vorgangsliste",
+   "link_count": 0,
+   "link_to": "Vorgangsliste",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Lead",
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Anfrage",
+   "link_count": 0,
+   "link_to": "Lead",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Termin",
+   "link_count": 0,
+   "link_to": "Event",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Angebot",
+   "link_count": 0,
+   "link_to": "Quotation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Auftrag",
+   "link_count": 0,
+   "link_to": "Sales Order",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Projekt",
+   "link_count": 0,
+   "link_to": "Project",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Arbeitspaket",
+   "link_count": 0,
+   "link_to": "Task",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Rechnung",
+   "link_count": 0,
+   "link_to": "Sales Invoice",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Einstellungen",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Prozess-Einstellungen",
+   "link_count": 0,
+   "link_to": "Corevatis Prozess Einstellungen",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Vertriebs-Einstellungen",
+   "link_count": 0,
+   "link_to": "Corevatis Vertrieb Einstellungen",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-29 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Vorgänge",
+ "number_cards": [
+  {
+   "label": "Vorgänge offen",
+   "number_card_name": "Vorgänge offen"
+  },
+  {
+   "label": "Vorgänge überfällig",
+   "number_card_name": "Vorgänge überfällig"
+  },
+  {
+   "label": "Vorgänge: Betrieb am Zug",
+   "number_card_name": "Vorgänge: Betrieb am Zug"
+  },
+  {
+   "label": "Offene Termine",
+   "number_card_name": "Offene Termine"
+  },
+  {
+   "label": "Angebote offen",
+   "number_card_name": "Angebote offen"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [
+  {
+   "role": "Büro"
+  },
+  {
+   "role": "Meister"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": -1.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "label": "Vorgangsliste",
+   "link_to": "Vorgangsliste",
+   "report_ref_doctype": "Lead",
+   "type": "Report"
+  },
+  {
+   "color": "Green",
+   "doc_view": "New",
+   "label": "Neue Anfrage",
+   "link_to": "Lead",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Offene Anfragen",
+   "link_to": "Lead",
+   "stats_filter": "[[\"Lead\", \"cv_status\", \"not in\", [\"Gewonnen\", \"Verloren\"], false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "Calendar",
+   "label": "Termine",
+   "link_to": "Event",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Objekte",
+   "link_to": "Objekt",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Aufmaße",
+   "link_to": "Aufmass",
+   "type": "DocType"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "List",
+   "label": "Angebote",
+   "link_to": "Quotation",
+   "type": "DocType"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "List",
+   "label": "Aufträge",
+   "link_to": "Sales Order",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "label": "Projekte",
+   "link_to": "Project",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "label": "Rechnungen",
+   "link_to": "Sales Invoice",
+   "type": "DocType"
+  }
+ ],
+ "standard": 1,
+ "title": "Vorgänge",
+ "type": "Workspace"
+}

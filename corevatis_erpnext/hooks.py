@@ -14,16 +14,24 @@ app_license = "GPL-3.0-only"
 # corevatis, keine gemeinsamen Datenklassen (docs/mvp-plan.md, Lizenzarchitektur).
 required_apps = ["erpnext"]
 
-# Kachel auf dem Startbildschirm (/desk): Einstieg „Anfragen“ (Befunde mvp-test: der Auftraggeber
-# fand „kein CRM“ - v16 zeigt nur Apps mit diesem Hook, der Arbeitsbereich war nur per URL erreichbar)
+# Kacheln auf dem Startbildschirm (/desk). Befunde mvp-test: der Auftraggeber fand „kein CRM“ -
+# v16 zeigt nur Apps mit diesem Hook. Prozessleiste: Einstieg ist „Vorgänge“ (Vorgangsübersicht,
+# Kurzlinks je Schritt; „Anfragen“ bleibt als Arbeitsbereich), Monteure bekommen „Meine Baustellen“.
 add_to_apps_screen = [
 	{
 		"name": app_name,
 		"logo": "/assets/corevatis_erpnext/images/anfragen.svg",
-		"title": "Anfragen",
-		"route": "/app/anfragen",
+		"title": "Vorgänge",
+		"route": "/app/vorgänge",
 		"has_permission": "corevatis_erpnext.anfrage.setup.hat_anfragen_zugriff",
-	}
+	},
+	{
+		"name": app_name,
+		"logo": "/assets/corevatis_erpnext/images/anfragen.svg",
+		"title": "Meine Baustellen",
+		"route": "/app/meine-baustellen",
+		"has_permission": "corevatis_erpnext.prozess.setup.hat_baustellen_zugriff",
+	},
 ]
 
 # Installation
@@ -48,22 +56,29 @@ before_app_uninstall = "corevatis_erpnext.vor_ort.lead_objekt.before_app_uninsta
 # vor der Workflow-Aktion „Als verloren markieren“ (1.4); galerie.js stellt
 # corevatis_erpnext.galerie(frm) bereit (wiederverwendbar, z. B. für Objekt aus 2.1),
 # lead_galerie.js hängt sie am Lead ein (1.5), lead_termin.js bringt „Termin anlegen“ (1.3)
+# Prozessleiste (prozessleiste.js) im Formularkopf aller Belege der Kette; prozess_lead.js räumt
+# das Lead-Formular auf (Befunde mvp-test Nr. 21)
+_PROZESSLEISTE = "public/js/prozessleiste.js"
 doctype_js = {
 	"Lead": [
 		"public/js/lead.js",
 		"public/js/galerie.js",
 		"public/js/lead_galerie.js",
 		"public/js/lead_termin.js",
+		_PROZESSLEISTE,
+		"public/js/prozess_lead.js",
 	],
 	# Angebot annehmen/ablehnen (4.4), Nachfassen (4.5)
-	"Quotation": ["public/js/quotation_annahme.js"],
+	"Quotation": ["public/js/quotation_annahme.js", _PROZESSLEISTE],
 	# Angebot aus dem Aufmaß (4.1): Doctype Aufmass aus corevatis, ohne Kern lädt es nie
-	"Aufmass": "public/js/aufmass_angebot.js",
+	"Aufmass": ["public/js/aufmass_angebot.js", _PROZESSLEISTE],
 	# Foto-Galerie am Befund (3.7): Fotos der App; Doctype aus corevatis, ohne Kern lädt es nie
-	"Befund": ["public/js/galerie.js", "public/js/befund_galerie.js"],
+	"Befund": ["public/js/galerie.js", "public/js/befund_galerie.js", _PROZESSLEISTE],
 	# Arbeitspakete und Materialbedarf erzeugen (5.1)
-	"Sales Order": "public/js/planung.js",
-	"Project": "public/js/planung.js",
+	"Sales Order": ["public/js/planung.js", _PROZESSLEISTE],
+	"Project": ["public/js/planung.js", _PROZESSLEISTE],
+	"Objekt": [_PROZESSLEISTE],
+	"Sales Invoice": [_PROZESSLEISTE],
 }
 
 # Verbindungen: Angebote am Objekt und am Aufmaß (Kern-Doctypes, Quotation.cv_objekt/cv_aufmass);

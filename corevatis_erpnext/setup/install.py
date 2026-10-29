@@ -55,6 +55,8 @@ def after_install() -> None:
 	ensure_material()
 	ensure_planung_setup()
 
+	ensure_prozess()
+
 
 def after_migrate() -> None:
 	"""Nach jedem ``bench migrate``: dieselben idempotenten Schritte wie bei der Installation."""
@@ -109,6 +111,16 @@ def ensure_planung_setup() -> None:
 	from corevatis_erpnext.planung.felder import ensure_planung_felder
 
 	ensure_planung_felder()
+
+	ensure_prozess()
+
+
+def ensure_prozess() -> None:
+	"""Prozessleiste: Kennzahlen und Blöcke der Arbeitsbereiche „Vorgänge“/„Meine Baustellen“,
+	Lead-Formular aufräumen (``corevatis_erpnext.prozess.setup``)."""
+	from corevatis_erpnext.prozess.setup import ensure_prozess_setup
+
+	ensure_prozess_setup()
 
 
 def ensure_angebot_setup() -> None:

@@ -144,3 +144,18 @@ Work Package (Corevatis),Arbeitspaket (Corevatis)
 Target Hours (BOM),Sollstunden (Stückliste)
 "Assembly minutes per unit from the BOMs x quantity, summed","Montageminuten je Einheit aus den Stücklisten × Menge, summiert"
 Positions,Positionen
+Corevatis Prozess Einstellungen,Corevatis Prozess-Einstellungen
+Thresholds of the process overview (Corevatis),Schwellen der Vorgangsübersicht (Corevatis)
+Overdue Rules (Traffic Light),Überfällig-Regeln (Ampel)
+A process turns red when one of these thresholds is exceeded.,"Ein Vorgang wird rot, sobald eine dieser Schwellen überschritten ist."
+Inquiry without Appointment (Days),Anfrage ohne Termin (Tage)
+Days after the inquiry was created without an inspection appointment.,Tage nach dem Anlegen der Anfrage ohne Besichtigungstermin.
+Appointment without Measurement (Days),Termin ohne Aufmaß (Tage)
+Days after the appointment without a completed measurement or quotation.,Tage nach dem Termin ohne abgeschlossenes Aufmaß oder Angebot.
+Quotation without Follow-up (Days),Angebot ohne Nachfassen (Tage)
+Days after the quotation date without an answer and without a follow-up task in this period.,Tage nach dem Angebotsdatum ohne Antwort und ohne Nachfass-Aufgabe in diesem Zeitraum.
+Order without Daily Report (Days),Auftrag ohne Rapport (Tage)
+Days after the planned start (or the order date) without time booking or daily report.,Tage nach dem geplanten Start (oder dem Auftragsdatum) ohne Zeitbuchung oder Tagesrapport.
+Process Overview,Vorgangsübersicht
+Maximum Processes in the Overview,Höchstens Vorgänge in der Übersicht
+Newest inquiries first; older ones are not evaluated.,Neueste Anfragen zuerst; ältere werden nicht ausgewertet.

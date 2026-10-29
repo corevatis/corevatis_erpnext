@@ -1,0 +1,117 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-29 18:00:00.000000",
+ "description": "Thresholds of the process overview (Corevatis)",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "ampel_section",
+  "ampel_anfrage_ohne_termin_tage",
+  "ampel_termin_ohne_aufmass_tage",
+  "column_break_ampel",
+  "ampel_angebot_ohne_nachfass_tage",
+  "ampel_auftrag_ohne_rapport_tage",
+  "uebersicht_section",
+  "uebersicht_max_vorgaenge"
+ ],
+ "fields": [
+  {
+   "fieldname": "ampel_section",
+   "fieldtype": "Section Break",
+   "label": "Overdue Rules (Traffic Light)",
+   "description": "A process turns red when one of these thresholds is exceeded."
+  },
+  {
+   "fieldname": "ampel_anfrage_ohne_termin_tage",
+   "fieldtype": "Int",
+   "label": "Inquiry without Appointment (Days)",
+   "default": "2",
+   "non_negative": 1,
+   "description": "Days after the inquiry was created without an inspection appointment."
+  },
+  {
+   "fieldname": "ampel_termin_ohne_aufmass_tage",
+   "fieldtype": "Int",
+   "label": "Appointment without Measurement (Days)",
+   "default": "7",
+   "non_negative": 1,
+   "description": "Days after the appointment without a completed measurement or quotation."
+  },
+  {
+   "fieldname": "column_break_ampel",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ampel_angebot_ohne_nachfass_tage",
+   "fieldtype": "Int",
+   "label": "Quotation without Follow-up (Days)",
+   "default": "10",
+   "non_negative": 1,
+   "description": "Days after the quotation date without an answer and without a follow-up task in this period."
+  },
+  {
+   "fieldname": "ampel_auftrag_ohne_rapport_tage",
+   "fieldtype": "Int",
+   "label": "Order without Daily Report (Days)",
+   "default": "3",
+   "non_negative": 1,
+   "description": "Days after the planned start (or the order date) without time booking or daily report."
+  },
+  {
+   "fieldname": "uebersicht_section",
+   "fieldtype": "Section Break",
+   "label": "Process Overview"
+  },
+  {
+   "fieldname": "uebersicht_max_vorgaenge",
+   "fieldtype": "Int",
+   "label": "Maximum Processes in the Overview",
+   "default": "500",
+   "non_negative": 1,
+   "description": "Newest inquiries first; older ones are not evaluated."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-29 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Corevatis Prozess Einstellungen",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "email": 0,
+   "print": 0,
+   "share": 0
+  },
+  {
+   "role": "Büro",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "email": 0,
+   "print": 0,
+   "share": 0
+  },
+  {
+   "role": "Meister",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "email": 0,
+   "print": 0,
+   "share": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

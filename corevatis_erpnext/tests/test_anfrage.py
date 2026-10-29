@@ -76,7 +76,12 @@ class TestLeadFields(IntegrationTestCase):
 		for fieldname in ("cv_bauteil", "cv_symptome"):
 			field = meta.get_field(fieldname)
 			self.assertFalse(field.reqd, fieldname)
-			self.assertEqual(field.mandatory_depends_on, "eval:1", fieldname)
+			# Prozessleiste (Befunde mvp-test Nr. 22): Pflicht erst ab Anfragestatus „Termin“
+			self.assertEqual(
+				field.mandatory_depends_on,
+				"eval:['Termin','Besichtigt','Angebot','Gewonnen'].includes(doc.cv_status)",
+				fieldname,
+			)
 		# wie ein Web-Form-/API-Lead: ohne Bauteil und Symptome speicherbar
 		lead = _new_lead(cv_quelle="Web Form")
 		self.assertEqual(lead.cv_dringlichkeit, "Normal")

@@ -1,6 +1,7 @@
 // Corevatis – Angebot aus dem Aufmaß (Aufgabe 4.1)
 // Server: corevatis_erpnext.angebot.generator.erzeuge_angebot (Rollen Büro/Meister)
 // Das Formular „Aufmass“ gehört zu corevatis; dieses Skript hängt nur die Schaltflächen an.
+frappe.provide("corevatis_erpnext.angebot");
 (function () {
 	const METHODE = "corevatis_erpnext.angebot.generator.erzeuge_angebot";
 	const ROLLEN = ["Büro", "Meister", "System Manager", "Administrator"];
@@ -93,6 +94,9 @@
 		});
 		d.show();
 	}
+
+	// Prozessleiste: „Angebot erzeugen“ öffnet denselben Dialog
+	corevatis_erpnext.angebot.erzeugen_dialog = dialog;
 
 	frappe.ui.form.on("Aufmass", {
 		refresh(frm) {

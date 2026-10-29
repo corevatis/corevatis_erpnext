@@ -6,9 +6,11 @@ Quelltexte, die deutsche Oberfläche kommt aus ``translations/de.csv``; die
 Select-Werte sind deutsche Daten (so stehen sie in der Datenbank und in der API).
 
 Pflichtfelder: Bauteil und Symptome sind nur im Desk Pflicht
-(``mandatory_depends_on``, wird nur im Formular ausgewertet). Leads aus dem Web Form,
-der Mobile-API oder dem E-Mail-Eingang werden nicht abgewiesen; die Vorqualifizierung
-holt das Büro beim ersten Speichern im Desk nach.
+(``mandatory_depends_on``, wird nur im Formular ausgewertet) und erst ab dem Anfragestatus
+„Termin“ (Befunde mvp-test Nr. 22: eine Telefonnotiz war ohne Bauteil nicht speicherbar;
+ANNAHME Prozessleiste, Entscheidung des Auftraggebers offen). Leads aus dem Web Form,
+der Mobile-API oder dem E-Mail-Eingang werden nie abgewiesen; die Vorqualifizierung
+holt das Büro spätestens nach dem Termin im Desk nach.
 """
 
 MODULE = "Corevatis ERPNext"
@@ -34,8 +36,11 @@ SYMPTOME = (
 SYMPTOM_FIELDS = tuple(fieldname for fieldname, _label, _value in SYMPTOME)
 FOTO_FIELDS = ("cv_foto_1", "cv_foto_2", "cv_foto_3")
 
-# im Desk Pflicht (Formular), serverseitig nicht
-DESK_MANDATORY = "eval:1"
+# im Desk Pflicht (Formular) ab Anfragestatus „Termin“, serverseitig nie
+STATUS_MIT_PFLICHT = ("Termin", "Besichtigt", "Angebot", "Gewonnen")
+DESK_MANDATORY = "eval:{}.includes(doc.cv_status)".format(
+	"[" + ",".join(f"'{status}'" for status in STATUS_MIT_PFLICHT) + "]"
+)
 
 
 def _select(*values: str, blank: bool = True) -> str:
