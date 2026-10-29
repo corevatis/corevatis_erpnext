@@ -16,6 +16,20 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   `cv_aufmass_position` (Data), `cv_mengen_herkunft` (Small Text), `cv_einzelkosten`
   (Currency, nur lesen), `cv_eventualposition`, `cv_alternativposition` (Check). Gemeinsamer
   Vertrag für Generator (4.1), Angebotslayout (4.3) und Annahme (4.4).
+- Angebot aus dem Aufmaß: Whitelist `corevatis_erpnext.angebot.generator.erzeuge_angebot`
+  (`aufmass`, `schema`, `kunde`, `lead`, `neu_erzeugen`, `erschwernis_prozent`; Rollen Büro,
+  Meister). Leistungen aus `item_code` bzw. `verfahren` der Aufmaßzeilen (Leistungsregeln des
+  Verfahrens mit Leistungsposition), Herstellkosten aus der Standard-Stückliste, Kalkulation
+  im Kern per `frappe.get_attr("corevatis.angebot.kalkulation.kalkuliere")`. Angebot mit
+  Preisliste „Standard-Verkauf“, Preisen der Engine, Steuervorlage „Umsatzsteuer 19 %“ samt
+  Steuerzeilen (Befund mvp-test Nr. 4), `valid_till` + 30 Tage (Nr. 17), Titel, Vorbemerkung
+  (Textbaustein „Angebot Standard“, create-if-missing), Garantiehinweis, `cv_kalkulation_json`.
+  Partei: Kunde, Lead, Referenz des Aufmaßes oder Kunde des Objekts, sonst Platzhalterkunde
+  „Interessent“. Idempotent: zweiter Aufruf meldet das bestehende Angebot, `neu_erzeugen=1`
+  ersetzt einen Entwurf (gleiche Nummer).
+- Aufmaß-Formular (Kern): Schaltfläche „Erstellen → Angebot erzeugen“ (Schema, Erschwernis) und
+  „Angebot …“ (`public/js/aufmass_angebot.js`); Verbindungen „Angebot“ am Objekt und am Aufmaß
+  (`override_doctype_dashboards`).
 
 ### Geändert (Befunde mvp-test, Angebot)
 
