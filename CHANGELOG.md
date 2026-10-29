@@ -6,6 +6,17 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (4.1, Angebot aus dem Aufmaß)
+
+- Custom Fields am Angebot (`angebot.felder`, idempotent in `after_install`/`after_migrate`):
+  Quotation `cv_titel`, `cv_objekt`, `cv_aufmass`, `cv_kalkulationsschema` (Data, Namen der
+  Kern-Datensätze), `cv_erzeugt_aus_aufmass` (Check, nur lesen), `cv_vorbemerkung` (Text
+  Editor), `cv_garantiehinweis` (Small Text), `cv_kalkulation_json` (Code/JSON, nur lesen,
+  nicht gedruckt); Quotation Item `cv_raum`, `cv_bauteil`, `cv_verfahren`,
+  `cv_aufmass_position` (Data), `cv_mengen_herkunft` (Small Text), `cv_einzelkosten`
+  (Currency, nur lesen), `cv_eventualposition`, `cv_alternativposition` (Check). Gemeinsamer
+  Vertrag für Generator (4.1), Angebotslayout (4.3) und Annahme (4.4).
+
 ### Geändert (Befunde mvp-test, Angebot)
 
 - Steuern: eigene Verkaufs-Steuervorlage „Umsatzsteuer 19 %“ je Firma (eine Zeile, fester
