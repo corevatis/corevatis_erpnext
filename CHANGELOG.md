@@ -39,6 +39,11 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   vorhanden) > Lead > Standardfirma; hat die Firma für das Aufmaß keine Leistungen (alter Lead
   einer Firma ohne Stücklisten), nimmt er die nächste mit Hinweis. 403 beim Nachfassen nennt
   „nachfassen“ statt „annehmen und ablehnen“.
+- Security-Review: `Quotation.cv_lead` setzt nur der Server (`validate` verwirft Änderungen aus
+  Formular/REST), bei der Annahme zählt es nur, wenn der Lead zum Kunden gehört; Annahme und
+  `on_submit`-Hook ändern einen Lead nur mit Schreibrecht. Nachfass-Aufgaben gehen nur an
+  Benutzer mit Rolle Büro/Meister und eigenem Leserecht am Angebot - keine Freigabe (DocShare)
+  mehr.
 
 ### Behoben (Verifikation Epic 4 auf mvp-test)
 

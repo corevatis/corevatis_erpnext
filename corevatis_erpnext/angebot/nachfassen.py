@@ -29,11 +29,15 @@ werten, auch wenn das Formular nie gespeichert wurde).
 """
 
 import frappe
-import frappe.share
 from frappe import _
 from frappe.utils import add_days, cint, date_diff, escape_html, fmt_money, get_fullname, getdate, today
 
-from corevatis_erpnext.angebot.annahme import angebot_sperren, bestehender_auftrag, pruefe_rolle
+from corevatis_erpnext.angebot.annahme import (
+	angebot_sperren,
+	bestehender_auftrag,
+	darf_annehmen,
+	pruefe_rolle,
+)
 
 EINSTELLUNGEN = "Corevatis Vertrieb Einstellungen"
 EMAIL_TEMPLATE = "Angebot Nachfassen"
@@ -191,25 +195,29 @@ def _aktive_systembenutzer(namen) -> list[str]:
 	)
 
 
+def _berechtigt(user: str, angebot) -> bool:
+	"""Rolle Büro/Meister und eigenes Leserecht am Angebot - die Aufgabe verleiht keine Rechte
+	(keine Freigabe, Security-Review)."""
+	return darf_annehmen(user) and bool(frappe.has_permission("Quotation", "read", doc=angebot, user=user))
+
+
 def empfaenger(angebot, e) -> list[str]:
 	"""Genau ein Empfänger (N-1): fester Benutzer, sonst Ersteller des Angebots (auch Meister),
-	sonst der erste aktive Büro-Benutzer, zuletzt Administrator."""
+	sonst der erste aktive Büro-Benutzer, zuletzt Administrator. Nur Benutzer mit Rolle
+	Büro/Meister und Leserecht am Angebot (``_berechtigt``)."""
+	kandidaten = []
 	if e.nachfass_zuweisung == "Benutzer" and e.nachfass_benutzer:
-		benutzer = _aktive_systembenutzer([e.nachfass_benutzer])
-		if benutzer:
-			return benutzer[:1]
+		kandidaten.append(e.nachfass_benutzer)
 	if angebot.owner != "Administrator":
-		ersteller = _aktive_systembenutzer([angebot.owner])
-		if ersteller:
-			return ersteller
-	buero = [
-		b
-		for b in _aktive_systembenutzer(
-			frappe.get_all("Has Role", filters={"role": ROLLE_BUERO, "parenttype": "User"}, pluck="parent")
-		)
-		if b != "Administrator"
-	]
-	return buero[:1] or ["Administrator"]
+		kandidaten.append(angebot.owner)
+	kandidaten += frappe.get_all(
+		"Has Role", filters={"role": ROLLE_BUERO, "parenttype": "User"}, pluck="parent", order_by="parent asc"
+	)
+	aktiv = set(_aktive_systembenutzer(kandidaten))
+	for user in dict.fromkeys(kandidaten):
+		if user in aktiv and user != "Administrator" and _berechtigt(user, angebot):
+			return [user]
+	return ["Administrator"]
 
 
 def aufgabe_text(angebot, zyklus: int) -> str:
@@ -244,10 +252,6 @@ def aufgabe_anlegen(angebot, zyklus: int, stichtag, e) -> list[str]:
 			}
 		).insert(ignore_permissions=True)
 		namen.append(todo.name)
-		if not frappe.has_permission("Quotation", "read", doc=angebot, user=user):
-			frappe.share.add_docshare(
-				"Quotation", angebot.name, user, read=1, flags={"ignore_share_permission": True}, notify=0
-			)
 		notify_assignment(
 			todo.assigned_by, user, "Quotation", angebot.name, action="ASSIGN", description=beschreibung
 		)

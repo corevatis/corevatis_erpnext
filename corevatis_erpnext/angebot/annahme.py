@@ -159,6 +159,9 @@ def angebot_annehmen(
 
 	warnungen: list[str] = []
 	lead = lead_zum_angebot(angebot)
+	if lead:
+		# Status und Projekt des Leads setzt die Annahme - nur mit Schreibrecht (Security-Review)
+		frappe.has_permission("Lead", "write", lead, throw=True)
 	auftrag = bestehender_auftrag(angebot.name, sperren=True)
 	bereits = bool(auftrag)
 
@@ -276,14 +279,44 @@ def annahme_status(quotation: str) -> dict:
 
 def lead_zum_angebot(angebot) -> str | None:
 	"""Lead des Angebots: direkt (an Lead), ``cv_lead`` (bei der Annahme gemerkt - wichtig, wenn ein
-	bestehender Kunde übernommen wurde) oder über ``Customer.lead_name`` (nach der Umwandlung)."""
+	bestehender Kunde übernommen wurde) oder über ``Customer.lead_name`` (nach der Umwandlung).
+
+	``cv_lead`` zählt nur, wenn der Lead nachweislich zum Kunden gehört
+	(``lead_gehoert_zum_kunden``) - das Feld setzt nur der Server (``cv_lead_schuetzen``).
+	"""
 	if angebot.quotation_to == "Lead":
 		return angebot.party_name or None
-	if angebot.get(FELD_LEAD):
-		return angebot.get(FELD_LEAD)
-	if angebot.quotation_to == "Customer" and angebot.party_name:
-		return frappe.db.get_value("Customer", angebot.party_name, "lead_name") or None
-	return None
+	if angebot.quotation_to != "Customer" or not angebot.party_name:
+		return None
+	gemerkt = angebot.get(FELD_LEAD)
+	if gemerkt and lead_gehoert_zum_kunden(gemerkt, angebot.party_name, angebot):
+		return gemerkt
+	return frappe.db.get_value("Customer", angebot.party_name, "lead_name") or None
+
+
+def lead_gehoert_zum_kunden(lead_name: str, kunde: str, angebot=None) -> bool:
+	"""Lead und Kunde gehören zusammen: ``Customer.lead_name``, gemeinsame Anschrift bzw.
+	gemeinsamer Kontakt (Verknüpfung mit beiden), oder dieselben Merkmale wie bei der
+	Dublettensuche (E-Mail eines Kundenkontakts, Name und PLZ)."""
+	if not frappe.db.exists("Lead", lead_name):
+		return False
+	if frappe.db.get_value("Customer", kunde, "lead_name") == lead_name:
+		return True
+	for doctype in ("Address", "Contact"):
+		if set(_verknuepft(doctype, "Lead", lead_name)) & set(_verknuepft(doctype, "Customer", kunde)):
+			return True
+	return kunde in _dubletten(lead_name, angebot)
+
+
+def cv_lead_schuetzen(doc, method=None) -> None:
+	"""``validate`` Quotation: ``cv_lead`` setzt nur der Server (``_angebot_auf_kunde`` per
+	``db.set_value``). Änderungen über Formular oder REST werden verworfen (Security-Review: sonst
+	setzte die Annahme Status und Projekt eines fremden Leads)."""
+	if not doc.meta.has_field(FELD_LEAD):
+		return
+	gespeichert = None if doc.is_new() else frappe.db.get_value("Quotation", doc.name, FELD_LEAD)
+	if (doc.get(FELD_LEAD) or None) != (gespeichert or None):
+		doc.set(FELD_LEAD, gespeichert)
 
 
 def kunde_sicherstellen(angebot, lead: str | None, warnungen: list[str]) -> tuple[str, bool]:
@@ -400,6 +433,13 @@ def bestehender_kunde(lead_name: str, angebot) -> tuple[str | None, str | None]:
 
 	Bei mehreren Treffern gewinnt der älteste Kunde; deaktivierte Kunden zählen nicht.
 	"""
+	treffer = _dubletten(lead_name, angebot)
+	return next(iter(treffer.items()), (None, None))
+
+
+def _dubletten(lead_name: str, angebot=None) -> dict[str, str]:
+	"""Kandidaten ``{Kunde: Grund}`` in der Reihenfolge von ``bestehender_kunde``."""
+	ergebnis: dict[str, str] = {}
 	lead = frappe.get_doc("Lead", lead_name)
 	email = (lead.get("email_id") or "").strip()
 	if email:
@@ -417,9 +457,8 @@ def bestehender_kunde(lead_name: str, angebot) -> tuple[str | None, str | None]:
 				pluck="link_name",
 				order_by="creation asc",
 			)
-			kunden = _aktive_kunden(kunden)
-			if kunden:
-				return kunden[0], _("gleiche E-Mail {0}").format(email)
+			for kunde in _aktive_kunden(kunden):
+				ergebnis.setdefault(kunde, _("gleiche E-Mail {0}").format(email))
 
 	name = (lead.get("lead_name") or lead.get("company_name") or "").strip()
 	plz = objekt_anschrift(angebot, lead).get("plz")
@@ -430,8 +469,8 @@ def bestehender_kunde(lead_name: str, angebot) -> tuple[str | None, str | None]:
 		for kunde in kunden:
 			adressen = _verknuepft("Address", "Customer", kunde)
 			if adressen and frappe.db.exists("Address", {"name": ["in", adressen], "pincode": plz}):
-				return kunde, _("gleicher Name und PLZ {0}").format(plz)
-	return None, None
+				ergebnis.setdefault(kunde, _("gleicher Name und PLZ {0}").format(plz))
+	return ergebnis
 
 
 def _adressen_an_kunde(lead_name: str, kunde: str) -> None:
@@ -907,6 +946,8 @@ def auftrag_eingereicht(doc, method=None) -> None:
 		angebotsstatus_korrigieren(name)
 	angebot = frappe.get_doc("Quotation", angebote[0])
 	lead = lead_zum_angebot(angebot)
+	if lead and not frappe.has_permission("Lead", "write", lead):
+		lead = None  # ERPNext-Weg durch einen Benutzer ohne Recht am Lead: Lead bleibt unberührt
 	# Projekt automatisch nur für Corevatis-Angebote (A-5); ein vorhandenes (Annahme mit
 	# ``projekt_anlegen``) bleibt
 	projekt = vorhandenes_projekt(doc)

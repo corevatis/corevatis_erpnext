@@ -187,10 +187,28 @@ class TestNachfassen(IntegrationTestCase):
 			for b in nachfassen._aktive_systembenutzer(
 				frappe.get_all("Has Role", filters={"role": "Büro", "parenttype": "User"}, pluck="parent")
 			)
-			if b != "Administrator"
+			if b != "Administrator" and nachfassen._berechtigt(b, self.angebot)
 		]
 		self.assertIn(BUERO_NF, buero)
 		self.assertEqual([t.allocated_to for t in self._todos()], buero[:1])
+
+	def test_ersteller_ohne_rolle_bekommt_keine_aufgabe_und_keine_freigabe(self):
+		"""Security-Review: Ersteller ohne Büro/Meister (z. B. Rolle entzogen) → Büro-Benutzer;
+		die Aufgabe verleiht keine Rechte (keine DocShare)."""
+		vertrieb = make_user("cv-test-vertrieb-nachfassen@example.com", "Vera", ["Sales User"], "Vertrieb")
+		frappe.db.set_value("Quotation", self.angebot.name, "owner", vertrieb, update_modified=False)
+		nachfassen.nachfassen_pruefen()
+		zugewiesen = [t.allocated_to for t in self._todos()]
+		self.assertEqual(len(zugewiesen), 1)
+		self.assertNotEqual(zugewiesen[0], vertrieb)
+		self.assertFalse(
+			frappe.db.exists(
+				"DocShare", {"share_doctype": "Quotation", "share_name": self.angebot.name, "user": vertrieb}
+			)
+		)
+		self.assertFalse(
+			frappe.db.exists("DocShare", {"share_doctype": "Quotation", "share_name": self.angebot.name})
+		)
 
 	def test_button_parallel_ein_todo(self):
 		"""Review Epic 4 A-1: zwei gleichzeitige Klicks „Nachfassen“ über die WSGI-App - genau ein

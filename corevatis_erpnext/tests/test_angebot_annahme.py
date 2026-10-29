@@ -386,6 +386,48 @@ class TestAngebotAnnahme(IntegrationTestCase):
 			annahme.bestehender_kunde(lead.name, td.angebot(lead.name, zusatz=False)), (None, None)
 		)
 
+	def test_cv_lead_nur_vom_server(self):
+		"""Security-Review: ``cv_lead`` aus Formular/REST wird verworfen; ein fremder Lead in
+		``cv_lead`` zählt bei der Annahme nicht; ohne Schreibrecht am Lead keine Annahme."""
+		fremd = td.lead_mit_angebot_status()
+		entwurf = frappe.copy_doc(self.angebot)
+		entwurf.docstatus = 0
+		entwurf.cv_lead = fremd.name
+		entwurf.insert(ignore_permissions=True)
+		self.assertIsNone(frappe.db.get_value("Quotation", entwurf.name, "cv_lead"))
+		entwurf.reload()
+		entwurf.cv_lead = fremd.name
+		entwurf.save(ignore_permissions=True)
+		self.assertIsNone(frappe.db.get_value("Quotation", entwurf.name, "cv_lead"))
+
+		# direkt in der DB (z. B. Altbestand): Lead gehört nicht zum Kunden → nicht benutzt
+		kunde = frappe.get_doc(
+			{"doctype": "Customer", "customer_name": "Kunde ohne Lead", "customer_type": "Individual"}
+		)
+		kunde.customer_group = annahme._kundengruppe(None)
+		kunde.insert(ignore_permissions=True)
+		angebot = td.angebot(kunde.name, quotation_to="Customer", zusatz=False)
+		frappe.db.set_value("Quotation", angebot.name, "cv_lead", fremd.name, update_modified=False)
+		angebot.reload()
+		self.assertIsNone(annahme.lead_zum_angebot(angebot))
+		annahme.angebot_annehmen(angebot.name)
+		self.assertEqual(frappe.db.get_value("Lead", fremd.name, "cv_status"), "Angebot")
+		self.assertFalse(frappe.db.get_value("Lead", fremd.name, "cv_projekt"))
+
+		original = frappe.has_permission
+
+		def ohne_lead_recht(doctype, ptype="read", *args, **kwargs):
+			if doctype == "Lead" and ptype == "write":
+				if kwargs.get("throw") or (len(args) > 2 and args[2]):
+					raise frappe.PermissionError
+				return False
+			return original(doctype, ptype, *args, **kwargs)
+
+		with patch("frappe.has_permission", side_effect=ohne_lead_recht):
+			with self.assertRaises(frappe.PermissionError):
+				self._annehmen()
+		self.assertFalse(annahme.bestehender_auftrag(self.angebot.name))
+
 	def test_projekt_nur_fuer_corevatis_angebote(self):
 		"""A-5: gewöhnliches Angebot (ohne Aufmaß) → Auftrag ohne Projekt; mit ``projekt_anlegen``
 		bzw. aus dem Aufmaß → Projekt; ERPNext-Weg ohne Aufmaß → kein Projekt."""
