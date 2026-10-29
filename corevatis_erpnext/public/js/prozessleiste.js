@@ -106,6 +106,29 @@ frappe.provide("corevatis_erpnext.prozess");
 		frm.savesubmit();
 	};
 
+	// Arbeitspakete aus dem Auftrag (5.1, corevatis_erpnext.planung.tasks_erzeugen)
+	P.arbeitspakete_erzeugen = function (frm) {
+		frappe
+			.call({
+				method: "corevatis_erpnext.planung.tasks_erzeugen",
+				args: { project: frm.doc.name },
+				freeze: true,
+				freeze_message: __("Arbeitspakete werden angelegt …"),
+			})
+			.then((r) => {
+				const m = r.message || {};
+				const hinweise = (m.hinweise || []).filter(Boolean);
+				frappe.show_alert({
+					message: __("{0} Arbeitspaket(e)", [(m.arbeitspakete || []).length]),
+					indicator: (m.arbeitspakete || []).length ? "green" : "orange",
+				});
+				if (hinweise.length) {
+					frappe.msgprint(hinweise.map((h) => `<div>${esc(h)}</div>`).join(""));
+				}
+				frm.reload_doc();
+			});
+	};
+
 	P.rechnung_aus_auftrag = function (frm) {
 		frappe.model.open_mapped_doc({
 			method: "erpnext.selling.doctype.sales_order.sales_order.make_sales_invoice",

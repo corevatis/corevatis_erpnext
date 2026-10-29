@@ -857,12 +857,25 @@ def aktionen(k: frappe._dict, liste: list[dict]) -> None:
 			"corevatis_erpnext.prozess.einreichen",
 		)
 
-	# Arbeitspaket anlegen (Task am Projekt; die automatische Ableitung bringt 5.1 nach dem Auftrag)
+	# Arbeitspakete: 5.1 legt sie beim Einreichen des Auftrags an; fehlen sie, „Arbeitspakete
+	# erzeugen“ (planung.tasks_erzeugen: Büro/Meister, Schreibrecht Projekt, Anlegerecht Task) für
+	# Projekte mit Auftrag, sonst ein Arbeitspaket von Hand
 	projekt = _neuestes(k.projekte)
 	if projekt and schritt["ausfuehrung"]["status"] == AKTIV and not k.tasks and _darf("Task", "create"):
-		schritt["ausfuehrung"]["aktion"] = _aktion(
-			_("Arbeitspaket anlegen"), neu="Task", werte={"project": projekt.name}
-		)
+		from corevatis_erpnext.planung.auftrag import darf_planen
+
+		mit_auftrag = frappe.db.get_value("Project", projekt.name, "sales_order")
+		if mit_auftrag and darf_planen() and _darf("Project", "write", projekt.name):
+			schritt["ausfuehrung"]["aktion"] = _aktion(
+				_("Arbeitspakete erzeugen"),
+				"Project",
+				projekt.name,
+				"corevatis_erpnext.prozess.arbeitspakete_erzeugen",
+			)
+		else:
+			schritt["ausfuehrung"]["aktion"] = _aktion(
+				_("Arbeitspaket anlegen"), neu="Task", werte={"project": projekt.name}
+			)
 
 	# Rechnung erstellen (ERPNext „Erstellen → Rechnung“ am Auftrag)
 	auftrag = _neuestes(k.auftraege, lambda a: a.docstatus == 1)

@@ -295,8 +295,11 @@ class TestProzessleiste(IntegrationTestCase):
 				)
 				self.assertEqual(_schritt(stand, "ausfuehrung")["belege"][0]["name"], r["projekt"])
 				if not frappe.db.count("Task", {"project": r["projekt"]}):
-					# ohne Arbeitspakete (5.1 legt sie nach dem Auftrag an): von Hand anlegen
-					self.assertEqual(_schritt(stand, "ausfuehrung")["aktion"]["neu"], "Task")
+					# ohne Arbeitspakete: 5.1 erzeugen (Projekt mit Auftrag)
+					self.assertEqual(
+						_schritt(stand, "ausfuehrung")["aktion"]["js"],
+						"corevatis_erpnext.prozess.arbeitspakete_erzeugen",
+					)
 				self.assertEqual(
 					_schritt(stand, "rechnung")["aktion"]["js"],
 					"corevatis_erpnext.prozess.rechnung_aus_auftrag",
@@ -317,7 +320,7 @@ class TestProzessleiste(IntegrationTestCase):
 		self.assertEqual((zeile["beleg_typ"], zeile["beleg"]), ("Project", r["projekt"]))
 		self.assertEqual(zeile["objekt_adresse"], "Kellerweg 7, 48143 Münster")
 		if not frappe.db.count("Task", {"project": r["projekt"]}):
-			self.assertEqual(zeile["naechster_schritt"], "Arbeitspaket anlegen")
+			self.assertEqual(zeile["naechster_schritt"], "Arbeitspakete erzeugen")
 		rot = uebersicht.vorgaenge({"ampel": "rot"})
 		self.assertIn(lead.name, [z["vorgang"] for z in rot])
 		self.assertTrue(all(z["ampel"] == "rot" for z in rot))
