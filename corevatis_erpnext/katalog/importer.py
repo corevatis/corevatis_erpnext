@@ -240,7 +240,37 @@ def importieren(firma=None, paket="abdichtung", force=False, commit=True) -> dic
 		_bom_kosten_aktualisieren(daten["BOM"], bericht)
 		if commit:
 			frappe.db.commit()
+	bericht.changes.extend(standard_preislisten(daten))
+	if commit:
+		frappe.db.commit()
 	return bericht.as_dict()
+
+
+# Standard-Preislisten in Selling/Buying Settings: ERPNext-Vorgabe -> Katalog-Preisliste
+_PREISLISTEN_EINSTELLUNG = (
+	("Selling Settings", "selling_price_list", "Standard Selling", "selling"),
+	("Buying Settings", "buying_price_list", "Standard Buying", "buying"),
+)
+
+
+def standard_preislisten(daten: dict | None = None, paket: str = "abdichtung") -> list[str]:
+	"""Katalog-Preislisten als Standard für neue Belege setzen (Befunde mvp-test).
+
+	Ohne das zieht ein neues Angebot im Desk die ERPNext-Vorgabe „Standard Selling“; die
+	Katalogpreise stehen aber in „Standard-Verkauf“, die Positionen bekommen 0,00 €. Ersetzt
+	wird nur ein leerer Wert oder die ERPNext-Vorgabe, nie eine bewusst gewählte Liste.
+	"""
+	daten = daten or lese_paket(paket)
+	changes = []
+	for einstellung, feld, erpnext_vorgabe, art in _PREISLISTEN_EINSTELLUNG:
+		name = next((p["price_list_name"] for p in daten["Price List"] if cint(p.get(art))), None)
+		if not name or not frappe.db.exists("Price List", name):
+			continue
+		aktuell = frappe.db.get_single_value(einstellung, feld)
+		if aktuell != name and aktuell in (None, "", erpnext_vorgabe):
+			frappe.db.set_single_value(einstellung, feld, name)
+			changes.append(f"{einstellung}: Standard-Preisliste {name} (statt {aktuell or 'leer'})")
+	return changes
 
 
 def _firma(firma: str | None, boms: list[dict]) -> str:

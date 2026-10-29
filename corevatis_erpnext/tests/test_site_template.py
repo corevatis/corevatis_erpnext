@@ -360,6 +360,64 @@ class TestSiteTemplate(IntegrationTestCase):
 		)
 		self.assertGreater(len(rates), 1)  # Grund für die Einstellung, siehe oben
 
+	def test_umsatzsteuer_eine_zeile(self):
+		# Befund mvp-test: Standardvorlage hatte zwei Zeilen (19 % und 7 %, Satz 0)
+		doctype = "Sales Taxes and Charges Template"
+		name = frappe.db.get_value(doctype, {"company": self.company, "is_default": 1})
+		doc = frappe.get_doc(doctype, name)
+		self.assertEqual(doc.title, "Umsatzsteuer 19 %")
+		self.assertEqual([(r.charge_type, flt(r.rate)) for r in doc.taxes], [("On Net Total", 19.0)])
+		self.assertTrue(doc.taxes[0].account_head.startswith("1776"), doc.taxes[0].account_head)
+		erpnext = frappe.db.get_value(
+			doctype, {"company": self.company, "title": "Lieferung oder sonstige Leistung im Inland"}
+		)
+		self.assertTrue(erpnext)  # bleibt wählbar (7-%-Belege)
+
+		frappe.db.savepoint("ust_eine_zeile")
+		try:
+			# Stand vor dem Fix: ERPNext-Vorlage ist Standard -> Template ersetzt sie
+			frappe.db.set_value(doctype, name, "is_default", 0)
+			frappe.db.set_value(doctype, erpnext, "is_default", 1)
+			report = apply_site_template(template="huelshoff", commit=False)
+			self.assertIn(f"Steuern: {name} als Standard gesetzt (statt {erpnext})", report["changes"])
+			self.assertEqual(frappe.db.get_value(doctype, {"company": self.company, "is_default": 1}), name)
+			# eigener Standard bleibt
+			frappe.db.set_value(doctype, name, "is_default", 0)
+			eigene = frappe.copy_doc(doc)
+			eigene.title = "_Test eigene Vorlage"
+			eigene.is_default = 1
+			eigene.insert(ignore_permissions=True)
+			self.assertEqual(apply_site_template(template="huelshoff", commit=False)["changes"], [])
+			self.assertEqual(
+				frappe.db.get_value(doctype, {"company": self.company, "is_default": 1}), eigene.name
+			)
+		finally:
+			frappe.db.rollback(save_point="ust_eine_zeile")
+
+	def test_patch_v0_4_idempotent(self):
+		from corevatis_erpnext.patches.v0_4 import angebot_steuern_druck
+
+		frappe.db.savepoint("patch_v0_4")
+		try:
+			angebot_steuern_druck.execute()
+			before = snapshot()
+			angebot_steuern_druck.execute()
+			self.assertEqual(snapshot(), before)
+			self.assertEqual(
+				frappe.db.get_value(
+					"Sales Taxes and Charges Template", {"company": self.company, "is_default": 1}, "title"
+				),
+				"Umsatzsteuer 19 %",
+			)
+			self.assertEqual(cint(frappe.db.get_single_value("Print Settings", "print_generated_pdf")), 1)
+		finally:
+			frappe.db.rollback(save_point="patch_v0_4")
+
+	def test_druckeinstellungen_und_crm(self):
+		self.assertEqual(cint(frappe.db.get_single_value("Print Settings", "print_generated_pdf")), 1)
+		if frappe.db.exists("Workspace", "CRM"):
+			self.assertEqual(cint(frappe.db.get_value("Workspace", "CRM", "is_hidden")), 1)
+
 	def test_invoice_and_credit_note_series(self):
 		from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
 

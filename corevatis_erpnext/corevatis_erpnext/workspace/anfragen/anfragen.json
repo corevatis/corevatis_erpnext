@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\": \"cvsc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Offene Anfragen\", \"col\": 3}}, {\"id\": \"cvsc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Anfragen nach Status\", \"col\": 3}}, {\"id\": \"cvsc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Neue Anfrage\", \"col\": 3}}, {\"id\": \"cvsc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Termine\", \"col\": 3}}, {\"id\": \"cvsc4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Web Form Anfrage\", \"col\": 3}}, {\"id\": \"cvsp0\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvcd0\", \"type\": \"card\", \"data\": {\"card_name\": \"Anfragen\", \"col\": 4}}, {\"id\": \"cvcd1\", \"type\": \"card\", \"data\": {\"card_name\": \"Einstellungen\", \"col\": 4}}]",
+ "content": "[{\"id\": \"cvnc0\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Neue Anfragen (7 Tage)\", \"col\": 4}}, {\"id\": \"cvnc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Offene Termine\", \"col\": 4}}, {\"id\": \"cvnc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Angebote offen\", \"col\": 4}}, {\"id\": \"cvsp1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvsc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Neue Anfrage\", \"col\": 3}}, {\"id\": \"cvsc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Offene Anfragen\", \"col\": 3}}, {\"id\": \"cvsc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Anfragen nach Status\", \"col\": 3}}, {\"id\": \"cvsc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Termine heute\", \"col\": 3}}, {\"id\": \"cvsc4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Termine\", \"col\": 3}}, {\"id\": \"cvsc5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Angebote\", \"col\": 3}}, {\"id\": \"cvsc6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Web Form Anfrage\", \"col\": 3}}, {\"id\": \"cvsp0\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvcd0\", \"type\": \"card\", \"data\": {\"card_name\": \"Anfragen\", \"col\": 3}}, {\"id\": \"cvcd1\", \"type\": \"card\", \"data\": {\"card_name\": \"Kunden\", \"col\": 3}}, {\"id\": \"cvcd2\", \"type\": \"card\", \"data\": {\"card_name\": \"Termine und Angebote\", \"col\": 3}}, {\"id\": \"cvcd3\", \"type\": \"card\", \"data\": {\"card_name\": \"Einstellungen\", \"col\": 3}}]",
  "creation": "2026-10-28 12:00:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -24,9 +24,61 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Lead",
+   "label": "Anfrage (Lead)",
    "link_count": 0,
    "link_to": "Lead",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Chance",
+   "link_count": 0,
+   "link_to": "Opportunity",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Potenzieller Kunde",
+   "link_count": 0,
+   "link_to": "Prospect",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Kampagne",
+   "link_count": 0,
+   "link_to": "Campaign",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Kunden",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Kunde",
+   "link_count": 0,
+   "link_to": "Customer",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -54,12 +106,31 @@
    "type": "Link"
   },
   {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Termine und Angebote",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
    "label": "Termin",
    "link_count": 0,
    "link_to": "Event",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Angebot",
+   "link_count": 0,
+   "link_to": "Quotation",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -106,11 +177,24 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-28 15:00:00.000000",
+ "modified": "2026-10-29 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Corevatis ERPNext",
  "name": "Anfragen",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Neue Anfragen (7 Tage)",
+   "number_card_name": "Neue Anfragen (7 Tage)"
+  },
+  {
+   "label": "Offene Termine",
+   "number_card_name": "Offene Termine"
+  },
+  {
+   "label": "Angebote offen",
+   "number_card_name": "Angebote offen"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
@@ -122,17 +206,27 @@
   },
   {
    "role": "Meister"
+  },
+  {
+   "role": "System Manager"
   }
  ],
- "sequence_id": 1.0,
+ "sequence_id": 0.0,
  "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "New",
+   "label": "Neue Anfrage",
+   "link_to": "Lead",
+   "type": "DocType"
+  },
   {
    "color": "Orange",
    "doc_view": "List",
    "label": "Offene Anfragen",
    "link_to": "Lead",
-   "stats_filter": "[[\"Lead\", \"cv_status\", \"not in\", [\"Gewonnen\", \"Verloren\"], false]]",
-   "type": "DocType"
+   "type": "DocType",
+   "stats_filter": "[[\"Lead\", \"cv_status\", \"not in\", [\"Gewonnen\", \"Verloren\"], false]]"
   },
   {
    "color": "Blue",
@@ -143,17 +237,25 @@
    "type": "DocType"
   },
   {
-   "color": "Green",
-   "doc_view": "New",
-   "label": "Neue Anfrage",
-   "link_to": "Lead",
-   "type": "DocType"
+   "color": "Cyan",
+   "doc_view": "List",
+   "label": "Termine heute",
+   "link_to": "Event",
+   "type": "DocType",
+   "stats_filter": "[[\"Event\", \"starts_on\", \"Timespan\", \"today\", false]]"
   },
   {
    "color": "Cyan",
    "doc_view": "Calendar",
    "label": "Termine",
    "link_to": "Event",
+   "type": "DocType"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "List",
+   "label": "Angebote",
+   "link_to": "Quotation",
    "type": "DocType"
   },
   {

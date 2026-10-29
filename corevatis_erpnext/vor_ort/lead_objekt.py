@@ -63,3 +63,31 @@ def after_app_install(app_name: str) -> None:
 def before_app_uninstall(app_name: str) -> None:
 	if app_name == CORE_APP:
 		remove_lead_objekt_field()
+
+
+def objekt_kunde_pruefen(doc, method=None) -> None:
+	"""``doc_events`` Objekt ``validate``: verknüpfter Kunde/Lead muss für den Benutzer lesbar sein.
+
+	Security-Review (MEDIUM): ``kunde`` ist ein Dynamic Link; ohne Prüfung könnte jeder, der ein
+	Objekt anlegen darf, beliebige Leads/Kunden verknüpfen (IDOR). Kein Import aus ``corevatis``.
+	"""
+	if doc.get("kunde_doctype") and doc.get("kunde"):
+		frappe.has_permission(doc.kunde_doctype, "read", doc.kunde, throw=True)
+
+
+def objekt_an_lead(doc, method=None) -> None:
+	"""``doc_events`` Objekt (``after_insert``/``on_update``): Objekt am Lead eintragen.
+
+	Befund mvp-test: Ein im Desk für einen Lead angelegtes Objekt (``kunde_doctype`` Lead)
+	stand nicht am Lead (``cv_objekt`` leer), obwohl das Feld „wird zum Vor-Ort-Termin
+	angelegt“ verspricht. Gesetzt wird nur ein leeres Feld; ein Lead mit anderem Objekt
+	bleibt unverändert. Der Benutzer braucht Schreibrecht auf den Lead (sonst 403, das
+	Speichern des Objekts wird zurückgerollt).
+	"""
+	if doc.get("kunde_doctype") != "Lead" or not doc.get("kunde"):
+		return
+	if not frappe.db.has_column("Lead", FIELDNAME) or not frappe.db.exists("Lead", doc.kunde):
+		return
+	if not frappe.db.get_value("Lead", doc.kunde, FIELDNAME):
+		frappe.has_permission("Lead", "write", doc.kunde, throw=True)
+		frappe.db.set_value("Lead", doc.kunde, FIELDNAME, doc.name)

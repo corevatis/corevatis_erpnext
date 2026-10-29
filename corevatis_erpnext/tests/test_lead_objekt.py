@@ -50,10 +50,38 @@ class TestLeadObjekt(IntegrationTestCase):
 				"module": "Corevatis ERPNext",
 				"custom": 1,
 				"autoname": "hash",
-				"fields": [{"fieldname": "titel", "fieldtype": "Data", "label": "Titel"}],
+				"fields": [
+					{"fieldname": "titel", "fieldtype": "Data", "label": "Titel"},
+					{"fieldname": "kunde_doctype", "fieldtype": "Link", "options": "DocType", "label": "Typ"},
+					{
+						"fieldname": "kunde",
+						"fieldtype": "Dynamic Link",
+						"options": "kunde_doctype",
+						"label": "Kunde",
+					},
+				],
 				"permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1}],
 			}
 		).insert(ignore_permissions=True)
+
+	def _benutzer_ohne_lead_recht(self) -> str:
+		"""Darf Objekte anlegen, hat aber kein Recht auf Leads."""
+		rolle = "_Test Objekt Erfasser"
+		if not frappe.db.exists("Role", rolle):
+			frappe.get_doc({"doctype": "Role", "role_name": rolle, "desk_access": 1}).insert(
+				ignore_permissions=True
+			)
+		meta = frappe.get_doc("DocType", OBJEKT_DOCTYPE)
+		meta.append("permissions", {"role": rolle, "read": 1, "write": 1, "create": 1})
+		meta.save(ignore_permissions=True)
+		email = "cv-test-objekt-erfasser@example.com"
+		if not frappe.db.exists("User", email):
+			frappe.get_doc(
+				{"doctype": "User", "email": email, "first_name": "Objekt Erfasser", "send_welcome_email": 0}
+			).insert(ignore_permissions=True)
+		user = frappe.get_doc("User", email)
+		user.add_roles(rolle)
+		return email
 
 	def test_ohne_kern_kein_feld(self):
 		self.assertFalse(lead_objekt.ensure_lead_objekt_field())
@@ -85,6 +113,34 @@ class TestLeadObjekt(IntegrationTestCase):
 		self.assertEqual(frappe.db.get_value("Lead", lead.name, FIELDNAME), objekt.name)
 		with self.assertRaises(frappe.LinkValidationError):
 			make_lead(**{FIELDNAME: "gibt-es-nicht"})
+		frappe.delete_doc("Lead", lead.name, force=True, ignore_permissions=True)
+
+		# Befund mvp-test: Objekt für einen Lead angelegt -> steht am Lead (doc_events Objekt)
+		lead = make_lead()
+		objekt = frappe.get_doc(
+			{"doctype": OBJEKT_DOCTYPE, "titel": "Lindenweg 5", "kunde_doctype": "Lead", "kunde": lead.name}
+		).insert(ignore_permissions=True)
+		self.assertEqual(frappe.db.get_value("Lead", lead.name, FIELDNAME), objekt.name)
+		# ein zweites Objekt überschreibt den Verweis nicht
+		frappe.get_doc(
+			{"doctype": OBJEKT_DOCTYPE, "titel": "Garage", "kunde_doctype": "Lead", "kunde": lead.name}
+		).insert(ignore_permissions=True)
+		self.assertEqual(frappe.db.get_value("Lead", lead.name, FIELDNAME), objekt.name)
+		frappe.delete_doc("Lead", lead.name, force=True, ignore_permissions=True)
+
+		# Security-Review: Benutzer ohne Recht auf den Lead -> 403, kein cv_objekt
+		lead = make_lead()
+		user = self._benutzer_ohne_lead_recht()
+		frappe.set_user(user)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				frappe.get_doc(
+					{"doctype": OBJEKT_DOCTYPE, "titel": "Fremd", "kunde_doctype": "Lead", "kunde": lead.name}
+				).insert()
+		finally:
+			frappe.set_user("Administrator")
+		self.assertIsNone(frappe.db.get_value("Lead", lead.name, FIELDNAME))
+		self.assertFalse(frappe.db.exists(OBJEKT_DOCTYPE, {"titel": "Fremd"}))
 		frappe.delete_doc("Lead", lead.name, force=True, ignore_permissions=True)
 
 		lead_objekt.before_app_uninstall("corevatis")

@@ -32,7 +32,7 @@ from datetime import date
 from pathlib import Path
 
 import frappe
-from frappe.utils import add_days, add_years, cint, getdate, today
+from frappe.utils import add_days, add_years, cint, flt, getdate, today
 from frappe.utils.nestedset import get_root_of
 
 from corevatis_erpnext.setup.config import TEMPLATE_DIR, find_placeholders, is_placeholder, load_config
@@ -126,6 +126,8 @@ def apply_site_template(
 	_ensure_company_address(cfg, company, report)
 	_ensure_letter_head(cfg, company, report)
 	_ensure_print_formats(cfg, report)
+	_ensure_print_settings(cfg, report)
+	_ensure_workspaces(cfg, report)
 	_ensure_erpnext_germany(cfg, report)
 
 	if commit:
@@ -363,18 +365,27 @@ def _ensure_taxes(cfg: dict, company: str, report: Report) -> None:
 			frappe.db.set_single_value("Accounts Settings", "add_taxes_from_item_tax_template", wanted)
 			report.change("Steuern", f"Accounts Settings add_taxes_from_item_tax_template={wanted}")
 
-	for doctype, title in (
-		("Sales Taxes and Charges Template", spec.get("default_sales_template")),
-		("Purchase Taxes and Charges Template", spec.get("default_purchase_template")),
+	chart = cfg["company"].get("chart_of_accounts")
+	for message in ensure_sales_tax_templates(company, chart, spec):
+		report.change("Steuern", message)
+
+	for doctype, title, replace in (
+		(
+			"Sales Taxes and Charges Template",
+			spec.get("default_sales_template"),
+			spec.get("replace_default_sales_templates") or (),
+		),
+		("Purchase Taxes and Charges Template", spec.get("default_purchase_template"), ()),
 	):
 		if not title:
 			continue
 		name = frappe.db.get_value(doctype, {"company": company, "title": title})
 		if not name:
 			report.warn("Steuern", f"{doctype} {title!r} fehlt")
-		elif not frappe.db.exists(doctype, {"company": company, "is_default": 1}):
-			frappe.db.set_value(doctype, name, "is_default", 1)
-			report.change("Steuern", f"{name} als Standard gesetzt")
+			continue
+		message = _set_default_template(doctype, company, name, replace)
+		if message:
+			report.change("Steuern", message)
 
 	for title in spec.get("item_tax_templates") or []:
 		if not frappe.db.exists("Item Tax Template", {"company": company, "title": title}):
@@ -401,6 +412,68 @@ def _ensure_taxes(cfg: dict, company: str, report: Report) -> None:
 	group.flags.ignore_mandatory = True
 	group.save(ignore_permissions=True)
 	report.change("Steuern", f"Artikelgruppe {root}: Standard-Artikelsteuer {template}")
+
+
+def skr_of(chart_name: str | None) -> str | None:
+	"""``SKR03``/``SKR04`` aus dem Kontenrahmen-Namen der Firma bzw. der Vorlage."""
+	for skr in SKR_ACCOUNTS:
+		if chart_name and chart_name.startswith(skr):
+			return skr
+	return None
+
+
+def ensure_sales_tax_templates(company: str, chart: str | None, spec: dict) -> list[str]:
+	"""Eigene Verkaufs-Steuervorlagen (``taxes.sales_templates``) für die Firma anlegen.
+
+	Hintergrund (Befunde mvp-test): Die deutsche ERPNext-Vorlage „Lieferung oder sonstige
+	Leistung im Inland“ hat zwei Zeilen (USt 19 % und 7 %, Satz 0); den Satz liefert erst die
+	Artikelsteuervorlage. Im Angebot stehen deshalb immer zwei Steuerzeilen, eine davon mit
+	0,00 €, und Artikel ohne Artikelsteuervorlage (z. B. einer zweiten Firma) bleiben ohne
+	Steuer. Die eigene Vorlage hat genau eine Zeile mit festem Satz. Bestehende Vorlagen
+	werden nicht geändert. Rückgabe: Änderungsmeldungen.
+	"""
+	skr = skr_of(chart) or skr_of(frappe.db.get_value("Company", company, "chart_of_accounts"))
+	if not skr:
+		return []
+	changes = []
+	for title, row in (spec.get("sales_templates") or {}).items():
+		if frappe.db.exists("Sales Taxes and Charges Template", {"company": company, "title": title}):
+			continue
+		account = account_by_number(company, SKR_ACCOUNTS[skr][row["account"]])
+		if not account:
+			continue
+		doc = frappe.get_doc(
+			{
+				"doctype": "Sales Taxes and Charges Template",
+				"title": title,
+				"company": company,
+				"taxes": [
+					{
+						"charge_type": "On Net Total",
+						"account_head": account,
+						"rate": row["rate"],
+						"description": row.get("description") or title,
+					}
+				],
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		changes.append(f"{doc.name} angelegt ({row['rate']} % auf {account})")
+	return changes
+
+
+def _set_default_template(doctype: str, company: str, name: str, replace=()) -> str | None:
+	"""``name`` zum Standard der Firma machen, wenn es keinen gibt oder der bisherige eine der
+	von ERPNext mitgelieferten Vorlagen aus ``replace`` ist (eigene Standards bleiben)."""
+	current = frappe.db.get_value(
+		doctype, {"company": company, "is_default": 1}, ["name", "title"], as_dict=True
+	)
+	if current and (current.name == name or current.title not in replace):
+		return None
+	if current:
+		frappe.db.set_value(doctype, current.name, "is_default", 0)
+	frappe.db.set_value(doctype, name, "is_default", 1)
+	return f"{name} als Standard gesetzt" + (f" (statt {current.name})" if current else "")
 
 
 def _ensure_naming_series(cfg: dict, report: Report) -> None:
@@ -712,6 +785,29 @@ def _ensure_print_formats(cfg: dict, report: Report) -> None:
 		report.change("Druckformate", f"{doctype}: Standard {print_format}")
 
 
+def _ensure_print_settings(cfg: dict, report: Report) -> None:
+	for field, value in (cfg.get("print_settings") or {}).items():
+		if not frappe.get_meta("Print Settings").has_field(field):
+			report.warn("Druckeinstellungen", f"Feld {field} unbekannt")
+			continue
+		if str(frappe.db.get_single_value("Print Settings", field)) != str(value):
+			frappe.db.set_single_value("Print Settings", field, value)
+			report.change("Druckeinstellungen", f"{field}={value}")
+
+
+def _ensure_workspaces(cfg: dict, report: Report) -> None:
+	"""Sichtbarkeit von (ERPNext-)Arbeitsbereichen, z. B. CRM ausblenden; ``is_hidden: 0`` nimmt
+	das zurück. Fehlende Arbeitsbereiche werden übersprungen."""
+	for name, values in (cfg.get("workspaces") or {}).items():
+		if not frappe.db.exists("Workspace", name):
+			report.skip("Arbeitsbereiche", f"{name} nicht vorhanden")
+			continue
+		for field, value in values.items():
+			if cint(frappe.db.get_value("Workspace", name, field)) != cint(value):
+				frappe.db.set_value("Workspace", name, field, cint(value))
+				report.change("Arbeitsbereiche", f"{name}: {field}={cint(value)}")
+
+
 def _is_custom_print_format(name: str | None) -> bool:
 	"""Eigenes (nicht von einer App geliefertes) Druckformat? Standardformate wie
 	„Quotation Classic“ (ERPNext setzt sie im Doctype als Standard) dürfen ersetzt werden."""
@@ -804,12 +900,22 @@ def _verify(cfg: dict) -> dict:
 			),
 		):
 			name = frappe.db.get_value(doctype, {"company": company, "title": title, "is_default": 1})
+			own = (taxes.get("sales_templates") or {}).get(title) if doctype.startswith("Sales") else None
+			if own:
+				keys = (own["account"],)
 			if check(f"{doctype} Standard {title!r}", name, name or "fehlt"):
-				heads = set(
-					frappe.get_all(doctype.replace(" Template", ""), {"parent": name}, pluck="account_head")
+				rows = frappe.get_all(
+					doctype.replace(" Template", ""), {"parent": name}, ["account_head", "rate"]
 				)
+				heads = {r.account_head for r in rows}
 				for key in keys:
 					check(f"{name}: Konto {numbers[key]}", accounts[key] in heads)
+				if own:
+					check(
+						f"{name}: genau eine Zeile mit {own['rate']} %",
+						len(rows) == 1 and flt(rows[0].rate) == flt(own["rate"]),
+						", ".join(f"{r.account_head} {r.rate}" for r in rows),
+					)
 		for title, key, rate in (("19 %", "ust19", 19), ("7 %", "ust7", 7)):
 			name = frappe.db.get_value("Item Tax Template", {"company": company, "title": title})
 			if check(f"Item Tax Template {title}", name, name or "fehlt"):
@@ -900,6 +1006,15 @@ def _verify(cfg: dict) -> dict:
 				current == print_format or (current and _is_custom_print_format(current)),
 				current or "leer",
 			)
+
+	for field, value in (cfg.get("print_settings") or {}).items():
+		got = frappe.db.get_single_value("Print Settings", field)
+		check(f"Druckeinstellung {field}", str(got) == str(value), str(got))
+	for name, values in (cfg.get("workspaces") or {}).items():
+		if frappe.db.exists("Workspace", name):
+			for field, value in values.items():
+				got = cint(frappe.db.get_value("Workspace", name, field))
+				check(f"Arbeitsbereich {name} {field}", got == cint(value), str(got))
 
 	settings = frappe.get_single("System Settings")
 	for field, value in (cfg.get("system_settings") or {}).items():

@@ -14,6 +14,18 @@ app_license = "GPL-3.0-only"
 # corevatis, keine gemeinsamen Datenklassen (docs/mvp-plan.md, Lizenzarchitektur).
 required_apps = ["erpnext"]
 
+# Kachel auf dem Startbildschirm (/desk): Einstieg „Anfragen“ (Befunde mvp-test: der Auftraggeber
+# fand „kein CRM“ - v16 zeigt nur Apps mit diesem Hook, der Arbeitsbereich war nur per URL erreichbar)
+add_to_apps_screen = [
+	{
+		"name": app_name,
+		"logo": "/assets/corevatis_erpnext/images/anfragen.svg",
+		"title": "Anfragen",
+		"route": "/app/anfragen",
+		"has_permission": "corevatis_erpnext.anfrage.setup.hat_anfragen_zugriff",
+	}
+]
+
 # Installation
 # ------------
 
@@ -67,6 +79,17 @@ doc_events = {
 	},
 	"Sales Invoice": {
 		"before_insert": "corevatis_erpnext.setup.naming.set_return_naming_series",
+	},
+	# Befunde mvp-test: Hinweis auf Positionen ohne Preis (falsche Preisliste)
+	"Quotation": {
+		"validate": "corevatis_erpnext.angebot.pruefung.positionen_ohne_preis",
+	},
+	# Befunde mvp-test: Objekt eines Leads am Lead eintragen (Lead.cv_objekt, 2.1);
+	# der Doctype Objekt kommt aus corevatis - ohne Kern greifen die Hooks nie
+	"Objekt": {
+		"validate": "corevatis_erpnext.vor_ort.lead_objekt.objekt_kunde_pruefen",
+		"after_insert": "corevatis_erpnext.vor_ort.lead_objekt.objekt_an_lead",
+		"on_update": "corevatis_erpnext.vor_ort.lead_objekt.objekt_an_lead",
 	},
 }
 

@@ -39,3 +39,4 @@ Name of the Leistungsregel (Corevatis) that calculates the quantity from the mea
 Quantity rule {0} does not exist.,Leistungsregel {0} existiert nicht.
 Unknown quantity rule,Unbekannte Leistungsregel
 Not permitted to use quantity rules.,Keine Berechtigung für Leistungsregeln.
+Get Items From,Positionen übernehmen aus
