@@ -27,6 +27,7 @@ from corevatis_erpnext.tests._helpers import make_lead, make_user
 FIRMA = "Hülshoff Sanierungstechnik"
 BUERO = "cv-angebot-buero@example.com"
 OHNE_ROLLE = "cv-angebot-sales@example.com"
+MONTEUR = "cv-angebot-monteur@example.com"
 
 # Herstellkosten je Einheit aus den Stücklisten (Katalog 2.3): Material, Minuten
 KOSTEN = {
@@ -443,3 +444,21 @@ class TestAngebotGenerator(IntegrationTestCase):
 		dateiname, pdf = mobil.angebot_pdf(a["angebot"])
 		self.assertEqual(dateiname, f"{a['angebot']}.pdf")
 		self.assertTrue(pdf.startswith(b"%PDF"))
+
+	def test_mobil_rechte(self):
+		"""Security-Review: Katalog nur für Büro/Meister; Summen nur mit Leserecht auf das Angebot."""
+		from corevatis_erpnext.angebot import mobil
+
+		make_user(MONTEUR, "Monteur Angebot", ["Monteur"])
+		frappe.set_user(MONTEUR)
+		with self.assertRaises(frappe.PermissionError):
+			mobil.katalog()
+		frappe.set_user("Administrator")
+		name = self.erzeugen()["angebot"]
+		with (
+			patch.object(generator, "erzeuge_angebot", return_value={"angebot": name, "neu": False}),
+			patch.object(frappe, "has_permission", return_value=False),
+		):
+			r = mobil.angebot_erzeugen("AUF-TEST-4.1")
+		self.assertEqual(r, {"angebot": name, "neu": False})  # ohne Leserecht keine Summen
+		self.assertIn("netto", mobil.angebot_erzeugen("AUF-TEST-4.1"))
