@@ -168,9 +168,7 @@ frappe.provide("corevatis_erpnext.prozess");
 				belege
 					.map(
 						(b) =>
-							`<div style="padding:6px 0"><a href="/app/${frappe.router.slug(b.doctype)}/${encodeURIComponent(
-								b.name
-							)}">${esc(__(b.doctype))} ${esc(b.name)}</a> <span class="text-muted">${esc(b.info)}</span></div>`
+							`<div style="padding:6px 0">${corevatis_erpnext.beleg_link(b.doctype, b.name, `${__(b.doctype)} ${b.name}`)} <span class="text-muted">${esc(b.info)}</span></div>`
 					)
 					.join("") +
 					(schritt.aktion
