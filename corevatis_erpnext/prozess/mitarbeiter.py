@@ -79,3 +79,90 @@ def ensure_mitarbeiter_bestand() -> None:
 			and name not in ("Administrator", "Guest")
 		):
 			ensure_mitarbeiter(name)
+
+
+# Issue #72: Das Büro liest Mitarbeiter (Wochenplan, Zuweisung), sieht aber keine persönlichen
+# Daten. Diese ERPNext-Felder liegen auf Berechtigungsstufe 1; dort dürfen nur System Manager und
+# HR Manager lesen und schreiben. Wer nur Stufe 0 hat, bekommt die Felder weder in Formular noch
+# API; beim Speichern bleiben ihre Werte unverändert (Frappe setzt sie auf den gespeicherten Stand).
+MITARBEITER_GESCHUETZT = (
+	"date_of_birth",
+	"gender",
+	"marital_status",
+	"blood_group",
+	"family_background",
+	"health_details",
+	"personal_email",
+	"permanent_accommodation_type",
+	"permanent_address",
+	"current_accommodation_type",
+	"current_address",
+	"bio",
+	"passport_number",
+	"date_of_issue",
+	"valid_upto",
+	"place_of_issue",
+	"salary_mode",
+	"salary_currency",
+	"ctc",
+	"bank_name",
+	"bank_ac_no",
+	"iban",
+	"education",
+	"external_work_history",
+	"internal_work_history",
+	"resignation_letter_date",
+	"relieving_date",
+	"reason_for_leaving",
+	"leave_encashed",
+	"encashment_date",
+	"held_on",
+	"new_workplace",
+	"feedback",
+	"scheduled_confirmation_date",
+	"final_confirmation_date",
+	"contract_end_date",
+	"notice_number_of_days",
+	"date_of_retirement",
+	"attendance_device_id",
+)
+PERMLEVEL_GESCHUETZT = 1
+ROLLEN_PERSONALDATEN = ("System Manager", "HR Manager")
+
+
+def ensure_mitarbeiter_felder_geschuetzt() -> list[str]:
+	"""Property Setter ``permlevel`` für die persönlichen Felder und Rechte auf Stufe 1 für
+	System Manager und HR Manager. Rückgabe: neu geschützte Felder."""
+	from frappe.custom.doctype.property_setter.property_setter import make_property_setter
+	from frappe.permissions import add_permission, update_permission_property
+
+	if not frappe.db.exists("DocType", "Employee"):
+		return []
+	meta = frappe.get_meta("Employee")
+	geaendert = []
+	for feld in MITARBEITER_GESCHUETZT:
+		df = meta.get_field(feld)
+		if not df or int(df.permlevel or 0) == PERMLEVEL_GESCHUETZT:
+			continue
+		ps = make_property_setter(
+			"Employee",
+			feld,
+			"permlevel",
+			PERMLEVEL_GESCHUETZT,
+			"Int",
+			validate_fields_for_doctype=False,
+		)
+		frappe.db.set_value("Property Setter", ps.name, "module", "Corevatis ERPNext", update_modified=False)
+		geaendert.append(feld)
+	for rolle in ROLLEN_PERSONALDATEN:
+		if not frappe.db.exists("Role", rolle):
+			continue
+		if not frappe.db.exists(
+			"Custom DocPerm", {"parent": "Employee", "role": rolle, "permlevel": PERMLEVEL_GESCHUETZT}
+		):
+			add_permission("Employee", rolle, PERMLEVEL_GESCHUETZT)
+			update_permission_property("Employee", rolle, PERMLEVEL_GESCHUETZT, "write", 1)
+			geaendert.append(f"docperm:{rolle}")
+	if geaendert:
+		frappe.clear_cache(doctype="Employee")
+	return geaendert

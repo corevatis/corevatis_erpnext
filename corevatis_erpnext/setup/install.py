@@ -134,9 +134,14 @@ def ensure_prozess() -> None:
 	# Durchstich D1 bis D3: Startseiten je Rolle, Modulsperren für Benutzer mit Fachrolle
 	ensure_desk()
 	# Durchstich A2: Benutzer mit Rolle Monteur/Meister bekommen automatisch einen Mitarbeiter
-	from corevatis_erpnext.prozess.mitarbeiter import ensure_mitarbeiter_bestand
+	from corevatis_erpnext.prozess.mitarbeiter import (
+		ensure_mitarbeiter_bestand,
+		ensure_mitarbeiter_felder_geschuetzt,
+	)
 
 	ensure_mitarbeiter_bestand()
+	# Issue #72: persönliche Mitarbeiterfelder nur für System Manager und HR Manager
+	ensure_mitarbeiter_felder_geschuetzt()
 
 
 def ensure_angebot_setup() -> None:

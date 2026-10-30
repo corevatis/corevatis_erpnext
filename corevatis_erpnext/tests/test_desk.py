@@ -155,3 +155,25 @@ class TestDesk(IntegrationTestCase):
 		self.assertEqual([o for o in options if o.strip()], ["ANG-.YYYY.-"])
 		options = (frappe.get_meta("Lead").get_field("naming_series").options or "").split("\n")
 		self.assertEqual([o for o in options if o.strip()], ["ANF-.YYYY.-"])
+
+	def test_buero_sieht_keine_personalfelder(self):
+		from corevatis_erpnext.prozess import mitarbeiter
+
+		mitarbeiter.ensure_mitarbeiter_felder_geschuetzt()
+		meta = frappe.get_meta("Employee")
+		self.assertEqual(meta.get_field("date_of_birth").permlevel, 1)
+		self.assertEqual(meta.get_field("iban").permlevel, 1)
+		self.assertEqual(meta.get_field("cv_fahrzeuglager").permlevel, 0)
+		_user(MONTEUR, ["Monteur"])
+		emp = frappe.db.get_value("Employee", {"user_id": MONTEUR}, "name")
+		_user(BUERO, ["Büro"])
+		frappe.set_user(BUERO)
+		doc = frappe.get_doc("Employee", emp)
+		doc.apply_fieldlevel_read_permissions()
+		self.assertIsNone(doc.get("date_of_birth"))
+		self.assertEqual(doc.employee_name, "test-desk-monteur")
+		frappe.set_user("Administrator")
+		# Administrator sieht alles
+		self.assertIsNotNone(frappe.get_doc("Employee", emp).get("date_of_birth"))
+		# zweiter Lauf ändert nichts
+		self.assertEqual(mitarbeiter.ensure_mitarbeiter_felder_geschuetzt(), [])
