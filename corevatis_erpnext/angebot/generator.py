@@ -27,6 +27,7 @@ statt ein zweites anzulegen; ``neu_erzeugen=1`` ersetzt Positionen und Werte ein
 from __future__ import annotations
 
 import json
+from decimal import Decimal, InvalidOperation
 
 import frappe
 from frappe import _
@@ -342,12 +343,112 @@ def _fehlertext(kalkulation: dict) -> str:
 	return "<br>".join(frappe.utils.escape_html(z) for z in zeilen) or _("Calculation failed.")
 
 
-def _zeile(p: dict) -> dict:
+# --------------------------------------------------------------------------- Wände je Position
+# Rückmeldung Mike 31.10.: Kunde und Büro müssen die Menge einer Position dem Grundriss zuordnen
+# können - dieselben Wand-IDs wie im Grundriss und im Aufmaß (W1 … aus dem Scan, A-D von Hand).
+
+GRUNDLAGE_FEST = "Menge vom Meister bestätigt"
+ART_NETTO = "Wandfläche netto"  # Aufmaßzeile mit dem Engine-Beitrag je Wand und Leistung (Kern 3.3)
+
+
+def _dezimal(wert) -> Decimal:
+	try:
+		d = Decimal(str(wert))
+	except (InvalidOperation, ValueError, TypeError):
+		return Decimal(0)
+	return d if d.is_finite() else Decimal(0)
+
+
+def _wand_id(eintrag: dict) -> tuple[str, str]:
+	"""(Raum, Wand) aus einem Engine-Beitrag (``id`` = ``Raum/Wand``, ``raum``)."""
+	wid = str(eintrag.get("id") or "")
+	raum = str(eintrag.get("raum") or "")
+	if raum and wid.startswith(raum + "/"):
+		return raum, wid[len(raum) + 1 :]
+	vorne, _sep, wand = wid.rpartition("/")
+	return raum or vorne, wand
+
+
+def waende_der_position(p: dict, kalkulation: dict, aufmass=None) -> list[tuple[str, list[str], Decimal]]:
+	"""Wände, aus denen die Menge einer Position kommt: ``[(Raum, [Wand, …], Menge des Raums)]`` in der
+	Reihenfolge des Aufmaßes (Wände im Umlauf des Grundrisses).
+
+	Quelle sind die Engine-Mengen je Wand: bei fester Menge (App) ``aufmass_mengen[item].waende`` aus
+	``kalkuliere`` (= ``aufmass.mengen`` der Mobile-API), bei einer Mengenregel die Beiträge der Wände
+	(``mengen.beitraege``, Quelle ``wand``). Rückfall (Kern ohne ``aufmass_mengen``): die Zeilen
+	„Wandfläche netto“ des Aufmaßes mit diesem Item. Wände mit Menge 0 zählen nicht."""
+	code = p.get("item_code")
+	eintraege: list[tuple[str, str, Decimal]] = []
+	fest = (kalkulation.get("aufmass_mengen") or {}).get(code) or {}
+	if p.get("mengen"):
+		for b in p["mengen"].get("beitraege") or []:
+			if b.get("quelle") == "wand":
+				eintraege.append((*_wand_id(b), _dezimal(b.get("menge"))))
+	elif fest.get("waende"):
+		for w in fest["waende"]:
+			eintraege.append((*_wand_id(w), _dezimal(w.get("menge"))))
+	elif aufmass is not None:
+		for z in aufmass.get("positionen") or []:
+			if z.get("art") == ART_NETTO and z.get("item_code") == code and z.get("wand"):
+				eintraege.append((z.get("raum") or "", z.get("wand"), _dezimal(z.get("menge"))))
+	je_raum: dict[str, tuple[list[str], Decimal]] = {}
+	for raum, wand, menge in eintraege:
+		if not wand or not menge:
+			continue
+		waende, summe = je_raum.get(raum, ([], Decimal(0)))
+		if wand not in waende:
+			waende.append(wand)
+		je_raum[raum] = (waende, summe + menge)
+	return [(raum, waende, summe) for raum, (waende, summe) in je_raum.items()]
+
+
+def _zahl_de(wert: Decimal) -> str:
+	return f"{wert.quantize(Decimal('0.01')):,.2f}".replace(",", " ").replace(".", ",").replace(" ", ".")
+
+
+def waende_text(waende: list[tuple[str, list[str], Decimal]], einheit: str | None) -> str | None:
+	"""``cv_waende``: je Raum eine Zeile „Wohnzimmer: W1, W2, W5 · 23,32 m²“."""
+	zeilen = [
+		f"{raum or 'ohne Raum'}: {', '.join(w)} · {_zahl_de(summe)}{f' {einheit}' if einheit else ''}"
+		for raum, w, summe in waende
+	]
+	return "\n".join(zeilen) or None
+
+
+def grundlage_text(waende: list[tuple[str, list[str], Decimal]], fest: bool) -> str | None:
+	"""Zeile unter dem Langtext im Druck: „Grundlage: Wohnzimmer W1, W2, W5; Keller 1 A, C“, bei fester
+	Menge dazu „Menge vom Meister bestätigt“."""
+	teile = []
+	if waende:
+		teile.append(
+			"Grundlage: "
+			+ "; ".join(" ".join(t for t in (raum, ", ".join(w)) if t) for raum, w, _m in waende)
+		)
+	if fest:
+		teile.append(GRUNDLAGE_FEST)
+	return ". ".join(teile) + "." if teile else None
+
+
+def _beschreibung(item_code: str, grundlage: str | None) -> str | None:
+	"""Langtext des Items plus Absatz „Grundlage …“ (Druckformat „Angebot Corevatis“: unter dem
+	Langtext); ohne Grundlage ``None`` - dann setzt ERPNext die Beschreibung des Items wie bisher."""
+	if not grundlage:
+		return None
+	text = frappe.db.get_value("Item", item_code, ["description", "item_name"], as_dict=True) or {}
+	basis = (text.get("description") or "").strip()
+	if frappe.utils.strip_html_tags(basis).strip() == (text.get("item_name") or "").strip():
+		basis = ""  # Langtext wiederholt nur den Kurztext - im Druck steht dann nur die Grundlage
+	return f'{basis}<p class="cv-grundlage">{frappe.utils.escape_html(grundlage)}</p>'
+
+
+def _zeile(p: dict, kalkulation: dict | None = None, aufmass=None) -> dict:
 	mengen = p.get("mengen") or {}
 	herkunft = p.get("herkunft") or {}
 	raeume = [r["raum"] for r in mengen.get("je_raum") or [] if r.get("raum") and flt(r.get("menge"))]
 	bauteile = [b.get("bauteil") for b in mengen.get("beitraege") or [] if flt(b.get("menge"))]
-	return {
+	waende = waende_der_position(p, kalkulation or {}, aufmass)
+	fest = p.get("menge_quelle") == "fest"
+	zeile = {
 		"item_code": p["item_code"],
 		"qty": flt(p["menge"]),
 		"uom": p["einheit"],
@@ -358,7 +459,12 @@ def _zeile(p: dict) -> dict:
 		"cv_aufmass_position": _kurz(herkunft.get("aufmass_positionen") or []),
 		"cv_mengen_herkunft": p.get("mengen_herkunft"),
 		"cv_einzelkosten": flt(p["kalkulation"]["herstellkosten"]),
+		"cv_waende": waende_text(waende, p.get("einheit")),
 	}
+	beschreibung = _beschreibung(p["item_code"], grundlage_text(waende, fest))
+	if beschreibung:
+		zeile["description"] = beschreibung
+	return zeile
 
 
 def angebot_fuellen(doc, aufmass, kalkulation: dict, quotation_to: str, party: str, firma: str) -> None:
@@ -389,7 +495,7 @@ def angebot_fuellen(doc, aufmass, kalkulation: dict, quotation_to: str, party: s
 	textbausteine.texte_einsetzen(doc)
 	doc.set("items", [])
 	for p in kalkulation["positionen"]:
-		doc.append("items", _zeile(p))
+		doc.append("items", _zeile(p, kalkulation, aufmass))
 	# Befund mvp-test Nr. 4: per REST/Server angelegte Angebote bekamen keine Steuerzeilen
 	vorlage = _steuervorlage(firma)
 	doc.taxes_and_charges = vorlage

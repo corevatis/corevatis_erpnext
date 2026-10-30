@@ -6,6 +6,15 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Geändert (Wand-Bezeichnungen, Rückmeldung 31.10.)
+
+- Angebotsgenerator: jede Position nennt die Wände des Grundrisses, aus denen ihre Menge kommt –
+  neues Feld `Quotation Item.cv_waende` („Keller L: W1, W3, W5, W6 · 19,65 m²“ je Raum) und im
+  Langtext ein Absatz „Grundlage: Keller L W1, W3, W5, W6; Keller 1 A, C, D.“ (Druckformat „Angebot
+  Corevatis“ druckt ihn unter dem Langtext); bei fester Menge „Menge vom Meister bestätigt.“ Quelle:
+  Engine-Beiträge je Wand (`mengen.beitraege` bzw. `aufmass_mengen` des Kerns), Rückfall die Zeilen
+  „Wandfläche netto“ des Aufmaßes.
+
 ### Hinzugefügt (Durchstich A1: Besichtigung in der App bis zum Angebot)
 
 - `corevatis_erpnext.angebot.mobil` für die App, vom Kern über den Hook `corevatis_angebot_adapter`
