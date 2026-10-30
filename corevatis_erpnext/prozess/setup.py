@@ -157,7 +157,24 @@ def ensure_lead_formular() -> list[str]:
 	return geaendert
 
 
-# Startkachel „Meine Baustellen“ (hooks.add_to_apps_screen); „Vorgänge“ nutzt
-# anfrage.setup.hat_anfragen_zugriff (Büro, Meister, System Manager)
+# Startkachel (hooks.add_to_apps_screen): v16 zeigt je App nur den ersten Eintrag, deshalb eine
+# Kachel für Büro, Meister, System Manager und Monteur; /cv_start leitet je Rolle weiter
+ROUTE_VORGAENGE = "/app/vorgänge"
+ROUTE_BAUSTELLEN = "/app/meine-baustellen"
+
+
+def hat_startkachel_zugriff() -> bool:
+	return bool(set((*ROLLEN_VORGAENGE, *ROLLEN_BAUSTELLE)) & set(frappe.get_roles()))
+
+
 def hat_baustellen_zugriff() -> bool:
 	return "Monteur" in frappe.get_roles()
+
+
+def ziel_startseite() -> str:
+	rollen = set(frappe.get_roles())
+	if frappe.session.user == "Administrator" or rollen & set(ROLLEN_VORGAENGE):
+		return ROUTE_VORGAENGE
+	if rollen & set(ROLLEN_BAUSTELLE):
+		return ROUTE_BAUSTELLEN
+	return "/desk"

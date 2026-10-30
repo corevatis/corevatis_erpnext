@@ -754,8 +754,11 @@ def verantwortlich(k: frappe._dict, aktuell: str | None) -> str | None:
 	if aktuell in ("termin", "aufmass") and k.meister:
 		return k.meister
 	if k.lead:
-		owner = k.lead.get("lead_owner") or k.lead.get("owner")
-		return owner if owner != "Administrator" else k.lead.get("lead_owner")
+		# Web-Form-Anfragen gehören „Guest“: kein Verantwortlicher, bis das Büro einen setzt
+		for user in (k.lead.get("lead_owner"), k.lead.get("owner")):
+			if user and user not in ("Administrator", "Guest"):
+				return user
+		return None
 	for zeilen in (k.auftraege, k.angebote):
 		if zeilen:
 			return zeilen[-1].get("owner")
