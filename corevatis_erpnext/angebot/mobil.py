@@ -32,6 +32,8 @@ def _kurztext(text: str | None) -> str | None:
 
 
 def katalog() -> list[dict]:
+	# Security-Review: Katalog (Items, Stücklisten) nur für Büro/Meister, wie der Generator
+	frappe.only_for(generator.ROLLEN)
 	firma = generator._standardfirma()
 	mit_stueckliste = set(
 		frappe.get_all(
@@ -72,7 +74,8 @@ def katalog() -> list[dict]:
 def angebot_erzeugen(aufmass: str, neu_erzeugen=0) -> dict:
 	ergebnis = generator.erzeuge_angebot(aufmass, neu_erzeugen=cint(neu_erzeugen))
 	name = ergebnis.get("angebot")
-	if name:
+	# Security-Review: Status und Summen nur mit Leserecht auf das Angebot
+	if name and frappe.has_permission("Quotation", "read", doc=name):
 		werte = frappe.db.get_value(
 			"Quotation", name, ["status", "docstatus", "net_total", "grand_total"], as_dict=True
 		)
