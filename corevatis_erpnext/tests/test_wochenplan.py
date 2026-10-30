@@ -471,7 +471,9 @@ class TestWochenplan(IntegrationTestCase):
 		self.assertEqual(f(um(m, "18:00"), um(m, "20:00"), 2, "07:00:00", 8, set()), {m: 2.0})
 		# ohne Ende, ohne Stunden, ohne Beginn
 		self.assertEqual(f(um(m, "07:00"), None, 3, "07:00:00", 8, set()), {m: 3.0})
-		self.assertEqual(f(um(m, "07:00"), um(m, "15:00"), 0, "07:00:00", 8, set()), {})
+		# ohne Sollstunden sichtbar mit 0 h; nur Datum ohne Ende = ganzer Tag
+		self.assertEqual(f(um(m, "07:00"), um(m, "15:00"), 0, "07:00:00", 8, set()), {m: 0.0})
+		self.assertEqual(f(um(m), None, 4, "07:00:00", 8, set()), {m: 4.0})
 		self.assertEqual(f(None, um(m, "15:00"), 8, "07:00:00", 8, set()), {})
 		# Zeitplan aus 5.1 (Team 2): 20,59 h ab Mo 08:30 bis Di 10:47:42 → 6,5 h + 3,795 h Uhrzeit
 		v = f(

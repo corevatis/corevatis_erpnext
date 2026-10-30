@@ -55,9 +55,11 @@ def arbeitstage(von: dt.date, bis: dt.date, freie: set) -> list[dt.date]:
 def stunden_je_tag(
 	start, ende, stunden: float, arbeitsbeginn: str, tagesstunden: float, freie: set
 ) -> dict[dt.date, float]:
-	"""Stunden einer Task je Arbeitstag, anteilig nach der Überschneidung mit dem Arbeitstag."""
-	stunden = flt(stunden)
-	if not start or stunden <= 0:
+	"""Stunden einer Task je Arbeitstag, anteilig nach der Überschneidung mit dem Arbeitstag.
+
+	Ohne Sollstunden erscheint die Task mit 0 h an ihren Tagen (sichtbar, ohne Last)."""
+	stunden = max(flt(stunden), 0.0)
+	if not start:
 		return {}
 	start = get_datetime(start)
 	ende = get_datetime(ende) if ende else start
@@ -197,6 +199,7 @@ def plan(von=None, projekt: str | None = None, mitarbeiter: str | None = None) -
 			t.exp_start_date, t.exp_end_date, stunden, e.arbeitsbeginn, e.tagesarbeitszeit, freie
 		)
 		verteilung = {tag: h for tag, h in verteilung.items() if tag in im_zeitraum}
+		# ohne Termin oder außerhalb des Zeitraums: nicht im Plan
 		if not verteilung:
 			continue
 		pakete.append(

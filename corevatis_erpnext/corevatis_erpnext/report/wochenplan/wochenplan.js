@@ -44,7 +44,8 @@
 			}
 			const tag = column.fieldname && column.fieldname.startsWith("d_");
 			if ((tag || column.fieldname === "summe") && !value) {
-				return "";
+				// Arbeitspaket ohne Sollstunden an seinen Tagen: 0 zeigen, sonst leer
+				return tag && data.indent === 1 && value === 0 ? `<span class="text-muted">0</span>` : "";
 			}
 			if (column.fieldname === "aktion") {
 				return data.typ === "task" && data.task
