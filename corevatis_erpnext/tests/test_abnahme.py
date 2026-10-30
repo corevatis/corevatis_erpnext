@@ -129,8 +129,15 @@ class TestAbnahme(IntegrationTestCase):
 			raise unittest.SkipTest("corevatis installiert - die Stellvertreter-Doctypes würden kollidieren")
 		_stellvertreter()
 		ensure_abnahme_felder()
-		make_user(BUERO, "Berta", ["Büro", "Sales User", "Accounts User", "Projects User"], "Büro")
-		make_user(MEISTER, "Martin", ["Meister", "Sales User", "Projects User"], "Meister")
+		make_user(
+			BUERO,
+			"Berta",
+			["Büro", "Sales User", "Accounts User", "Projects User", "Projects Manager"],
+			"Büro",
+		)
+		make_user(
+			MEISTER, "Martin", ["Meister", "Sales User", "Projects User", "Projects Manager"], "Meister"
+		)
 		make_user(MONTEUR, "Mona", ["Monteur"], "Monteur")
 		td.ensure_felder_41()
 		td.ensure_artikel()
@@ -421,3 +428,66 @@ class TestAbnahme(IntegrationTestCase):
 		self.assertIn("corevatis_erpnext.abnahme.rechnung_pruefen", events["Sales Invoice"]["validate"])
 		self.assertIn("corevatis_erpnext.abnahme.projekt_validieren", events["Project"]["validate"])
 		self.assertTrue(frappe.db.exists("DocType", EINSTELLUNGEN))
+
+	# --- Security-Review --------------------------------------------------------------------
+
+	def test_task_herkunft_nicht_faelschbar(self):
+		doc = self.abschliessen(
+			self.protokoll(maengel=[("Riss", add_days(today(), 7)), ("Fleck", add_days(today(), 7))])
+		)
+		echt = frappe.get_doc("Task", doc.maengel[0].task)
+		# neuer Task mit gefälschter Herkunft: Felder verworfen, Zeile bleibt offen
+		falsch = frappe.get_doc(
+			{
+				"doctype": "Task",
+				"subject": "fremd",
+				"project": self.projekt,
+				"cv_abnahmeprotokoll": doc.name,
+				"cv_mangel_zeile": doc.maengel[1].name,
+			}
+		)
+		_als(MEISTER, falsch.insert)
+		self.assertFalse(falsch.cv_abnahmeprotokoll or falsch.cv_mangel_zeile)
+		falsch.status = "Completed"
+		_als(MEISTER, falsch.save)
+		doc.reload()
+		self.assertEqual(doc.maengel[1].status, K.MANGEL_OFFEN)
+		# echter Task: Zeile umhängen wird verworfen
+		echt.cv_mangel_zeile = doc.maengel[1].name
+		_als(MEISTER, echt.save)
+		self.assertEqual(frappe.db.get_value("Task", echt.name, "cv_mangel_zeile"), doc.maengel[0].name)
+		# an der Prüfung vorbei gesetzte Herkunft (DB) zählt nicht: Zeile verweist auf einen anderen Task
+		frappe.db.set_value(
+			"Task",
+			falsch.name,
+			{"cv_abnahmeprotokoll": doc.name, "cv_mangel_zeile": doc.maengel[1].name, "status": "Open"},
+		)
+		falsch.reload()
+		falsch.status = "Completed"
+		_als(MEISTER, falsch.save)
+		doc.reload()
+		self.assertEqual(doc.maengel[1].status, K.MANGEL_OFFEN)
+
+	def test_behoben_erledigt_nur_eigenen_task(self):
+		doc = self.abschliessen(self.protokoll(maengel=[("Riss", add_days(today(), 7))]))
+		fremd = frappe.get_doc(
+			{"doctype": "Task", "subject": "fremder Task", "project": self.projekt}
+		).insert()
+		echt = doc.maengel[0].task
+		# Zeile zeigt (an der Prüfung vorbei) auf einen fremden Task: der fremde bleibt offen
+		frappe.db.set_value(K.ABNAHME_MANGEL, doc.maengel[0].name, "task", fremd.name)
+		doc.reload()
+		doc.maengel[0].status = K.MANGEL_BEHOBEN
+		_als(MEISTER, doc.save)
+		self.assertEqual(frappe.db.get_value("Task", fremd.name, "status"), "Open")
+		self.assertEqual(frappe.db.get_value("Task", echt, "status"), "Completed")
+
+	def test_abschluss_nur_mit_schreibrecht_am_projekt(self):
+		doc = self.protokoll(maengel=[("Riss", add_days(today(), 7))])
+		with patch.object(abnahme, "darf_projekt_schreiben", return_value=False):
+			with self.assertRaises(frappe.PermissionError):
+				self.abschliessen(doc)
+		doc.reload()
+		self.assertEqual(doc.status, K.STATUS_ENTWURF)
+		self.assertEqual(self.tasks(doc), [])
+		self.assertFalse(frappe.db.get_value("Project", self.projekt, "cv_abgenommen_am"))

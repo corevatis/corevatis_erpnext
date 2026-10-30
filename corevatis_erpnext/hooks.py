@@ -144,9 +144,11 @@ doc_events = {
 	# Doctype, ohne Kern greift der Hook nie); erledigter Mangel-Task -> Mangelzeile „Behoben“;
 	# Abnahme-/Gewährleistungsfelder am Projekt nur vom Server
 	"Abnahmeprotokoll": {
+		"validate": "corevatis_erpnext.abnahme.protokoll_pruefen",
 		"on_update": "corevatis_erpnext.abnahme.protokoll_aktualisiert",
 	},
 	"Task": {
+		"validate": "corevatis_erpnext.abnahme.task_pruefen",
 		"on_update": "corevatis_erpnext.abnahme.task_aktualisiert",
 	},
 	"Project": {

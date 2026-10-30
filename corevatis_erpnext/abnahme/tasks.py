@@ -99,6 +99,7 @@ def maengel_tasks_anlegen(doc, ignore_permissions: bool = True) -> list[dict]:
 					"cv_mangel_zeile": zeile.name,
 				}
 			)
+			t.flags.cv_abnahme_intern = True  # Herkunftsfelder setzt nur dieser Weg (task_pruefen)
 			t.insert(ignore_permissions=ignore_permissions)
 			task = t.name
 		if zeile.get("task") != task:
@@ -111,10 +112,16 @@ def maengel_tasks_anlegen(doc, ignore_permissions: bool = True) -> list[dict]:
 def behobene_tasks_erledigen(doc) -> None:
 	"""Mangelzeile im Protokoll auf „Behoben“ gesetzt: offenen Task erledigen."""
 	for zeile in doc.get("maengel") or []:
-		if zeile.get("status") != K.MANGEL_BEHOBEN or not zeile.get("task"):
+		if zeile.get("status") != K.MANGEL_BEHOBEN:
 			continue
-		if frappe.db.get_value("Task", zeile.task, "status") in TASK_OFFEN:
-			task = frappe.get_doc("Task", zeile.task)
+		# nicht der Zeile vertrauen: den Task über seine (nur vom Server gesetzte) Herkunft suchen
+		# und mit dem Projekt des Protokolls abgleichen (Security-Review)
+		name = _vorhandener_task(doc.name, zeile.name)
+		if not name:
+			continue
+		werte = frappe.db.get_value("Task", name, ["status", "project"], as_dict=True)
+		if werte.project == doc.projekt and werte.status in TASK_OFFEN:
+			task = frappe.get_doc("Task", name)
 			task.status = "Completed"
 			task.flags.cv_aus_abnahme = True
 			task.save(ignore_permissions=True)
@@ -136,6 +143,19 @@ def _mangel_status(protokoll: str, zeile: str, behoben: bool, quelle: str) -> No
 	)
 
 
+def task_pruefen(doc, method=None) -> None:
+	"""``Task.validate``: ``cv_abnahmeprotokoll``/``cv_mangel_zeile`` setzt nur der Server
+	(``maengel_tasks_anlegen``); Werte aus Desk/REST werden auf den gespeicherten Stand
+	zurückgesetzt (bei neuen Tasks leer). Sonst könnte ein beliebiger Task eine fremde Mangelzeile
+	auf „Behoben“ setzen (Security-Review)."""
+	if doc.flags.cv_abnahme_intern or not doc.meta.has_field("cv_abnahmeprotokoll"):
+		return
+	felder = ("cv_abnahmeprotokoll", "cv_mangel_zeile")
+	gespeichert = {} if doc.is_new() else (frappe.db.get_value("Task", doc.name, felder, as_dict=True) or {})
+	for feld in felder:
+		doc.set(feld, gespeichert.get(feld))
+
+
 def task_aktualisiert(doc, method=None) -> None:
 	"""``Task.on_update``: Status des Mangel-Tasks → Mangelzeile im Protokoll."""
 	protokoll, zeile = doc.get("cv_abnahmeprotokoll"), doc.get("cv_mangel_zeile")
@@ -152,6 +172,11 @@ def task_aktualisiert(doc, method=None) -> None:
 	else:
 		return
 	if not frappe.db.exists("DocType", K.ABNAHMEPROTOKOLL):
+		return
+	# nur der echte Mangel-Task dieser Zeile, am Projekt des Protokolls (Security-Review)
+	if frappe.db.get_value(K.ABNAHME_MANGEL, {"name": zeile, "parent": protokoll}, "task") != doc.name:
+		return
+	if frappe.db.get_value(K.ABNAHMEPROTOKOLL, protokoll, "projekt") != doc.project:
 		return
 	frappe.db.savepoint("cv_abnahme_task")
 	try:

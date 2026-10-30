@@ -31,6 +31,7 @@ from corevatis_erpnext.abnahme.tasks import (
 	maengel_tasks_anlegen,
 	maengel_tasks_erzeugen,
 	task_aktualisiert,
+	task_pruefen,
 )
 
 
@@ -55,6 +56,28 @@ def _schritt(doc, funktion, bezeichnung: str, *args) -> None:
 		)
 
 
+def darf_projekt_schreiben(projekt: str) -> bool:
+	return bool(frappe.has_permission("Project", "write", doc=projekt))
+
+
+def protokoll_pruefen(doc, method=None) -> None:
+	"""``Abnahmeprotokoll.validate``: Abschluss und Wiederöffnen ändern Tasks und Abnahmefelder des
+	Projekts - nur mit Schreibrecht am Projekt (Security-Review). Das Projekt eines einmal
+	abgeschlossenen Protokolls ist im Kern unveränderlich."""
+	vorher = doc.get_doc_before_save()
+	alt = vorher.get("status") if vorher is not None else K.STATUS_ENTWURF
+	if alt == doc.get("status") and not (doc.is_new() and doc.get("status") == K.STATUS_ABGESCHLOSSEN):
+		return
+	projekt = doc.get("projekt")
+	if projekt and frappe.db.exists("Project", projekt) and not darf_projekt_schreiben(projekt):
+		frappe.throw(
+			_("Abschließen oder Wiederöffnen der Abnahme braucht Schreibrecht am Projekt {0}.").format(
+				projekt
+			),
+			frappe.PermissionError,
+		)
+
+
 def protokoll_aktualisiert(doc, method=None) -> None:
 	"""``Abnahmeprotokoll.on_update``: Mangel-Tasks und Abnahme am Projekt."""
 	vorher = doc.get_doc_before_save()
@@ -63,6 +86,10 @@ def protokoll_aktualisiert(doc, method=None) -> None:
 	if not (abgeschlossen or war_abgeschlossen):
 		return
 	if not doc.get("projekt") or not frappe.db.exists("Project", doc.projekt):
+		return
+	# Seiteneffekte am Projekt (Tasks, Abnahmefelder) nur mit Schreibrecht am Projekt; Statuswechsel
+	# ohne dieses Recht lehnt protokoll_pruefen schon ab (Security-Review)
+	if not darf_projekt_schreiben(doc.projekt):
 		return
 	if abgeschlossen:
 		e = einstellungen()
@@ -80,6 +107,8 @@ __all__ = [
 	"maengel_tasks_erzeugen",
 	"projekt_validieren",
 	"protokoll_aktualisiert",
+	"protokoll_pruefen",
 	"rechnung_pruefen",
 	"task_aktualisiert",
+	"task_pruefen",
 ]
