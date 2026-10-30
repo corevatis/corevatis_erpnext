@@ -76,6 +76,8 @@ doctype_js = {
 	"Task": ["public/js/zuweisung.js", "public/js/task_zuweisung.js"],
 	"Objekt": [_PROZESSLEISTE],
 	"Sales Invoice": [_PROZESSLEISTE],
+	# Abnahme (6.1): Doctype aus corevatis, ohne Kern lädt es nie; „Mangel-Aufgaben erzeugen“
+	"Abnahmeprotokoll": ["public/js/abnahme.js", _PROZESSLEISTE],
 }
 
 # Verbindungen: Angebote am Objekt und am Aufmaß (Kern-Doctypes, Quotation.cv_objekt/cv_aufmass);
@@ -107,6 +109,10 @@ doc_events = {
 	},
 	"Sales Invoice": {
 		"before_insert": "corevatis_erpnext.setup.naming.set_return_naming_series",
+		# 6.2: Rechnung zu einem Projekt ohne Abnahme ablehnen (außer Abschlag/Übersteuerung)
+		"validate": "corevatis_erpnext.abnahme.rechnung_pruefen",
+		"on_update": "corevatis_erpnext.abnahme.rechnung.rechnung_kommentar",
+		"on_submit": "corevatis_erpnext.abnahme.rechnung.rechnung_kommentar",
 	},
 	# Befunde mvp-test: Hinweis auf Positionen ohne Preis (falsche Preisliste)
 	# Angebotsdruck (4.3): Textbausteine in leere Felder, Eventual-/Alternativpositionen
@@ -134,6 +140,20 @@ doc_events = {
 	},
 	# Befunde mvp-test: Objekt eines Leads am Lead eintragen (Lead.cv_objekt, 2.1);
 	# der Doctype Objekt kommt aus corevatis - ohne Kern greifen die Hooks nie
+	# Abnahme (6.1/6.2): Mangel-Tasks und Abnahme am Projekt beim Abschluss des Protokolls (Kern-
+	# Doctype, ohne Kern greift der Hook nie); erledigter Mangel-Task -> Mangelzeile „Behoben“;
+	# Abnahme-/Gewährleistungsfelder am Projekt nur vom Server
+	"Abnahmeprotokoll": {
+		"validate": "corevatis_erpnext.abnahme.protokoll_pruefen",
+		"on_update": "corevatis_erpnext.abnahme.protokoll_aktualisiert",
+	},
+	"Task": {
+		"validate": "corevatis_erpnext.abnahme.task_pruefen",
+		"on_update": "corevatis_erpnext.abnahme.task_aktualisiert",
+	},
+	"Project": {
+		"validate": "corevatis_erpnext.abnahme.projekt_validieren",
+	},
 	"Objekt": {
 		"validate": "corevatis_erpnext.vor_ort.lead_objekt.objekt_kunde_pruefen",
 		"after_insert": "corevatis_erpnext.vor_ort.lead_objekt.objekt_an_lead",

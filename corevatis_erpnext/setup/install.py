@@ -56,6 +56,7 @@ def after_install() -> None:
 	ensure_planung_setup()
 
 	ensure_prozess()
+	ensure_abnahme()
 
 
 def after_migrate() -> None:
@@ -105,6 +106,14 @@ def after_migrate() -> None:
 	from corevatis_erpnext.material import ensure_setup as ensure_material
 
 	ensure_material()
+	# Abnahme (6.1/6.2): Task/Project/Sales Invoice-Felder
+	ensure_abnahme()
+
+
+def ensure_abnahme() -> None:
+	from corevatis_erpnext.abnahme.felder import ensure_abnahme_felder
+
+	ensure_abnahme_felder()
 
 
 def ensure_planung_setup() -> None:

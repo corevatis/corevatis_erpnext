@@ -1,0 +1,107 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-30 18:00:00.000000",
+ "description": "Settings for acceptance protocols: contract basis and warranty period, defect tasks, invoice release (Corevatis)",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "fields": [
+  {
+   "fieldname": "gewaehrleistung_section",
+   "fieldtype": "Section Break",
+   "label": "Warranty"
+  },
+  {
+   "default": "BGB",
+   "description": "Used when the project has no contract basis of its own.",
+   "fieldname": "vertragsgrundlage",
+   "fieldtype": "Select",
+   "label": "Default Contract Basis",
+   "options": "BGB\nVOB/B"
+  },
+  {
+   "default": "5",
+   "fieldname": "gewaehrleistung_bgb_jahre",
+   "fieldtype": "Int",
+   "label": "Warranty Years (BGB)",
+   "non_negative": 1
+  },
+  {
+   "default": "4",
+   "fieldname": "gewaehrleistung_vob_jahre",
+   "fieldtype": "Int",
+   "label": "Warranty Years (VOB/B)",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "maengel_section",
+   "fieldtype": "Section Break",
+   "label": "Defects and Invoicing"
+  },
+  {
+   "default": "1",
+   "description": "When an acceptance protocol is completed: one task per defect with the deadline as due date.",
+   "fieldname": "mangel_tasks_automatisch",
+   "fieldtype": "Check",
+   "label": "Create Defect Tasks on Completion"
+  },
+  {
+   "default": "1",
+   "description": "Sales invoices for a project without acceptance are rejected (except down payment invoices).",
+   "fieldname": "rechnung_ohne_abnahme_sperren",
+   "fieldtype": "Check",
+   "label": "Block Invoices without Acceptance"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-30 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Corevatis Abnahme Einstellungen",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 0,
+   "print": 0,
+   "read": 1,
+   "role": "System Manager",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 0,
+   "print": 0,
+   "read": 1,
+   "role": "Büro",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "email": 0,
+   "print": 0,
+   "read": 1,
+   "role": "Meister",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "field_order": [
+  "gewaehrleistung_section",
+  "vertragsgrundlage",
+  "gewaehrleistung_bgb_jahre",
+  "gewaehrleistung_vob_jahre",
+  "maengel_section",
+  "mangel_tasks_automatisch",
+  "rechnung_ohne_abnahme_sperren"
+ ]
+}
