@@ -14,23 +14,17 @@ app_license = "GPL-3.0-only"
 # corevatis, keine gemeinsamen Datenklassen (docs/mvp-plan.md, Lizenzarchitektur).
 required_apps = ["erpnext"]
 
-# Kacheln auf dem Startbildschirm (/desk). Befunde mvp-test: der Auftraggeber fand „kein CRM“ -
-# v16 zeigt nur Apps mit diesem Hook. Prozessleiste: Einstieg ist „Vorgänge“ (Vorgangsübersicht,
-# Kurzlinks je Schritt; „Anfragen“ bleibt als Arbeitsbereich), Monteure bekommen „Meine Baustellen“.
+# Kachel auf dem Startbildschirm (/desk). Befunde mvp-test: der Auftraggeber fand „kein CRM“ -
+# v16 zeigt nur Apps mit diesem Hook und davon nur den ersten Eintrag je App. Prozessleiste: eine
+# Kachel „Vorgänge“; /cv_start leitet Büro/Meister auf den Arbeitsbereich „Vorgänge“ und Monteure
+# auf „Meine Baustellen“ (Abnahme mvp-test). „Anfragen“ bleibt als Arbeitsbereich.
 add_to_apps_screen = [
 	{
 		"name": app_name,
 		"logo": "/assets/corevatis_erpnext/images/anfragen.svg",
 		"title": "Vorgänge",
-		"route": "/app/vorgänge",
-		"has_permission": "corevatis_erpnext.anfrage.setup.hat_anfragen_zugriff",
-	},
-	{
-		"name": app_name,
-		"logo": "/assets/corevatis_erpnext/images/anfragen.svg",
-		"title": "Meine Baustellen",
-		"route": "/app/meine-baustellen",
-		"has_permission": "corevatis_erpnext.prozess.setup.hat_baustellen_zugriff",
+		"route": "/cv_start",
+		"has_permission": "corevatis_erpnext.prozess.setup.hat_startkachel_zugriff",
 	},
 ]
 

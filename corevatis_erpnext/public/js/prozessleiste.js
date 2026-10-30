@@ -34,7 +34,9 @@ frappe.provide("corevatis_erpnext.prozess");
 	color: var(--text-muted); font-size: var(--text-xs, 11px); text-align: left; cursor: default; line-height: 1.3; }
 .cv-pl-schritt.cv-pl-klickbar { cursor: pointer; }
 .cv-pl-schritt.cv-pl-klickbar:hover { border-color: var(--gray-500, #98a1a9); }
-.cv-pl-schritt .cv-pl-label { font-size: var(--text-sm, 12px); font-weight: 600; color: var(--text-color); white-space: nowrap; }
+.cv-pl-schritt .cv-pl-label { font-size: var(--text-sm, 12px); font-weight: 600; color: var(--text-color);
+	white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cv-pl-schritt { overflow: hidden; }
 .cv-pl-schritt .cv-pl-text { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
 	-webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .cv-pl-schritt.cv-pl-erledigt { background: var(--bg-green, #e4f5e9); border-color: transparent; }

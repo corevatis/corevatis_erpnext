@@ -393,6 +393,13 @@ class TestProzessleiste(IntegrationTestCase):
 		)
 		self.assertEqual(stand["aktuell"], "angebot")
 
+	def test_verantwortlich_ohne_guest(self):
+		lead = self._lead()
+		frappe.db.set_value("Lead", lead.name, {"owner": "Guest", "lead_owner": None})
+		self.assertIsNone(kette.verantwortlich(kette.sammeln(lead.name, "Lead", lead.name), "termin"))
+		frappe.db.set_value("Lead", lead.name, "lead_owner", BUERO)
+		self.assertEqual(kette.verantwortlich(kette.sammeln(lead.name, "Lead", lead.name), "termin"), BUERO)
+
 	def test_unbekannter_doctype(self):
 		with self.assertRaises(frappe.ValidationError):
 			status("User", "Administrator")
@@ -437,7 +444,17 @@ class TestProzessleiste(IntegrationTestCase):
 		self.assertEqual(_als(MONTEUR, uebersicht.karte_ueberfaellig)["value"], 0)
 
 
+MONTEUR_EINRICHTUNG = "cv-prozess-monteur2@example.com"
+OHNE_ROLLE = "cv-prozess-ohne-rolle@example.com"
+
+
 class TestProzessEinrichtung(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		make_user(MONTEUR_EINRICHTUNG, "Moritz", ["Monteur"], "Monteur")
+		make_user(OHNE_ROLLE, "Otto", [], "Ohne")
+
 	def test_lead_formular(self):
 		setup.ensure_prozess_setup()
 		meta = frappe.get_meta("Lead")
@@ -514,6 +531,9 @@ class TestProzessEinrichtung(IntegrationTestCase):
 		)
 		for karte in ws.number_cards:
 			self.assertTrue(frappe.db.exists("Number Card", karte.number_card_name), karte.number_card_name)
+		for karte in setup.KENNZAHLEN:
+			# Anzahl ohne Währung (sonst „€ 16,00“)
+			self.assertFalse(frappe.db.get_value("Number Card", karte["name"], "currency"), karte["name"])
 		self.assertTrue(frappe.db.exists("Custom HTML Block", setup.BLOCK_VORGAENGE))
 		self.assertTrue(frappe.db.exists("Report", "Vorgangsliste"))
 
@@ -522,9 +542,20 @@ class TestProzessEinrichtung(IntegrationTestCase):
 		self.assertTrue(frappe.db.exists("Custom HTML Block", setup.BLOCK_BAUSTELLEN))
 
 		kacheln = frappe.get_hooks("add_to_apps_screen", app_name="corevatis_erpnext")
-		self.assertEqual([k["title"] for k in kacheln], ["Vorgänge", "Meine Baustellen"])
-		for kachel in kacheln:
-			frappe.get_attr(kachel["has_permission"])
+		# v16 zeigt je App nur den ersten Eintrag: eine Kachel, /cv_start leitet je Rolle weiter
+		self.assertEqual([(k["title"], k["route"]) for k in kacheln], [("Vorgänge", "/cv_start")])
+		frappe.get_attr(kacheln[0]["has_permission"])
+		self.assertEqual(setup.ziel_startseite(), setup.ROUTE_VORGAENGE)
+		self.assertEqual(_als(MONTEUR_EINRICHTUNG, setup.ziel_startseite), setup.ROUTE_BAUSTELLEN)
+		self.assertTrue(_als(MONTEUR_EINRICHTUNG, setup.hat_startkachel_zugriff))
+		self.assertEqual(_als(OHNE_ROLLE, setup.ziel_startseite), "/desk")
+		self.assertFalse(_als(OHNE_ROLLE, setup.hat_startkachel_zugriff))
+		from corevatis_erpnext.www import cv_start
+
+		with self.assertRaises(frappe.Redirect):
+			cv_start.get_context(frappe._dict())
+		self.assertEqual(frappe.local.flags.redirect_location, setup.ROUTE_VORGAENGE)
+		frappe.local.flags.redirect_location = None
 
 		self.assertTrue(frappe.db.exists("DocType", "Corevatis Prozess Einstellungen"))
 		from corevatis_erpnext.prozess.einstellungen import einstellungen
