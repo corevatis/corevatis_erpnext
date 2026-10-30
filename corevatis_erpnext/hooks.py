@@ -16,6 +16,8 @@ required_apps = ["erpnext"]
 
 # Durchstich D4: Nummernkreis-Wähler in allen Formularen ausblenden (public/css/betrieb.css)
 app_include_css = "/assets/corevatis_erpnext/css/betrieb.css"
+# Durchstich D1: Links im Desk bleiben in der Leiste „Betrieb“ (public/js/betrieb.js)
+app_include_js = "/assets/corevatis_erpnext/js/betrieb.js"
 
 # Kachel auf dem Startbildschirm (/desk). Befunde mvp-test: der Auftraggeber fand „kein CRM“ -
 # v16 zeigt nur Apps mit diesem Hook und davon nur den ersten Eintrag je App. Prozessleiste: eine

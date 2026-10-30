@@ -26,7 +26,7 @@ frappe.provide("corevatis_erpnext.planung");
 		const zeilen = offen
 			.map(
 				(v) =>
-					`<li><a href="/app/task/${encodeURIComponent(v.task)}">${esc(v.task)}</a> ${esc(v.titel)} – ${esc(__(v.status))}${
+					`<li>${corevatis_erpnext.beleg_link("Task", v.task)} ${esc(v.titel)} – ${esc(__(v.status))}${
 						v.ende ? " " + __("bis") + " " + esc(frappe.datetime.str_to_user(v.ende)) : ""
 					}</li>`
 			)
@@ -46,7 +46,7 @@ frappe.provide("corevatis_erpnext.planung");
 					mit_entfernen && z.status === "Open" && z.employee
 						? `<button class="btn btn-xs btn-default cv-entfernen" data-employee="${esc(z.employee)}">${__("Entfernen")}</button>`
 						: "";
-				return `<tr><td>${esc(z.employee_name)}</td><td>${esc(status)}</td><td><a href="/app/todo/${encodeURIComponent(z.todo)}">${esc(z.todo)}</a></td><td class="text-right">${knopf}</td></tr>`;
+				return `<tr><td>${esc(z.employee_name)}</td><td>${esc(status)}</td><td>${corevatis_erpnext.beleg_link("ToDo", z.todo)}</td><td class="text-right">${knopf}</td></tr>`;
 			})
 			.join("");
 		return `<table class="table table-sm small mb-2"><thead><tr><th>${__("Mitarbeiter")}</th><th>${__("Status")}</th><th>${__("Aufgabe")}</th><th></th></tr></thead><tbody>${zeilen}</tbody></table>`;

@@ -10,7 +10,7 @@ frappe.provide("corevatis_erpnext.angebot");
 	const esc = (s) => frappe.utils.escape_html(s == null ? "" : String(s));
 
 	function link(doctype, name) {
-		return name ? `<a href="/app/${frappe.router.slug(doctype)}/${encodeURIComponent(name)}">${esc(name)}</a>` : "-";
+		return corevatis_erpnext.beleg_link(doctype, name);
 	}
 
 	function hinweise(liste) {
