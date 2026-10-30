@@ -68,9 +68,12 @@ doctype_js = {
 	"Aufmass": ["public/js/aufmass_angebot.js", _PROZESSLEISTE],
 	# Foto-Galerie am Befund (3.7): Fotos der App; Doctype aus corevatis, ohne Kern lädt es nie
 	"Befund": ["public/js/galerie.js", "public/js/befund_galerie.js", _PROZESSLEISTE],
-	# Arbeitspakete und Materialbedarf erzeugen (5.1)
+	# Arbeitspakete und Materialbedarf erzeugen (5.1), am Projekt Button „Wochenplan“ (5.2)
 	"Sales Order": ["public/js/planung.js", _PROZESSLEISTE],
 	"Project": ["public/js/planung.js", _PROZESSLEISTE],
+	# Zuweisung Mitarbeiter (5.2): Abschnitt „Zuweisung“ mit Dropdown; zuweisung.js ist die
+	# Bibliothek (auch vom Wochenplan per frappe.require geladen)
+	"Task": ["public/js/zuweisung.js", "public/js/task_zuweisung.js"],
 	"Objekt": [_PROZESSLEISTE],
 	"Sales Invoice": [_PROZESSLEISTE],
 }

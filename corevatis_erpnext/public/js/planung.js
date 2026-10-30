@@ -103,6 +103,12 @@ frappe.provide("corevatis_erpnext.planung");
 			if (!frm.is_new() && frm.doc.sales_order) {
 				corevatis_erpnext.planung.buttons(frm, { project: frm.doc.name });
 			}
+			// 5.2: Wochenplan mit Projektfilter (Report „Wochenplan“, auch ohne Auftrag)
+			if (!frm.is_new() && ROLLEN.some((r) => frappe.user.has_role(r))) {
+				frm.add_custom_button(__("Wochenplan"), () =>
+					frappe.set_route("query-report", "Wochenplan", { projekt: frm.doc.name })
+				);
+			}
 		},
 	});
 })();
