@@ -397,3 +397,49 @@ class TestAngebotGenerator(IntegrationTestCase):
 			"public/js/aufmass_angebot.js",
 			frappe.get_hooks("doctype_js", app_name="corevatis_erpnext")["Aufmass"],
 		)
+
+	def test_feste_mengen_der_app(self):
+		"""Durchstich A1: Zeilen mit ``menge_fest`` (vom Meister in der App bestätigt) geben die Menge
+		je Item vor (Summe), ohne Mengenregel; ihr Hinweis „nicht verwendet“ entfällt."""
+		self.aufmass = testaufmass("AUF-TEST-APP")
+		self.aufmass.positionen = [
+			frappe._dict(
+				name="a1",
+				idx=1,
+				item_code="IA-05",
+				raum="Keller 1",
+				bauteil="Keller innen",
+				menge=20.5,
+				menge_fest=1,
+			),
+			frappe._dict(name="a2", idx=2, item_code="IA-05", raum="Keller 2", menge=5, menge_fest=1),
+			frappe._dict(name="a3", idx=10, item_code="AL-01", menge=1, menge_fest=1),
+		]
+		r = self.erzeugen()
+		leistungen = self.kern.aufrufe[0]["leistungen"]
+		self.assertEqual(
+			[(l["item_code"], l["menge"], l["leistungsregel"]) for l in leistungen],
+			[("IA-05", "25.5", None), ("AL-01", "1.0", None)],
+		)
+		self.assertEqual(leistungen[0]["herkunft"]["raeume"], ["Keller 1", "Keller 2"])
+		self.assertNotIn("Zeile 10 ohne Kategorie", r["warnungen"])
+		for leistung in leistungen:
+			self.assertLessEqual(set(leistung), set(generator.LEISTUNG_SCHLUESSEL))
+
+	def test_mobil_katalog_angebote_pdf(self):
+		"""Durchstich A1: Funktionen für die App (Hook ``corevatis_angebot_adapter``)."""
+		from corevatis_erpnext.angebot import mobil
+
+		self.assertEqual(frappe.get_hooks("corevatis_angebot_adapter"), ["corevatis_erpnext.angebot.mobil"])
+		katalog = {k["item_code"]: k for k in mobil.katalog()}
+		self.assertEqual(katalog["IA-05"]["verfahren"], "Innenabdichtung")
+		self.assertEqual(katalog["IA-05"]["einheit"], "m²")
+		self.assertNotIn("AZ-01", katalog)  # Regiestunde ohne Stückliste: der Generator überspränge sie
+		a = mobil.angebot_erzeugen("AUF-TEST-4.1")
+		self.assertEqual((a["netto"], a["brutto"], a["docstatus"]), (NETTO, BRUTTO, 0))
+		self.assertIn(a["angebot"], [x["name"] for x in mobil.angebote(objekt="OBJ-TEST-1")])
+		self.assertEqual(mobil.angebot_info(a["angebot"])["objekt"], "OBJ-TEST-1")
+		self.assertIsNone(mobil.angebot_info("ANG-GIBT-ES-NICHT"))
+		dateiname, pdf = mobil.angebot_pdf(a["angebot"])
+		self.assertEqual(dateiname, f"{a['angebot']}.pdf")
+		self.assertTrue(pdf.startswith(b"%PDF"))
