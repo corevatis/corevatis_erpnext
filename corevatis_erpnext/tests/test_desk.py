@@ -128,3 +128,30 @@ class TestDesk(IntegrationTestCase):
 		self.assertTrue(meta.get_field("naming_series").hidden)
 		self.assertTrue(meta.get_field("salutation").hidden)
 		self.assertIn("ANF-.YYYY.-", meta.get_field("naming_series").options or "")
+
+	def test_lead_kontakt_oben_und_ballast_weg(self):
+		from corevatis_erpnext.prozess.setup import ensure_lead_ausblenden, ensure_lead_feldreihenfolge
+
+		ensure_lead_ausblenden()
+		ensure_lead_feldreihenfolge()
+		meta = frappe.get_meta("Lead")
+		namen = [f.fieldname for f in meta.fields]
+		self.assertLess(namen.index("mobile_no"), namen.index("lead_owner"))
+		self.assertLess(namen.index("email_id"), namen.index("cv_section_anfrage"))
+		self.assertTrue(meta.get_field("website").hidden)
+		self.assertTrue(meta.get_field("qualification_status").hidden)
+		# zweiter Lauf ändert nichts
+		self.assertFalse(ensure_lead_feldreihenfolge())
+		self.assertEqual(ensure_lead_ausblenden(), [])
+
+	def test_buero_liest_mitarbeiter(self):
+		_user(BUERO, ["Büro"])
+		frappe.set_user(BUERO)
+		self.assertTrue(frappe.has_permission("Employee", "read"))
+		frappe.set_user("Administrator")
+
+	def test_nummernkreise_nur_vom_betrieb(self):
+		options = (frappe.get_meta("Quotation").get_field("naming_series").options or "").split("\n")
+		self.assertEqual([o for o in options if o.strip()], ["ANG-.YYYY.-"])
+		options = (frappe.get_meta("Lead").get_field("naming_series").options or "").split("\n")
+		self.assertEqual([o for o in options if o.strip()], ["ANF-.YYYY.-"])

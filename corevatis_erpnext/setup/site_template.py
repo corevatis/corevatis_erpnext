@@ -495,7 +495,9 @@ def _ensure_naming_series(cfg: dict, report: Report) -> None:
 			head.append(spec["return_series"])
 			wanted_returns[doctype] = spec["return_series"]
 		current = [o.strip() for o in (field.options or "").split("\n") if o.strip()]
-		desired = head + [o for o in current if o not in head]
+		# Nur die Nummernkreise des Betriebs: ERPNext-Vorgaben wie SAL-QTN- oder PROJ- verschwinden
+		# aus der Auswahl (Durchstich D4); bestehende Belege behalten ihre Nummern
+		desired = list(head)
 		if current == desired and field.default == spec["series"]:
 			continue
 

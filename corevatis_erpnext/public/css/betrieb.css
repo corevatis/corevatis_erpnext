@@ -1,0 +1,5 @@
+/* Durchstich D4: kein Nummernkreis-Wähler in Formularen. Die Nummernkreise (ANF-, ANG-, AB-, RE-,
+   PRJ-) setzt das Site-Template als Standard; der Desk zeigt das Feld bei neuen Belegen trotzdem. */
+.form-layout .frappe-control[data-fieldname="naming_series"] {
+	display: none !important;
+}

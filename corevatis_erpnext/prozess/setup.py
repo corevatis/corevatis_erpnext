@@ -75,6 +75,8 @@ def ensure_prozess_setup() -> None:
 	ensure_kennzahlen()
 	ensure_bloecke()
 	ensure_lead_formular()
+	ensure_lead_ausblenden()
+	ensure_lead_feldreihenfolge()
 
 
 def ensure_kennzahlen() -> None:
@@ -182,3 +184,71 @@ def ziel_startseite() -> str:
 	if rollen & set(ROLLEN_BAUSTELLE):
 		return ROUTE_BAUSTELLEN
 	return "/desk"
+
+
+# Durchstich D4: Kontaktdaten des Kunden gehören nach oben (Telefon, E-Mail direkt beim Namen);
+# ERPNext-Felder ohne Nutzen für den Handwerksbetrieb verschwinden.
+LEAD_KONTAKT_OBEN = ("mobile_no", "email_id", "phone")
+LEAD_AUSBLENDEN = (
+	"website",
+	"whatsapp_no",
+	"phone_ext",
+	"fax",
+	"no_of_employees",
+	"annual_revenue",
+	"industry",
+	"market_segment",
+	"territory",
+	"qualification_status",
+	"qualified_by",
+	"qualified_on",
+	"unsubscribed",
+	"blog_subscriber",
+	"language",
+)
+
+
+def ensure_lead_feldreihenfolge() -> bool:
+	"""Property Setter ``field_order`` am Lead: Telefon und E-Mail hinter den Namen. Rückgabe: geändert."""
+	import json
+
+	from frappe.custom.doctype.property_setter.property_setter import make_property_setter
+
+	meta = frappe.get_meta("Lead")
+	reihenfolge = [f.fieldname for f in meta.fields]
+	oben = [f for f in LEAD_KONTAKT_OBEN if f in reihenfolge]
+	if "lead_name" not in reihenfolge or not oben:
+		return False
+	rest = [f for f in reihenfolge if f not in oben]
+	pos = rest.index("lead_name") + 1
+	gewuenscht = rest[:pos] + oben + rest[pos:]
+	if reihenfolge == gewuenscht:
+		return False
+	vorhanden = frappe.db.get_value(
+		"Property Setter",
+		{"doc_type": "Lead", "property": "field_order", "doctype_or_field": "DocType"},
+		"value",
+	)
+	if vorhanden and json.loads(vorhanden) == gewuenscht:
+		return False
+	ps = make_property_setter("Lead", None, "field_order", json.dumps(gewuenscht), "Data", for_doctype=True)
+	frappe.db.set_value("Property Setter", ps.name, "module", MODULE, update_modified=False)
+	frappe.clear_cache(doctype="Lead")
+	return True
+
+
+def ensure_lead_ausblenden() -> list[str]:
+	from frappe.custom.doctype.property_setter.property_setter import make_property_setter
+
+	meta = frappe.get_meta("Lead")
+	geaendert = []
+	for feld in LEAD_AUSBLENDEN:
+		df = meta.get_field(feld)
+		if not df or df.hidden:
+			continue
+		ps = make_property_setter("Lead", feld, "hidden", "1", "Check", validate_fields_for_doctype=False)
+		frappe.db.set_value("Property Setter", ps.name, "module", MODULE, update_modified=False)
+		geaendert.append(feld)
+	if geaendert:
+		frappe.clear_cache(doctype="Lead")
+	return geaendert

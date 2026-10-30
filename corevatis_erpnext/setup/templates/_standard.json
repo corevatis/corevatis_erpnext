@@ -57,6 +57,7 @@
 			"desk_access": 1,
 			"role_profile": ["Sales User", "Accounts User", "Stock User", "Projects User"],
 			"permissions": {
+				"Employee": "lesen",
 				"Lead": "bearbeiten",
 				"Opportunity": "bearbeiten",
 				"Customer": "bearbeiten",
