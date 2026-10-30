@@ -81,10 +81,15 @@ class TestPlanung(IntegrationTestCase):
 			importieren(firma=FIRMA, commit=False)  # wird mit der Klasse zurückgerollt
 
 			def cache_leeren():
+				from frappe.cache_manager import clear_defaults_cache
 				from frappe.model.document import clear_document_cache
 
 				for doctype in ("Item", "BOM", "Item Price", "Price List", "UOM"):
 					clear_document_cache(doctype)
+				# Der Import setzt auch die Site-Defaults selling/buying_price_list; der
+				# Rollback nimmt sie aus der DB, der Defaults-Cache behielte sie (dann setzt
+				# ein späterer Import sie nicht und die Site bleibt auf „Standard Selling“).
+				clear_defaults_cache("__default")
 
 			cls.addClassCleanup(cache_leeren)
 		_angebot.ensure_felder_41()
