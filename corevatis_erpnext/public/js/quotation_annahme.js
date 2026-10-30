@@ -176,9 +176,14 @@ frappe.provide("corevatis_erpnext.angebot");
 	}
 
 	function entfernen_erpnext_menues(frm) {
+		// Gruppen-Dropdowns (Positionen übernehmen aus, Erstellen, …) als Ganzes entfernen
 		for (const gruppe of ["Get Items From", "Create", "Tools", "Action"]) {
 			try {
-				frm.page.remove_inner_button(__(gruppe));
+				const $g = frm.page.get_inner_group_button(__(gruppe));
+				if ($g && $g.length) {
+					frm.page.destroy_group_dropdowns && frm.page.destroy_group_dropdowns($g);
+					$g.remove();
+				}
 			} catch (e) {
 				// Gruppe nicht vorhanden
 			}
@@ -245,8 +250,9 @@ frappe.provide("corevatis_erpnext.angebot");
 			zustand_erklaeren(frm);
 			const status = frm.doc.status;
 			if (frm.doc.docstatus === 0) {
+				// Ein Hauptknopf statt „Freigeben“ plus „Angebot freigeben“: der Standard-Knopf wird ersetzt
 				if (frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc) && !frm.is_dirty()) {
-					frm.add_custom_button(__("Angebot freigeben"), () => corevatis_erpnext.prozess.freigeben(frm));
+					frm.page.set_primary_action(__("Angebot freigeben"), () => corevatis_erpnext.prozess.freigeben(frm));
 				}
 				return;
 			}
