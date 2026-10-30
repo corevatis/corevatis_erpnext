@@ -6,6 +6,24 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (5.2 Wochenplan und Zuweisung)
+
+- `corevatis_erpnext.planung.zuweisung`: `zuweisen(task, employee)` und
+  `zuweisung_entfernen(task, employee)` (Büro/Meister, sonst 403): Zuweisung als ToDo auf die Task
+  über `frappe.desk.form.assign_to` (dieselbe Quelle wie `baustellen_heute` und der Projektzugang
+  des Kerns), idempotent mit Zeilensperre, Entfernen storniert das offene ToDo; nur aktive
+  Employees mit aktivem Benutzer mit Rolle Monteur oder Meister; Hinweise bei Vorgänger nicht
+  fertig und Tageslast über der Tagesarbeitszeit. `zuweisungen(task)`, `mitarbeiter()` für die
+  Oberfläche.
+- Script Report **„Wochenplan“** (`planung.wochenplan`): Mitarbeiter × Arbeitstage zweier Wochen
+  (umschaltbar), Arbeitspakete als Unterzeilen, Sollstunden anteilig je Tag aus Beginn/Ende,
+  Tageslast mit Markierung über 8 h, Zeile „Nicht zugewiesen“, Filter Projekt/Mitarbeiter,
+  Dialog „Mitarbeiter zuweisen“; Kurzlink und Link im Arbeitsbereich „Vorgänge“, Button
+  „Wochenplan“ am Projekt.
+- Task-Formular: Abschnitt „Zuweisung (Corevatis)“ (`cv_section_zuweisung`, HTML `cv_zuweisung`)
+  mit Mitarbeiter-Auswahl, Zuweisungen und Hinweis auf offene Vorgänger.
+- Tests `test_wochenplan`.
+
 ### Hinzugefügt (3.11 Materialentnahme)
 
 - `corevatis_erpnext.material`: Fahrzeuglager je Mitarbeiter (`Employee.cv_fahrzeuglager`,

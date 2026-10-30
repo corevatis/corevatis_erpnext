@@ -2,7 +2,8 @@
 
 - Task: ``cv_auftrag`` (Link Sales Order, Idempotenz), ``cv_verfahren``, ``cv_sollstunden``
   (Sollstunden aus der Stückliste, unverändert - ``expected_time`` darf die Planung ändern),
-  ``cv_positionen`` (JSON: Positionen des Arbeitspakets mit Menge, Raum, Minuten je Einheit).
+  ``cv_positionen`` (JSON: Positionen des Arbeitspakets mit Menge, Raum, Minuten je Einheit),
+  ab 5.2 Abschnitt ``cv_section_zuweisung`` mit HTML-Feld ``cv_zuweisung`` (Zuweisung per Dropdown).
 - Material Request: ``cv_auftrag`` (Link Sales Order, Idempotenz, Listenansicht).
 
 Labels sind englische Quelltexte, die deutsche Oberfläche kommt aus ``translations/de.csv``.
@@ -64,6 +65,19 @@ def task_felder() -> list[dict]:
 			"read_only": 1,
 			"no_copy": 1,
 			"insert_after": "cv_sollstunden",
+		},
+		# 5.2: Zuweisung (ToDo) mit Dropdown im Formular - Inhalt aus public/js/task_zuweisung.js
+		{
+			"fieldname": "cv_section_zuweisung",
+			"fieldtype": "Section Break",
+			"label": "Assignment (Corevatis)",
+			"insert_after": "is_milestone",
+		},
+		{
+			"fieldname": "cv_zuweisung",
+			"fieldtype": "HTML",
+			"label": "Assigned Employees",
+			"insert_after": "cv_section_zuweisung",
 		},
 	]
 
