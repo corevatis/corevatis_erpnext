@@ -495,7 +495,8 @@ class TestProzessEinrichtung(IntegrationTestCase):
 			)
 
 		vorher = stand()
-		self.assertEqual(len(vorher[0]), len(setup.LEAD_FORMULAR))
+		# Lead-Formular (Property Setter je Zeile) + ausgeblendete ERPNext-Felder + field_order
+		self.assertEqual(len(vorher[0]), len(setup.LEAD_FORMULAR) + len(setup.LEAD_AUSBLENDEN) + 1)
 		self.assertEqual(len(vorher[1]), len(setup.KENNZAHLEN))
 		self.assertEqual(len(vorher[2]), len(setup.BLOECKE_DEF))
 		setup.ensure_prozess_setup()
