@@ -47,7 +47,10 @@ def auftrag_eingereicht(doc, method=None) -> None:
 			continue
 		frappe.db.savepoint("cv_planung")
 		try:
-			funktion(doc, projekt, e)
+			ergebnis = funktion(doc, projekt, e) or {}
+			if ergebnis.get("uebersprungen"):
+				# Materialbedarf ohne Lager: Hinweis, kein Fehler - die Arbeitspakete stehen
+				frappe.msgprint(ergebnis["uebersprungen"], indicator="orange", alert=True)
 		except Exception as fehler:
 			frappe.db.rollback(save_point="cv_planung")
 			frappe.log_error(

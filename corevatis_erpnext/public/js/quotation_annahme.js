@@ -72,8 +72,19 @@ frappe.provide("corevatis_erpnext.angebot");
 					.then((r) => {
 						const m = r.message || {};
 						const titel = m.bereits_angenommen ? __("Angebot war bereits angenommen") : __("Angebot angenommen");
+						// Rückmeldung 31.10.: weiter geht es am Projekt (Zustandstext, Arbeitspakete, Wochenplan)
+						const projekt_oeffnen = m.projekt
+							? {
+									label: __("Projekt öffnen"),
+									action() {
+										frappe.hide_msgprint();
+										frappe.set_route("Form", "Project", m.projekt);
+									},
+							  }
+							: null;
 						frappe.msgprint({
 							title: titel,
+							primary_action: projekt_oeffnen,
 							indicator: m.warnungen && m.warnungen.length ? "orange" : "green",
 							message:
 								hinweise(m.warnungen) +
@@ -82,7 +93,12 @@ frappe.provide("corevatis_erpnext.angebot");
 									<tr><td>${esc(__("Auftrag"))}</td><td>${link("Sales Order", m.auftrag)} ${m.auftrag_docstatus === 1 ? esc(__("eingereicht")) : esc(__("Entwurf"))}</td></tr>
 									<tr><td>${esc(__("Projekt"))}</td><td>${link("Project", m.projekt)}</td></tr>
 									<tr><td>${esc(__("Anfrage"))}</td><td>${link("Lead", m.lead)} ${esc(m.lead_status || "")}</td></tr>
-								</table>`,
+								</table>` +
+								(m.projekt
+									? `<p class="small">${esc(
+											__("Nächster Schritt am Projekt: Arbeitspakete prüfen und die Monteure im Wochenplan zuweisen.")
+									  )}</p>`
+									: ""),
 						});
 						frm.reload_doc();
 					});

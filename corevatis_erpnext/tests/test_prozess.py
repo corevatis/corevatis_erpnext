@@ -320,7 +320,7 @@ class TestProzessleiste(IntegrationTestCase):
 		self.assertEqual((zeile["beleg_typ"], zeile["beleg"]), ("Project", r["projekt"]))
 		self.assertEqual(zeile["objekt_adresse"], "Kellerweg 7, 48143 Münster")
 		if not frappe.db.count("Task", {"project": r["projekt"]}):
-			self.assertEqual(zeile["naechster_schritt"], "Arbeitspakete erzeugen")
+			self.assertEqual(zeile["naechster_schritt"], "Arbeitspakete anlegen")
 		rot = uebersicht.vorgaenge({"ampel": "rot"})
 		self.assertIn(lead.name, [z["vorgang"] for z in rot])
 		self.assertTrue(all(z["ampel"] == "rot" for z in rot))

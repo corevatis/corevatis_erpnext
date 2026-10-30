@@ -292,6 +292,8 @@ def sammeln(
 		auftraege=[],
 		projekte=[],
 		tasks=0,
+		zugewiesen=0,
+		ohne_zuweisung=0,
 		zeiten=0,
 		rapporte=0,
 		abnahmen=[],
@@ -420,7 +422,14 @@ def sammeln(
 	)
 	if k.projekte:
 		namen = [p.name for p in k.projekte]
-		k.tasks = frappe.db.count("Task", {"project": ["in", namen], "status": ["!=", "Cancelled"]})
+		from corevatis_erpnext.planung.projekt import zaehlen
+
+		pakete = zaehlen(namen)
+		k.tasks, k.zugewiesen, k.ohne_zuweisung = (
+			pakete.arbeitspakete,
+			pakete.zugewiesen,
+			pakete.ohne_zuweisung,
+		)
 		k.zeiten = _zeitbuchungen(namen)
 		k.rapporte = len(_kern_belege(TAGESRAPPORT, namen))
 		k.abnahmen = _zeilen(
@@ -654,8 +663,10 @@ def schritte(k: frappe._dict, einst=None) -> list[dict]:
 	if not projekt:
 		ergebnis.append(_schritt("ausfuehrung", OFFEN, _("Noch kein Projekt")))
 	else:
+		# Rückmeldung 31.10.: „4 Arbeitspakete, 2 zugewiesen, 0 Zeitbuchungen“
 		teile = [
 			_("{0} Arbeitspaket(e)").format(k.tasks),
+			_("{0} zugewiesen").format(k.zugewiesen),
 			_("{0} Zeitbuchung(en)").format(k.zeiten),
 		]
 		if doctype_da(TAGESRAPPORT):
@@ -900,25 +911,35 @@ def aktionen(k: frappe._dict, liste: list[dict]) -> None:
 			"corevatis_erpnext.prozess.einreichen",
 		)
 
-	# Arbeitspakete: 5.1 legt sie beim Einreichen des Auftrags an; fehlen sie, „Arbeitspakete
-	# erzeugen“ (planung.tasks_erzeugen: Büro/Meister, Schreibrecht Projekt, Anlegerecht Task) für
-	# Projekte mit Auftrag, sonst ein Arbeitspaket von Hand
+	# Ausführung (Rückmeldung 31.10., wie das Projektformular ``planung.projekt``): ohne Arbeitspakete
+	# „Arbeitspakete anlegen“ (5.1 ``tasks_erzeugen``, Projekt mit Auftrag; sonst ein Paket von Hand),
+	# Pakete ohne Zuweisung „Wochenplan öffnen“ (5.2), alle zugewiesen „Baustellenakte“
 	projekt = _neuestes(k.projekte)
-	if projekt and schritt["ausfuehrung"]["status"] == AKTIV and not k.tasks and _darf("Task", "create"):
-		from corevatis_erpnext.planung.auftrag import darf_planen
+	if projekt and schritt["ausfuehrung"]["status"] == AKTIV:
+		from corevatis_erpnext.planung import projekt as planung_projekt
 
-		mit_auftrag = frappe.db.get_value("Project", projekt.name, "sales_order")
-		if mit_auftrag and darf_planen() and _darf("Project", "write", projekt.name):
-			schritt["ausfuehrung"]["aktion"] = _aktion(
-				_("Arbeitspakete erzeugen"),
-				"Project",
-				projekt.name,
-				"corevatis_erpnext.prozess.arbeitspakete_erzeugen",
-			)
+		if not k.tasks:
+			mit_auftrag = frappe.db.get_value("Project", projekt.name, "sales_order")
+			key = "arbeitspakete_anlegen" if mit_auftrag else "arbeitspaket_anlegen"
+		elif k.ohne_zuweisung:
+			key = "wochenplan"
 		else:
-			schritt["ausfuehrung"]["aktion"] = _aktion(
-				_("Arbeitspaket anlegen"), neu="Task", werte={"project": projekt.name}
-			)
+			key = "baustellenakte"
+		if planung_projekt.aktion_erlaubt(key, projekt.name):
+			label = _(planung_projekt.AKTIONEN[key])
+			if key == "arbeitspakete_anlegen":
+				aktion = _aktion(
+					label, "Project", projekt.name, "corevatis_erpnext.prozess.arbeitspakete_erzeugen"
+				)
+			elif key == "arbeitspaket_anlegen":
+				aktion = _aktion(label, neu="Task", werte={"project": projekt.name})
+			elif key == "wochenplan":
+				aktion = _aktion(
+					label, route=["query-report", "Wochenplan"], route_options={"projekt": projekt.name}
+				)
+			else:
+				aktion = _aktion(label, "Project", projekt.name, "corevatis_erpnext.planung.baustellenakte")
+			schritt["ausfuehrung"]["aktion"] = aktion
 
 	# Abnahmeprotokoll anlegen (6.1, Formular des Kerns; Meister/Büro mit Anlegerecht)
 	abn = schritt["abnahme"]

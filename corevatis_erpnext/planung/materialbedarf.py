@@ -4,6 +4,9 @@ Bedarf je Material = Σ über alle Positionen (Material je Stücklisteneinheit m
 Stücklisteneinheit, Lagereinheit des Materials) mal (1 + Verschnitt). Gerundet wird **auf**: ganzzahlige
 Einheiten (``UOM.must_be_whole_number``, z. B. Stk) auf ganze Zahlen, sonst auf zwei Nachkommastellen.
 
+Nur Positionen mit Stückliste haben Material. Ohne Lager (Einstellungen, sonst Standardlager der
+Firma) wird der Materialbedarf übersprungen - mit Hinweis, ohne Fehler (Rückmeldung 31.10.).
+
 Mit „Bestand berücksichtigen“ wird der voraussichtliche Bestand (``Bin.projected_qty``) des
 Ziellagers abgezogen; Materialien ohne Restbedarf entfallen.
 
@@ -27,9 +30,12 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, getdate, today
 
-from corevatis_erpnext.planung.auftrag import PlanungFehler, auftrag_laden, pruefe_rolle, pruefe_schreibrechte
+from corevatis_erpnext.planung.auftrag import auftrag_laden, pruefe_rolle, pruefe_schreibrechte
 from corevatis_erpnext.planung.einstellungen import TYP_UMLAGERUNG, einstellungen
 from corevatis_erpnext.planung.positionen import positionen
+
+LAGER_FEHLT_HAUPT = "Kein Hauptlager eingestellt \u2013 Materialbedarf übersprungen."
+LAGER_FEHLT_FAHRZEUG = "Kein Fahrzeuglager eingestellt \u2013 Materialbedarf übersprungen."
 
 
 def bestehender_materialbedarf(auftrag: str) -> str | None:
@@ -118,14 +124,20 @@ def materialbedarf_anlegen(auftrag, projekt: str, e=None, ignore_permissions: bo
 	umlagerung = e.material_request_typ == TYP_UMLAGERUNG
 	haupt, fahrzeug = lager(auftrag.company, e)
 	ziel = fahrzeug if umlagerung else haupt
-	if not haupt or (umlagerung and not fahrzeug):
-		raise PlanungFehler(
-			_("Kein {0} für die Firma {1} - bitte in den Planungs-Einstellungen festlegen.").format(
-				_("Fahrzeuglager") if umlagerung and haupt else _("Hauptlager"), auftrag.company
-			)
-		)
-	if umlagerung and haupt == fahrzeug:
-		raise PlanungFehler(_("Für eine Umlagerung müssen Haupt- und Fahrzeuglager verschieden sein."))
+	# Der Materialbedarf ist ein optionaler Schritt: ohne Lager ein Hinweis statt eines Fehlers
+	# (Rückmeldung 31.10.) - die Arbeitspakete hängen nie an einem Lager
+	fehlt = None
+	if not haupt:
+		fehlt = LAGER_FEHLT_HAUPT
+	elif umlagerung and not fahrzeug:
+		fehlt = LAGER_FEHLT_FAHRZEUG
+	elif umlagerung and haupt == fahrzeug:
+		fehlt = _("Haupt- und Fahrzeuglager sind gleich \u2013 Materialbedarf übersprungen.")
+	if fehlt:
+		hinweise.append(fehlt + " " + _("Lager in „Corevatis Planung Einstellungen“ festlegen."))
+		ergebnis = _ergebnis(auftrag, projekt, None, False, zeilen, hinweise)
+		ergebnis["uebersprungen"] = fehlt
+		return ergebnis
 
 	for z in zeilen:
 		z["bestand"] = None
