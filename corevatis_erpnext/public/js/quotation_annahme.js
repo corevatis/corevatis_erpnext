@@ -175,6 +175,57 @@ frappe.provide("corevatis_erpnext.angebot");
 		};
 	}
 
+	function entfernen_erpnext_menues(frm) {
+		for (const gruppe of ["Get Items From", "Create", "Tools", "Action"]) {
+			try {
+				frm.page.remove_inner_button(__(gruppe));
+			} catch (e) {
+				// Gruppe nicht vorhanden
+			}
+		}
+		for (const label of ["Set as Lost", "Set as Open"]) {
+			try {
+				frm.remove_custom_button(__(label));
+			} catch (e) {
+				// Button nicht vorhanden
+			}
+		}
+	}
+
+	// Erklärt oben im Formular, was gerade passiert ist und was als Nächstes kommt
+	function zustand_erklaeren(frm) {
+		const d = frm.doc;
+		const esc = (s) => frappe.utils.escape_html(s == null ? "" : String(s));
+		let text = "";
+		let farbe = "blue";
+		if (d.docstatus === 0) {
+			const herkunft = d.cv_aufmass
+				? __("Angebotsentwurf aus der Besichtigung (Aufmaß {0}, erstellt von {1}).", [
+						esc(d.cv_aufmass),
+						esc(frappe.user_info(d.owner).fullname || d.owner),
+				  ])
+				: __("Angebotsentwurf.");
+			text =
+				herkunft +
+				" " +
+				__("Positionen und Preise prüfen, dann oben „Angebot freigeben“. Danach das PDF an den Kunden schicken; sagt er zu: „Vom Kunden angenommen“.");
+		} else if (d.docstatus === 1 && ["Ordered", "Partially Ordered"].includes(d.status)) {
+			text = __("Vom Kunden angenommen – Auftrag und Projekt sind angelegt (siehe Prozessleiste oben).");
+			farbe = "green";
+		} else if (d.docstatus === 1 && d.status === "Lost") {
+			text = __("Vom Kunden abgelehnt.");
+			farbe = "red";
+		} else if (d.docstatus === 1) {
+			text = __("Freigegeben am {0}, wartet auf die Antwort des Kunden: „Vom Kunden angenommen“ oder „Vom Kunden abgelehnt“ (Menü „Angebot“). Drucken über das Druckersymbol rechts oben.", [
+				esc(frappe.datetime.str_to_user(d.transaction_date)),
+			]);
+		} else if (d.docstatus === 2) {
+			text = __("Storniert.");
+			farbe = "red";
+		}
+		if (text) frm.set_intro(text, farbe);
+	}
+
 	frappe.ui.form.on("Quotation", {
 		refresh(frm) {
 			erpnext_auftrag_umleiten(frm);
@@ -187,14 +238,25 @@ frappe.provide("corevatis_erpnext.angebot");
 					true
 				);
 			}
-			if (frm.doc.docstatus !== 1 || !frappe.user.has_role(ROLLEN)) return;
+			if (!frappe.user.has_role(ROLLEN)) return;
+			// ERPNext-Menüs, die den Ablauf des Betriebs nur verwirren (Positionen übernehmen,
+			// Erstellen → Auftrag/Rechnung/Abo, Als verloren markieren): unser Weg ist die Leiste
+			setTimeout(() => entfernen_erpnext_menues(frm), 0);
+			zustand_erklaeren(frm);
 			const status = frm.doc.status;
+			if (frm.doc.docstatus === 0) {
+				if (frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc) && !frm.is_dirty()) {
+					frm.add_custom_button(__("Angebot freigeben"), () => corevatis_erpnext.prozess.freigeben(frm));
+				}
+				return;
+			}
+			if (frm.doc.docstatus !== 1) return;
 			if (["Open", "Replied", "Partially Ordered", "Ordered", "Expired"].includes(status)) {
 				// eigener Button (nicht im Menü), damit „ein Klick“ sichtbar ist
-				frm.add_custom_button(__("Angebot annehmen"), () => corevatis_erpnext.angebot.annehmen_dialog(frm));
+				frm.add_custom_button(__("Vom Kunden angenommen"), () => corevatis_erpnext.angebot.annehmen_dialog(frm));
 			}
 			if (["Open", "Replied", "Expired"].includes(status)) {
-				frm.add_custom_button(__("Angebot ablehnen"), () => corevatis_erpnext.angebot.ablehnen_dialog(frm), GRUPPE);
+				frm.add_custom_button(__("Vom Kunden abgelehnt"), () => corevatis_erpnext.angebot.ablehnen_dialog(frm), GRUPPE);
 				frm.add_custom_button(__("Nachfassen"), () => corevatis_erpnext.angebot.nachfassen(frm), GRUPPE);
 			}
 		},

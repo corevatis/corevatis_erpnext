@@ -85,7 +85,7 @@ STATUS_ANFRAGE_VERLOREN = "Verloren"
 QUOTATION_OFFEN = ("Open", "Replied")
 QUOTATION_STATUS_DE = {
 	"Draft": "Entwurf",
-	"Open": "versendet",
+	"Open": "freigegeben",
 	"Replied": "beantwortet",
 	"Partially Ordered": "teilweise beauftragt",
 	"Ordered": "beauftragt",
@@ -533,6 +533,14 @@ def _datum(wert) -> str:
 	return format_date(getdate(wert), "dd.MM.yyyy") if wert else ""
 
 
+def _passendes(zeilen: list[frappe._dict], bedingung) -> frappe._dict | None:
+	"""Neueste Zeile, die die Bedingung erfüllt - ohne Rückfall auf irgendeine Zeile. ``_neuestes``
+	fällt auf die letzte Zeile zurück; dadurch bot die Leiste „Angebot annehmen“ für einen Entwurf
+	an (Rückmeldung Mike 30.10.)."""
+	passend = [z for z in zeilen or [] if bedingung(z)]
+	return passend[-1] if passend else None
+
+
 def _neuestes(zeilen: list[frappe._dict], bevorzugt=None) -> frappe._dict | None:
 	if not zeilen:
 		return None
@@ -610,11 +618,16 @@ def schritte(k: frappe._dict, einst=None) -> list[dict]:
 	elif angebot.docstatus == 0:
 		ergebnis.append(
 			_schritt(
-				"angebot", AKTIV, _("Entwurf, noch nicht versendet"), belege, angebot.creation, betrieb=True
+				"angebot",
+				AKTIV,
+				_("Entwurf: prüfen und freigeben"),
+				belege,
+				angebot.creation,
+				betrieb=True,
 			)
 		)
 	else:
-		text = _("Versendet am {0}, wartet auf Antwort").format(_datum(angebot.transaction_date))
+		text = _("Freigegeben am {0}, wartet auf Antwort des Kunden").format(_datum(angebot.transaction_date))
 		ergebnis.append(_schritt("angebot", AKTIV, text, belege, angebot.transaction_date))
 
 	# 5 Auftrag
@@ -857,19 +870,24 @@ def aktionen(k: frappe._dict, liste: list[dict]) -> None:
 				_("Angebot erzeugen"), AUFMASS, aufmass.name, "corevatis_erpnext.angebot.erzeugen_dialog"
 			)
 	elif ang["status"] == AKTIV:
-		entwurf = _neuestes(k.angebote, lambda a: a.docstatus == 0)
-		offen = _neuestes(k.angebote, lambda a: a.docstatus == 1 and a.status in QUOTATION_OFFEN)
-		if offen and darf_annehmen() and lesbar("Quotation", offen.name):
+		entwurf = _passendes(k.angebote, lambda a: a.docstatus == 0)
+		offen = _passendes(k.angebote, lambda a: a.docstatus == 1 and a.status in QUOTATION_OFFEN)
+		# Ein neuer Entwurf (z. B. aus der Besichtigung) kommt zuerst: erst freigeben, dann kann der
+		# Kunde annehmen (Durchstich, Rückmeldung 30.10.)
+		if entwurf and _darf("Quotation", "submit", entwurf.name):
 			ang["aktion"] = _aktion(
-				_("Angebot annehmen"), "Quotation", offen.name, "corevatis_erpnext.angebot.annehmen_dialog"
+				_("Angebot freigeben"), "Quotation", entwurf.name, "corevatis_erpnext.prozess.freigeben"
 			)
-		elif entwurf and _darf("Quotation", "submit", entwurf.name):
+		elif offen and darf_annehmen() and lesbar("Quotation", offen.name):
 			ang["aktion"] = _aktion(
-				_("Angebot einreichen"), "Quotation", entwurf.name, "corevatis_erpnext.prozess.einreichen"
+				_("Vom Kunden angenommen"),
+				"Quotation",
+				offen.name,
+				"corevatis_erpnext.angebot.annehmen_dialog",
 			)
 
 	# Auftrag einreichen
-	auftrag_entwurf = _neuestes(k.auftraege, lambda a: a.docstatus == 0)
+	auftrag_entwurf = _passendes(k.auftraege, lambda a: a.docstatus == 0)
 	if (
 		schritt["auftrag"]["status"] == AKTIV
 		and auftrag_entwurf
