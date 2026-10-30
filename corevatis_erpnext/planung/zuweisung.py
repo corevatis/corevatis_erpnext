@@ -15,9 +15,9 @@ der Task) bleiben als Verlauf stehen.
 - ``mitarbeiter()``: Auswahl der planbaren Mitarbeiter (Select statt Link: Büro und Meister
   haben laut Site-Template kein Leserecht auf Employee).
 
-Das ToDo hat **kein Datum**: maßgeblich ist der Beginn des Arbeitspakets (``baustellen_heute``
-zeigt Tasks ab ``exp_start_date``) - verschiebt der Wochenplan die Task, bleibt die Zuweisung
-richtig.
+Datum des ToDo = Tag der Zuweisung (Standard des Doctype ToDo, auch bei leerem Wert). Für
+``baustellen_heute`` (Datum ≤ Tag) ist das immer erfüllt, maßgeblich ist der Beginn der Task
+(``exp_start_date``) - verschiebt der Wochenplan die Task, bleibt die Zuweisung richtig.
 """
 
 from __future__ import annotations
@@ -294,8 +294,7 @@ def zuweisen(task: str, employee: str) -> dict:
 				"name": task,
 				"description": beschreibung,
 				"priority": t.priority or "Medium",
-				# kein Datum: maßgeblich ist der Beginn der Task (baustellen_heute, Wochenplan)
-				"date": None,
+				# Datum = heute (Standard): maßgeblich ist der Beginn der Task (baustellen_heute)
 			},
 			ignore_permissions=False,
 		)

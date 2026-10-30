@@ -225,8 +225,8 @@ class TestWochenplan(IntegrationTestCase):
 		self.assertEqual(
 			(todo.allocated_to, todo.status, todo.owner, todo.assigned_by), (MONTEUR, "Open", BUERO, BUERO)
 		)
-		# kein Datum: maßgeblich ist der Beginn der Task (baustellen_heute)
-		self.assertIsNone(todo.date)
+		# Datum = Tag der Zuweisung (≤ jeder spätere Tag); maßgeblich ist der Beginn der Task
+		self.assertEqual(getdate(todo.date), getdate(today()))
 		self.assertEqual(r["todo"], todo.name)
 		self.assertIn(MONTEUR, frappe.parse_json(frappe.db.get_value("Task", self.t1, "_assign")))
 		# Wiederholung (Büro und Meister): kein weiteres ToDo
@@ -491,7 +491,7 @@ class TestWochenplan(IntegrationTestCase):
 
 	def test_monteur_sieht_zuweisung_von_heute(self):
 		"""Die Zuweisung erfüllt die Bedingungen von ``baustellen_heute`` (Kern, 3.1): offenes ToDo des
-		Monteurs ohne Datum auf eine offene Task mit Beginn ≤ heute, angelegt von einem anderen
+		Monteurs mit Datum ≤ heute auf eine offene Task mit Beginn ≤ heute, angelegt von einem anderen
 		(Projektzugang 3.12). Im Desk zeigt „Meine Baustellen“ sie (``meine_baustellen``)."""
 		from corevatis_erpnext.prozess import uebersicht
 
@@ -500,7 +500,7 @@ class TestWochenplan(IntegrationTestCase):
 		jetzt = self.task("Heute", um(heute, "07:00"), um(heute, "15:00"), 8)
 		als(BUERO, zuweisung.zuweisen, jetzt, self.e_monteur)
 		todo = self.todos(jetzt)[0]
-		self.assertEqual((todo.allocated_to, todo.status, todo.date), (MONTEUR, "Open", None))
+		self.assertEqual((todo.allocated_to, todo.status, getdate(todo.date)), (MONTEUR, "Open", heute))
 		self.assertNotEqual(todo.owner, MONTEUR)
 		ergebnis = als(MONTEUR, uebersicht.meine_baustellen)
 		self.assertIn(jetzt, [t["name"] for t in ergebnis["tasks"]])
