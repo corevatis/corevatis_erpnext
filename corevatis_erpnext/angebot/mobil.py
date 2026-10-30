@@ -17,6 +17,7 @@ Lizenzgrenze, Vertragstest ``corevatis/tests/test_erpnext_contract.py``:
 from __future__ import annotations
 
 import frappe
+from frappe import _
 from frappe.utils import cint, flt, strip_html_tags
 
 from corevatis_erpnext.angebot import generator
@@ -74,6 +75,8 @@ def katalog() -> list[dict]:
 def angebot_erzeugen(aufmass: str, neu_erzeugen=0) -> dict:
 	ergebnis = generator.erzeuge_angebot(aufmass, neu_erzeugen=cint(neu_erzeugen))
 	name = ergebnis.get("angebot")
+	if name and ergebnis.get("neu"):
+		buero_informieren(name)
 	# Security-Review: Status und Summen nur mit Leserecht auf das Angebot
 	if name and frappe.has_permission("Quotation", "read", doc=name):
 		werte = frappe.db.get_value(
@@ -156,3 +159,42 @@ def angebot_pdf(angebot: str) -> tuple[str, bytes]:
 	druckformat = frappe.get_meta("Quotation").default_print_format or None
 	inhalt = frappe.get_print("Quotation", doc.name, print_format=druckformat, doc=doc, as_pdf=True)
 	return f"{doc.name}.pdf", inhalt
+
+
+def buero_informieren(angebot: str) -> list[str]:
+	"""Neues Angebot aus der Besichtigung: ein ToDo für das Büro (Zuweisung wie beim Nachfassen 4.5,
+	genau eine Aufgabe), damit sichtbar ist, dass etwas aus der App gekommen ist und was zu tun ist."""
+	from corevatis_erpnext.angebot import nachfassen
+
+	doc = frappe.get_doc("Quotation", angebot)
+	if frappe.db.exists(
+		"ToDo",
+		{
+			"reference_type": "Quotation",
+			"reference_name": angebot,
+			"status": "Open",
+			"description": ["like", "%prüfen und freigeben%"],
+		},
+	):
+		return []
+	empfaenger = nachfassen.empfaenger(doc, nachfassen.einstellungen())
+	if not empfaenger:
+		return []
+	text = _("Angebotsentwurf {0} aus der Besichtigung prüfen und freigeben ({1}).").format(
+		angebot, doc.get("cv_angebotstitel") or doc.get("customer_name") or doc.get("party_name") or ""
+	)
+	todo = frappe.get_doc(
+		{
+			"doctype": "ToDo",
+			"allocated_to": empfaenger[0],
+			"description": text,
+			"reference_type": "Quotation",
+			"reference_name": angebot,
+			"priority": "Medium",
+			"date": frappe.utils.today(),
+			"assigned_by": frappe.session.user,
+		}
+	)
+	todo.flags.ignore_permissions = True
+	todo.insert()
+	return [todo.name]

@@ -118,6 +118,16 @@ frappe.provide("corevatis_erpnext.prozess");
 		frm.savesubmit();
 	};
 
+	// Angebot freigeben: ERPNext-„Submit“ in der Sprache des Betriebs, mit Erklärung des nächsten Schritts
+	P.freigeben = function (frm) {
+		frappe.confirm(
+			__(
+				"Das Angebot wird verbindlich und bekommt sein PDF. Danach schicken Sie es an den Kunden; sagt er zu, klicken Sie „Vom Kunden angenommen“ – Auftrag und Projekt entstehen dann von selbst."
+			),
+			() => frm.savesubmit()
+		);
+	};
+
 	// Arbeitspakete aus dem Auftrag (5.1, corevatis_erpnext.planung.tasks_erzeugen)
 	P.arbeitspakete_erzeugen = function (frm) {
 		frappe

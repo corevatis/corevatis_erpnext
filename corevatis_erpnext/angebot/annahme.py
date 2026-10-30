@@ -148,7 +148,11 @@ def angebot_annehmen(
 	frappe.has_permission("Quotation", "read", quotation, throw=True)
 	angebot = frappe.get_doc("Quotation", quotation)
 	if angebot.docstatus != 1:
-		frappe.throw(_("Nur ein eingereichtes Angebot kann angenommen werden."))
+		frappe.throw(
+			_(
+				"Das Angebot ist noch ein Entwurf. Erst oben „Angebot freigeben“, dann kann der Kunde es annehmen."
+			)
+		)
 	if angebot.status == "Lost":
 		frappe.throw(_("Das Angebot {0} ist als verloren markiert.").format(angebot.name))
 
