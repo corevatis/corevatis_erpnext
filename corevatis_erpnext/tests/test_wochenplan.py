@@ -382,7 +382,7 @@ class TestWochenplan(IntegrationTestCase):
 		self.assertEqual((t2[s(m)], t2[s(tag(1))], t2["sollstunden"], t2["indent"]), (8.0, 4.0, 12.0, 1))
 		t3 = next(k for k in kinder if k["task"] == self.t3)
 		self.assertEqual((t3[s(tag(2))], t3["anteil"]), (4.0, 2))
-		self.assertIn("Innenabdichtung", t3["bezeichnung"])
+		self.assertTrue(t3["bezeichnung"].startswith("Innenabdichtung · "), t3["bezeichnung"])
 		self.assertIn(self.projekt.project_name, t3["bezeichnung"])
 		berta = self.zeile(plan, "M:" + MONTEUR2)
 		self.assertEqual((berta[s(tag(2))], berta["ueberlast"]), (4.0, []))

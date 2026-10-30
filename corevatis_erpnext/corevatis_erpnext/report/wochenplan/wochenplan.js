@@ -47,6 +47,10 @@
 				// Arbeitspaket ohne Sollstunden an seinen Tagen: 0 zeigen, sonst leer
 				return tag && data.indent === 1 && value === 0 ? `<span class="text-muted">0</span>` : "";
 			}
+			if (column.fieldname === "sollstunden" && data.indent === 0) {
+				// Mitarbeiter-Zeile: keine eigenen Sollstunden (Abnahme mvp-test: „0,00“)
+				return "";
+			}
 			if (column.fieldname === "aktion") {
 				return data.typ === "task" && data.task
 					? `<a href="#" class="cv-zuweisen" data-task="${esc(data.task)}">${__("Zuweisen …")}</a>`

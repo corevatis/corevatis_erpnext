@@ -49,7 +49,7 @@ def columns(daten: dict) -> list[dict]:
 		if tag["frei"]:
 			label += " " + _("(frei)")
 		spalten.append(
-			{"fieldname": tag["spalte"], "label": label, "fieldtype": "Float", "precision": 1, "width": 78}
+			{"fieldname": tag["spalte"], "label": label, "fieldtype": "Float", "precision": 1, "width": 92}
 		)
 	spalten += [
 		{"fieldname": "summe", "label": _("Summe h"), "fieldtype": "Float", "precision": 1, "width": 80},

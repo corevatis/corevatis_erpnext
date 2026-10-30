@@ -297,7 +297,8 @@ def _task_zeile(p: dict, anteil: dict, eltern: str, m: dict | None) -> dict:
 		"eltern": eltern,
 		"indent": 1,
 		"typ": "task",
-		"bezeichnung": " · ".join(x for x in (p["projekt_name"], p["verfahren"] or p["titel"]) if x),
+		# Verfahren zuerst: Projektnamen aus 5.1 sind lange Objektadressen (Abnahme mvp-test)
+		"bezeichnung": " · ".join(x for x in (p["verfahren"] or p["titel"], p["projekt_name"]) if x),
 		"task": p["task"],
 		"titel": p["titel"],
 		"projekt": p["projekt"],
