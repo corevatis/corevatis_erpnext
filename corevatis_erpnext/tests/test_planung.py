@@ -548,6 +548,11 @@ class TestPlanung(IntegrationTestCase):
 
 	# --- Rückmeldung 31.10.: Mengen mit Nachkommastellen, ohne Lager, Arbeitsauftrag, Projekt ----
 
+	@staticmethod
+	def fehlerprotokolle() -> set[str]:
+		"""Error Logs (log_error schreibt sie in eigener Transaktion: alte bleiben, Namen wiederholen sich)."""
+		return set(frappe.get_all("Error Log", pluck="name"))
+
 	def auftrag_direkt(self, positionen: list[tuple[str, float]]) -> tuple[str, str]:
 		"""Auftrag mit Projekt ohne Angebot (Positionen wie AB-2026-00008 auf mvp-test), eingereicht."""
 		frappe.set_user("Administrator")
@@ -580,6 +585,7 @@ class TestPlanung(IntegrationTestCase):
 	def test_mengen_mit_nachkommastellen(self):
 		"""AB-2026-00008 (ANG-2026-00015): IA-01 23,32 m², HS-03/HS-05 16,33 lfm, SP-08 23,32 m², AL-01."""
 		frappe.local.message_log = []
+		vorher = self.fehlerprotokolle()
 		auftrag, projekt = self.auftrag_direkt(
 			[("IA-01", 23.32), ("HS-03", 16.33), ("HS-05", 16.33), ("SP-08", 23.32), ("AL-01", 1)]
 		)
@@ -616,7 +622,7 @@ class TestPlanung(IntegrationTestCase):
 		self.assertTrue(frappe.db.get_value("UOM", "Stk", "must_be_whole_number"))
 		meldungen = json.dumps(frappe.local.message_log, default=str)
 		self.assertNotIn("Nos", meldungen)
-		self.assertFalse(frappe.db.exists("Error Log", {"reference_name": auftrag}))
+		self.assertEqual(self.fehlerprotokolle() - vorher, set())
 
 		# Ursache der Meldung: ERPNext „Erstellen → Arbeitsauftrag“ (Fertigung) am Auftrag - wird mit
 		# Erklärung abgelehnt, statt an „Nos“/Pflichtlagern zu scheitern
@@ -644,11 +650,12 @@ class TestPlanung(IntegrationTestCase):
 	def test_ohne_lager_arbeitspakete_und_hinweis(self):
 		"""Arbeitspakete brauchen kein Lager; Materialbedarf ohne Lager: Hinweis statt Fehler."""
 		frappe.local.message_log = []
+		vorher = self.fehlerprotokolle()
 		with patch.object(materialbedarf, "lager", lambda firma, e: (None, None)):
 			r = self.auftrag()
 			self.assertEqual(frappe.db.count("Task", {"cv_auftrag": r["auftrag"]}), 4)
 			self.assertEqual(frappe.db.count("Material Request", {"cv_auftrag": r["auftrag"]}), 0)
-			self.assertFalse(frappe.db.exists("Error Log", {"reference_name": r["auftrag"]}))
+			self.assertEqual(self.fehlerprotokolle() - vorher, set())
 			self.assertIn(
 				"Kein Hauptlager eingestellt", json.dumps(frappe.local.message_log, ensure_ascii=False)
 			)
