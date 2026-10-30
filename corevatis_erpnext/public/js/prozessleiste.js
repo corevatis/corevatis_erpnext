@@ -93,6 +93,12 @@ frappe.provide("corevatis_erpnext.prozess");
 	// Zielformular - dort (Vormerkung, siehe vorgemerkt_ausfuehren)
 	P.aktion_ausfuehren = function (frm, aktion) {
 		if (!aktion) return;
+		if (aktion.route) {
+			// z. B. Wochenplan mit Projektfilter (Ausführung, Rückmeldung 31.10.)
+			frappe.route_options = aktion.route_options || null;
+			frappe.set_route(...aktion.route);
+			return;
+		}
 		if (aktion.neu) {
 			frappe.new_doc(aktion.neu, aktion.werte || {});
 			return;
@@ -222,7 +228,8 @@ frappe.provide("corevatis_erpnext.prozess");
 			.join("");
 		const ampel = daten.ampel || {};
 		const vorgang = daten.vorgang || {};
-		const naechste = daten.naechste_aktion;
+		// Am Projekt hat die Ausführung ihren eigenen Hauptknopf (planung.js) - kein zweiter hier
+		const naechste = frm.doctype === "Project" && daten.aktuell === "ausfuehrung" ? null : daten.naechste_aktion;
 		el.html(`
 			<div class="cv-pl-kopf">
 				<span class="cv-pl-titel">${esc(__("Vorgang"))}${vorgang.titel ? ": " + esc(vorgang.titel) : ""}</span>

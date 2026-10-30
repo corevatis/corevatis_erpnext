@@ -179,6 +179,11 @@ class TestPlanung(IntegrationTestCase):
 			hooks.index("corevatis_erpnext.angebot.annahme.auftrag_eingereicht"),
 			hooks.index("corevatis_erpnext.planung.auftrag_eingereicht"),
 		)
+		# Rückmeldung 31.10.: Arbeitsaufträge (Fertigung) zu Aufträgen mit Projekt abfangen
+		self.assertIn(
+			"corevatis_erpnext.planung.fertigung.arbeitsauftrag_pruefen",
+			frappe.get_hooks("doc_events")["Work Order"]["before_validate"],
+		)
 		js = frappe.get_hooks("doctype_js", app_name="corevatis_erpnext")
 		self.assertIn("public/js/planung.js", js["Sales Order"])
 		self.assertIn("public/js/planung.js", js["Project"])
@@ -540,6 +545,254 @@ class TestPlanung(IntegrationTestCase):
 		self.assertIn("Testfehler Materialbedarf", json.dumps(frappe.local.message_log, default=str))
 		frappe.set_user(BUERO)
 		self.assertTrue(planung.materialbedarf_erzeugen(sales_order=r["auftrag"])["neu"])
+
+	# --- Rückmeldung 31.10.: Mengen mit Nachkommastellen, ohne Lager, Arbeitsauftrag, Projekt ----
+
+	@staticmethod
+	def fehlerprotokolle() -> set[str]:
+		"""Error Logs (log_error schreibt sie in eigener Transaktion: alte bleiben, Namen wiederholen sich)."""
+		return set(frappe.get_all("Error Log", pluck="name"))
+
+	def auftrag_direkt(self, positionen: list[tuple[str, float]]) -> tuple[str, str]:
+		"""Auftrag mit Projekt ohne Angebot (Positionen wie AB-2026-00008 auf mvp-test), eingereicht."""
+		frappe.set_user("Administrator")
+		projekt = frappe.get_doc(
+			{
+				"doctype": "Project",
+				"project_name": f"Nachkomma {frappe.generate_hash(length=6)}",
+				"company": FIRMA,
+				"expected_start_date": self.start,
+				"expected_end_date": add_days(self.start, 14),
+			}
+		).insert()
+		so = frappe.get_doc(
+			{
+				"doctype": "Sales Order",
+				"customer": generator._platzhalterkunde(),
+				"company": FIRMA,
+				"transaction_date": self.start,
+				"delivery_date": add_days(self.start, 14),
+				"project": projekt.name,
+				"items": [
+					{"item_code": code, "qty": menge, "rate": 10, "delivery_date": add_days(self.start, 14)}
+					for code, menge in positionen
+				],
+			}
+		).insert()
+		so.submit()
+		return so.name, projekt.name
+
+	def test_mengen_mit_nachkommastellen(self):
+		"""AB-2026-00008 (ANG-2026-00015): IA-01 23,32 m², HS-03/HS-05 16,33 lfm, SP-08 23,32 m², AL-01."""
+		frappe.local.message_log = []
+		vorher = self.fehlerprotokolle()
+		auftrag, projekt = self.auftrag_direkt(
+			[("IA-01", 23.32), ("HS-03", 16.33), ("HS-05", 16.33), ("SP-08", 23.32), ("AL-01", 1)]
+		)
+		tasks = self.tasks(auftrag)
+		# Minuten je Einheit (Stückliste 2.3) x Menge: HS-03 26 + HS-05 35 = 61 x 16,33 = 996,13;
+		# IA-01 35 x 23,32 = 816,2; SP-08 48 x 23,32 = 1119,36
+		self.assertEqual(
+			[(t.cv_verfahren, flt(t.cv_sollstunden)) for t in tasks],
+			[
+				("Sonstiges", 3.0),
+				("Horizontalsperre Injektion", 16.6),
+				("Innenabdichtung", 13.6),
+				("Sanierputz", 18.66),
+			],
+		)
+		self.assertTrue(all(t.project == projekt for t in tasks))
+		# Materialbedarf: je Einheit x Menge x 1,05, ganzzahlige Einheit (Stk) auf ganze Zahlen
+		mr = frappe.get_doc("Material Request", {"cv_auftrag": auftrag})
+		self.assertEqual(
+			{z.item_code: flt(z.qty) for z in mr.items},
+			{
+				"MAT-KLEIN": 51.97,  # (25 + 1,5 x 16,33) x 1,05 = 51,96975
+				"MAT-ENTSORG": 0.74,  # 0,03 x 23,32 x 1,05 = 0,73458
+				"MAT-INJ-CREME": 6.86,  # 0,4 x 16,33 x 1,05 = 6,8586
+				"MAT-INJ-SILIKAT": 42.87,  # 2,5 x 16,33 x 1,05 = 42,86625
+				"MAT-PACKER": 138.0,  # 8 Stk x 16,33 x 1,05 = 137,172 → 138
+				"MAT-SP-SPRITZ": 122.43,  # 5 x 23,32 x 1,05
+				"MAT-SP-GRUNDPUTZ": 293.84,  # 12 x 23,32 x 1,05 = 293,832
+				"MAT-SP-PUTZ": 489.72,  # 20 x 23,32 x 1,05
+			},
+		)
+		packer = next(z for z in mr.items if z.item_code == "MAT-PACKER")
+		self.assertEqual(packer.uom, "Stk")
+		self.assertTrue(frappe.db.get_value("UOM", "Stk", "must_be_whole_number"))
+		meldungen = json.dumps(frappe.local.message_log, default=str)
+		self.assertNotIn("Nos", meldungen)
+		self.assertEqual(self.fehlerprotokolle() - vorher, set())
+
+		# Ursache der Meldung: ERPNext „Erstellen → Arbeitsauftrag“ (Fertigung) am Auftrag - wird mit
+		# Erklärung abgelehnt, statt an „Nos“/Pflichtlagern zu scheitern
+		from erpnext.selling.doctype.sales_order.sales_order import make_work_orders
+
+		zeile = frappe.get_doc("Sales Order", auftrag).items[0]
+		daten = {
+			"items": [
+				{
+					"item_code": "IA-01",
+					"bom": frappe.db.get_value("BOM", {"item": "IA-01", "is_default": 1, "docstatus": 1}),
+					"pending_qty": 23.32,
+					"sales_order_item": zeile.name,
+					"warehouse": "Hauptlager - HST",
+					"description": zeile.description,
+				}
+			]
+		}
+		with self.assertRaises(planung.auftrag.PlanungFehler) as fehler:
+			make_work_orders(json.dumps(daten), auftrag, FIRMA, projekt)
+		self.assertIn("Arbeitspaket", str(fehler.exception))
+		self.assertNotIn("Nos", str(fehler.exception))
+		self.assertEqual(frappe.db.count("Work Order", {"sales_order": auftrag}), 0)
+
+	def test_ohne_lager_arbeitspakete_und_hinweis(self):
+		"""Arbeitspakete brauchen kein Lager; Materialbedarf ohne Lager: Hinweis statt Fehler."""
+		frappe.local.message_log = []
+		vorher = self.fehlerprotokolle()
+		with patch.object(materialbedarf, "lager", lambda firma, e: (None, None)):
+			r = self.auftrag()
+			self.assertEqual(frappe.db.count("Task", {"cv_auftrag": r["auftrag"]}), 4)
+			self.assertEqual(frappe.db.count("Material Request", {"cv_auftrag": r["auftrag"]}), 0)
+			self.assertEqual(self.fehlerprotokolle() - vorher, set())
+			self.assertIn(
+				"Kein Hauptlager eingestellt", json.dumps(frappe.local.message_log, ensure_ascii=False)
+			)
+			frappe.set_user(BUERO)
+			m = planung.materialbedarf_erzeugen(sales_order=r["auftrag"])
+		self.assertIsNone(m["material_request"])
+		self.assertFalse(m["neu"])
+		self.assertTrue(
+			any(h.startswith("Kein Hauptlager eingestellt") for h in m["hinweise"]), m["hinweise"]
+		)
+		# Arbeitspakete über den Button ebenso ohne Lager (bereits vorhanden: neu false, kein Fehler)
+		self.assertFalse(planung.tasks_erzeugen(project=r["projekt"])["neu"])
+		# Umlagerung ohne Fahrzeuglager ebenso
+		frappe.set_user("Administrator")
+		frappe.db.set_single_value(EINSTELLUNGEN, "material_request_typ", "Material Transfer")
+		with patch.object(materialbedarf, "lager", lambda firma, e: ("Hauptlager - HST", None)):
+			frappe.set_user(BUERO)
+			m = planung.materialbedarf_erzeugen(sales_order=r["auftrag"])
+		self.assertIsNone(m["material_request"])
+		self.assertTrue(any(h.startswith("Kein Fahrzeuglager eingestellt") for h in m["hinweise"]))
+
+	def test_projekt_zustand(self):
+		"""Projektformular: Zustandstext, ein Hauptknopf je Zustand, Arbeitspakete (planung.projekt)."""
+		from corevatis_erpnext.planung import projekt as planung_projekt
+		from corevatis_erpnext.prozess.kette import status
+
+		r = self.auftrag()
+		datum = self.start.strftime("%d.%m.%Y")
+		frappe.set_user(BUERO)
+		z = planung_projekt.zustand(r["projekt"])
+		self.assertEqual(z["zustand"], "nicht_zugewiesen")
+		self.assertEqual(
+			z["text"],
+			f"Aus Auftrag {r['auftrag']} vom {datum}: 4 Arbeitspakete, 0 zugewiesen. Nächster Schritt:"
+			" Monteure im Wochenplan zuweisen \u2013 dann sehen sie die Baustelle in der App unter"
+			" „Baustellen heute“.",
+		)
+		self.assertEqual(z["aktion"], {"key": "wochenplan", "label": "Wochenplan öffnen"})
+		self.assertEqual(
+			z["kennzahlen"], {"arbeitspakete": 4, "zugewiesen": 0, "ohne_zuweisung": 4, "zeitbuchungen": 0}
+		)
+		self.assertEqual(
+			[(a["verfahren"], a["sollstunden"], a["status"], a["zugewiesen"]) for a in z["arbeitspakete"]],
+			[(v, h, "Open", []) for v, _t, h in PAKETE],
+		)
+		self.assertTrue(all(a["start"] and a["ende"] for a in z["arbeitspakete"]))
+		# Prozessleiste: Ausführung mit Zuweisungen und Aktion passend zum Zustand
+		ausfuehrung = next(
+			s for s in status("Project", r["projekt"])["schritte"] if s["key"] == "ausfuehrung"
+		)
+		self.assertTrue(ausfuehrung["text"].startswith("4 Arbeitspaket(e), 0 zugewiesen, 0 Zeitbuchung(en)"))
+		self.assertEqual(ausfuehrung["aktion"]["label"], "Wochenplan öffnen")
+		self.assertEqual(ausfuehrung["aktion"]["route"], ["query-report", "Wochenplan"])
+		self.assertEqual(ausfuehrung["aktion"]["route_options"], {"projekt": r["projekt"]})
+
+		# zwei zugewiesen (ToDo wie der Wochenplan 5.2)
+		frappe.set_user("Administrator")
+		tasks = [a["name"] for a in z["arbeitspakete"]]
+
+		def zuweisen(task):
+			frappe.get_doc(
+				{
+					"doctype": "ToDo",
+					"allocated_to": MEISTER,
+					"reference_type": "Task",
+					"reference_name": task,
+					"description": "Test",
+				}
+			).insert(ignore_permissions=True)
+
+		for task in tasks[:2]:
+			zuweisen(task)
+		frappe.set_user(BUERO)
+		z = planung_projekt.zustand(r["projekt"])
+		self.assertIn(": 4 Arbeitspakete, 2 zugewiesen. Nächster Schritt", z["text"])
+		self.assertEqual(z["aktion"]["key"], "wochenplan")
+		self.assertEqual(z["arbeitspakete"][0]["zugewiesen"][0]["user"], MEISTER)
+
+		# alle zugewiesen → Baustellenakte
+		frappe.set_user("Administrator")
+		for task in tasks[2:]:
+			zuweisen(task)
+		frappe.set_user(BUERO)
+		z = planung_projekt.zustand(r["projekt"])
+		self.assertEqual(z["zustand"], "zugewiesen")
+		self.assertIn("4 Arbeitspakete, alle zugewiesen, 0 Zeitbuchung(en)", z["text"])
+		self.assertEqual(z["aktion"], {"key": "baustellenakte", "label": "Baustellenakte"})
+		ausfuehrung = next(
+			s for s in status("Project", r["projekt"])["schritte"] if s["key"] == "ausfuehrung"
+		)
+		self.assertTrue(ausfuehrung["text"].startswith("4 Arbeitspaket(e), 4 zugewiesen"))
+		self.assertEqual(ausfuehrung["aktion"]["js"], "corevatis_erpnext.planung.baustellenakte")
+
+		# keine Arbeitspakete (storniert) → „Arbeitspakete anlegen“ (5.1), legt sie an
+		frappe.set_user("Administrator")
+		for task in tasks:
+			frappe.db.set_value("Task", task, "status", "Cancelled")
+		frappe.set_user(BUERO)
+		z = planung_projekt.zustand(r["projekt"])
+		self.assertEqual(z["zustand"], "keine_arbeitspakete")
+		self.assertTrue(
+			z["text"].startswith(f"Aus Auftrag {r['auftrag']} vom {datum}: noch keine Arbeitspakete.")
+		)
+		self.assertEqual(z["aktion"], {"key": "arbeitspakete_anlegen", "label": "Arbeitspakete anlegen"})
+		self.assertEqual(z["arbeitspakete"], [])
+		ausfuehrung = next(
+			s for s in status("Project", r["projekt"])["schritte"] if s["key"] == "ausfuehrung"
+		)
+		self.assertEqual(ausfuehrung["aktion"]["js"], "corevatis_erpnext.prozess.arbeitspakete_erzeugen")
+		self.assertEqual(ausfuehrung["aktion"]["label"], "Arbeitspakete anlegen")
+		self.assertTrue(planung.tasks_erzeugen(project=r["projekt"])["neu"])
+		self.assertEqual(planung_projekt.zustand(r["projekt"])["kennzahlen"]["arbeitspakete"], 4)
+
+		# Monteur: kein Hauptknopf zum Anlegen/Planen (Rollen wie 5.1/5.2)
+		for key in ("arbeitspakete_anlegen", "wochenplan"):
+			frappe.set_user(MONTEUR)
+			self.assertFalse(planung_projekt.aktion_erlaubt(key, r["projekt"]), key)
+
+	def test_projekt_zustand_texte(self):
+		"""Zustände ohne Belege: ohne Auftrag, abgeschlossen, Einzahl."""
+		from corevatis_erpnext.planung.projekt import zustand_bestimmen
+
+		offen = frappe._dict(status="Open")
+		k = frappe._dict(arbeitspakete=0, zugewiesen=0, ohne_zuweisung=0)
+		z = zustand_bestimmen(offen, None, k, 0)
+		self.assertEqual((z["zustand"], z["aktion"]), ("keine_arbeitspakete", "arbeitspaket_anlegen"))
+		self.assertTrue(z["text"].startswith("Projekt ohne Auftrag: noch keine Arbeitspakete."))
+		k = frappe._dict(arbeitspakete=1, zugewiesen=1, ohne_zuweisung=0)
+		z = zustand_bestimmen(offen, None, k, 3)
+		self.assertEqual((z["zustand"], z["aktion"]), ("zugewiesen", "baustellenakte"))
+		self.assertIn("1 Arbeitspaket, alle zugewiesen, 3 Zeitbuchung(en)", z["text"])
+		z = zustand_bestimmen(frappe._dict(status="Completed"), None, k, 3)
+		self.assertEqual((z["zustand"], z["aktion"]), ("abgeschlossen", "baustellenakte"))
+		self.assertTrue(z["text"].startswith("Projekt abgeschlossen."))
+		# erledigte Pakete ohne Zuweisung zählen nicht als offen
+		k = frappe._dict(arbeitspakete=2, zugewiesen=1, ohne_zuweisung=0)
+		self.assertEqual(zustand_bestimmen(offen, None, k, 0)["zustand"], "zugewiesen")
 
 
 class TestBauablauf(IntegrationTestCase):

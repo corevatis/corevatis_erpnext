@@ -158,6 +158,11 @@ doc_events = {
 		"validate": "corevatis_erpnext.abnahme.protokoll_pruefen",
 		"on_update": "corevatis_erpnext.abnahme.protokoll_aktualisiert",
 	},
+	# Rückmeldung 31.10.: ERPNext-Arbeitsaufträge (Fertigung) zu Aufträgen mit Projekt abfangen -
+	# die Arbeit der Monteure sind die Arbeitspakete (Task) am Projekt
+	"Work Order": {
+		"before_validate": "corevatis_erpnext.planung.fertigung.arbeitsauftrag_pruefen",
+	},
 	"Task": {
 		"validate": "corevatis_erpnext.abnahme.task_pruefen",
 		"on_update": "corevatis_erpnext.abnahme.task_aktualisiert",
