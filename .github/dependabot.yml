@@ -1,7 +1,0 @@
-# Actions sind per Commit-SHA gepinnt (Review Epic 1, T-3); Dependabot schlägt Updates vor.
-version: 2
-updates:
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
