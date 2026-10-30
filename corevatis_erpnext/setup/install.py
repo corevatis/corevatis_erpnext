@@ -127,9 +127,16 @@ def ensure_planung_setup() -> None:
 def ensure_prozess() -> None:
 	"""Prozessleiste: Kennzahlen und Blöcke der Arbeitsbereiche „Vorgänge“/„Meine Baustellen“,
 	Lead-Formular aufräumen (``corevatis_erpnext.prozess.setup``)."""
+	from corevatis_erpnext.prozess.desk import ensure_desk
 	from corevatis_erpnext.prozess.setup import ensure_prozess_setup
 
 	ensure_prozess_setup()
+	# Durchstich D1 bis D3: Startseiten je Rolle, Modulsperren für Benutzer mit Fachrolle
+	ensure_desk()
+	# Durchstich A2: Benutzer mit Rolle Monteur/Meister bekommen automatisch einen Mitarbeiter
+	from corevatis_erpnext.prozess.mitarbeiter import ensure_mitarbeiter_bestand
+
+	ensure_mitarbeiter_bestand()
 
 
 def ensure_angebot_setup() -> None:

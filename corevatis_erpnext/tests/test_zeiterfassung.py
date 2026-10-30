@@ -227,6 +227,10 @@ class TestZeiterfassung(IntegrationTestCase):
 
 	def test_employee_fuer_user(self):
 		self.assertEqual(z.employee_fuer_user(USER)["name"], self.employee)
+		# Seit Durchstich A2 bekommt ein Monteur seinen Mitarbeiter automatisch; der Fall „ohne“
+		# entsteht nur noch, wenn der Mitarbeiter entfernt wurde
+		for emp in frappe.get_all("Employee", filters={"user_id": USER_OHNE}, pluck="name"):
+			frappe.delete_doc("Employee", emp, force=True, ignore_permissions=True)
 		self.assertIsNone(z.employee_fuer_user(USER_OHNE))
 		self.assertIsNone(z.employee_fuer_user(""))
 		self.assertEqual(z.mitarbeiter(self.employee)["user_id"], USER)

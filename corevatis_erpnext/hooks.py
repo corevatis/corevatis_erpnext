@@ -159,12 +159,20 @@ doc_events = {
 		"after_insert": "corevatis_erpnext.vor_ort.lead_objekt.objekt_an_lead",
 		"on_update": "corevatis_erpnext.vor_ort.lead_objekt.objekt_an_lead",
 	},
+	# Durchstich D1: Benutzer mit Fachrolle sehen im Dock nur die Leiste „Betrieb“
+	"User": {
+		"validate": "corevatis_erpnext.prozess.desk.user_validate",
+		# Durchstich A2: Monteur/Meister bekommen automatisch einen Mitarbeiter (Employee)
+		"on_update": "corevatis_erpnext.prozess.mitarbeiter.user_on_update",
+	},
 }
 
 # Web Form „Kostenlose Einschätzung“ (1.2): Honeypot, Datenschutz, Rate-Limit und private
 # Fotos. Andere Web Forms reicht die Funktion unverändert an Frappe weiter.
 override_whitelisted_methods = {
 	"frappe.website.doctype.web_form.web_form.accept": "corevatis_erpnext.webform.einschaetzung.accept",
+	# Durchstich D2: Kachel „ERPNext“ auf /desk nur für System Manager
+	"frappe.apps.get_apps": "corevatis_erpnext.prozess.desk.get_apps",
 }
 
 # Scheduled Tasks
