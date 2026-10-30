@@ -99,7 +99,19 @@
 		);
 	}
 
-	const handlers = { before_workflow_action: ask_verlustgrund, refresh: objekt_button };
+	// Durchstich D4: Nummernkreis und Anrede blendet der Desk bei neuen Belegen trotz Property
+	// Setter ein; hier endgültig ausblenden (Handwerker: Kunde, Adresse, Problem – kein Formularkopf)
+	function formular_aufraeumen(frm) {
+		frm.toggle_display(["naming_series", "salutation"], false);
+	}
+
+	const handlers = {
+		before_workflow_action: ask_verlustgrund,
+		refresh(frm) {
+			formular_aufraeumen(frm);
+			objekt_button(frm);
+		},
+	};
 	for (const [fieldname] of SYMPTOME) {
 		handlers[fieldname] = rebuild;
 	}

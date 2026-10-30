@@ -53,6 +53,7 @@ BLOECKE_DEF = (
 LEAD_FORMULAR = (
 	# Nummernkreis ist fest (CRM-LEAD-.YYYY.-), das erste Feld des Formulars war die Serie
 	("naming_series", "hidden", "1", "Check"),
+	("salutation", "hidden", "1", "Check"),
 	# Privatkunden: kein zweiter Vorname, keine Stellenbezeichnung, kein Geschlecht
 	("middle_name", "hidden", "1", "Check"),
 	("job_title", "hidden", "1", "Check"),
