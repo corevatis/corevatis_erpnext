@@ -531,6 +531,9 @@ class TestProzessEinrichtung(IntegrationTestCase):
 		)
 		for karte in ws.number_cards:
 			self.assertTrue(frappe.db.exists("Number Card", karte.number_card_name), karte.number_card_name)
+		for karte in setup.KENNZAHLEN:
+			# Anzahl ohne Währung (sonst „€ 16,00“)
+			self.assertFalse(frappe.db.get_value("Number Card", karte["name"], "currency"), karte["name"])
 		self.assertTrue(frappe.db.exists("Custom HTML Block", setup.BLOCK_VORGAENGE))
 		self.assertTrue(frappe.db.exists("Report", "Vorgangsliste"))
 

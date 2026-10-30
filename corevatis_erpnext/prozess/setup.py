@@ -88,6 +88,9 @@ def ensure_kennzahlen() -> None:
 			"module": MODULE,
 			"color": karte["color"],
 			"show_percentage_stats": 0,
+			# Anzahl, kein Betrag: Frappe setzt sonst die Standardwährung, und die Karte zeigt „€ 16,00“
+			# (Abnahme mvp-test)
+			"currency": None,
 		}
 		if frappe.db.exists("Number Card", karte["name"]):
 			doc = frappe.get_doc("Number Card", karte["name"])
