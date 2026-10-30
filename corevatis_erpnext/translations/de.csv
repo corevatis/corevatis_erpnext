@@ -189,3 +189,24 @@ Block Invoices without Acceptance,Rechnungen ohne Abnahme sperren
 Sales invoices for a project without acceptance are rejected (except down payment invoices).,Rechnungen zu einem Projekt ohne Abnahme werden abgelehnt (außer Abschlagsrechnungen).
 Assignment (Corevatis),Zuweisung (Corevatis)
 Assigned Employees,Zugewiesene Mitarbeiter
+Lead,Anfrage
+Leads,Anfragen
+New Lead,Neue Anfrage
+Lead Owner,Verantwortlich
+Event,Termin
+Events,Termine
+Task,Arbeitspaket
+Tasks,Arbeitspakete
+Employee,Mitarbeiter
+Employees,Mitarbeiter
+Sales Order,Auftrag
+Sales Orders,Aufträge
+Sales Invoice,Rechnung
+Sales Invoices,Rechnungen
+Timesheet,Stundenzettel
+Timesheets,Stundenzettel
+Stock Entry,Materialbuchung
+Stock Entries,Materialbuchungen
+Material Request,Materialanforderung
+Naming Series,Nummernkreis
+Salutation,Anrede
