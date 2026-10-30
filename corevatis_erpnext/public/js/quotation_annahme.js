@@ -228,7 +228,11 @@ frappe.provide("corevatis_erpnext.angebot");
 			text = __("Storniert.");
 			farbe = "red";
 		}
-		if (text) frm.set_intro(text, farbe);
+		if (text) {
+			// Frappes Standardhinweis („Zum Freigeben oben klicken“) wäre der zweite blaue Balken
+			frm.dashboard.clear_headline && frm.dashboard.clear_headline();
+			frm.set_intro(text, farbe);
+		}
 	}
 
 	frappe.ui.form.on("Quotation", {
@@ -246,7 +250,8 @@ frappe.provide("corevatis_erpnext.angebot");
 			if (!frappe.user.has_role(ROLLEN)) return;
 			// ERPNext-Menüs, die den Ablauf des Betriebs nur verwirren (Positionen übernehmen,
 			// Erstellen → Auftrag/Rechnung/Abo, Als verloren markieren): unser Weg ist die Leiste
-			setTimeout(() => entfernen_erpnext_menues(frm), 0);
+			// ERPNext hängt seine Gruppen teils verzögert an (nach Ajax-Antworten), deshalb mehrfach
+			for (const ms of [0, 300, 1200]) setTimeout(() => entfernen_erpnext_menues(frm), ms);
 			zustand_erklaeren(frm);
 			const status = frm.doc.status;
 			if (frm.doc.docstatus === 0) {
