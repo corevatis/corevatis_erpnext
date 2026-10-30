@@ -6,7 +6,9 @@ Ablauf (``erzeuge_angebot``):
 2. Leistungen bestimmen (``leistungen_aus_aufmass``): Zeilen mit ``item_code`` nennen das Item
    direkt; Zeilen mit nur ``verfahren`` holen die aktiven Leistungsregeln dieses Verfahrens,
    die eine Leistungsposition (``Leistungsregel.item_code``) tragen. Die Mengenregel ist die
-   dort gefundene Regel, sonst ``Item.cv_leistungsregel``.
+   dort gefundene Regel, sonst ``Item.cv_leistungsregel``. Zeilen mit ``menge_fest`` (App,
+   Durchstich A1: vom Meister bestätigte Menge je Raum/Bauteil) geben die Menge fest vor - die
+   Summe dieser Zeilen je Item, ohne Mengenregel.
 3. Herstellkosten je Einheit aus der Standard-Stückliste der Firma: Material zum
    Einkaufspreis (``raw_material_cost``), Montage in Minuten (Arbeitsgänge) - wie
    ``katalog.uebersicht``. Gerechnet wird hier nichts (Architekturregel 7).
@@ -46,6 +48,7 @@ LEISTUNG_SCHLUESSEL = (
 	"bezeichnung",
 	"einheit",
 	"leistungsregel",
+	"menge",
 	"material_je_einheit",
 	"montage_min_je_einheit",
 	"herkunft",
@@ -146,10 +149,12 @@ def leistungen_aus_aufmass(aufmass, firma: str) -> tuple[list[dict], list[str]]:
 	warnungen: list[str] = []
 
 	def merken(item_code: str, zeile, regel: str | None = None):
-		eintrag = auswahl.setdefault(item_code, {"regel": None, "zeilen": []})
+		eintrag = auswahl.setdefault(item_code, {"regel": None, "zeilen": [], "menge": None})
 		if regel and not eintrag["regel"]:
 			eintrag["regel"] = regel
 		eintrag["zeilen"].append(zeile)
+		if cint(zeile.get("menge_fest")):
+			eintrag["menge"] = flt(eintrag["menge"]) + flt(zeile.get("menge"))
 
 	verfahren_gesehen: set[str] = set()
 	for zeile in aufmass.get("positionen") or []:
@@ -183,7 +188,8 @@ def leistungen_aus_aufmass(aufmass, firma: str) -> tuple[list[dict], list[str]]:
 			warnungen.append(_("Item {0} not found or disabled - skipped.").format(code))
 			continue
 		regel = eintrag["regel"] or item.cv_leistungsregel
-		if not regel:
+		fest = eintrag["menge"]
+		if not regel and fest is None:
 			warnungen.append(_("Item {0} has no quantity rule - skipped.").format(code))
 			continue
 		kosten = _bom_kosten(code, firma)
@@ -191,24 +197,27 @@ def leistungen_aus_aufmass(aufmass, firma: str) -> tuple[list[dict], list[str]]:
 			warnungen.append(_("Item {0} has no submitted BOM for {1} - skipped.").format(code, firma))
 			continue
 		zeilen = eintrag["zeilen"]
-		leistungen.append(
-			{
-				"item_code": code,
-				"bezeichnung": item.item_name,
-				"einheit": item.stock_uom,
-				"leistungsregel": regel,
-				"material_je_einheit": kosten["material_je_einheit"],
-				"montage_min_je_einheit": kosten["montage_min_je_einheit"],
-				"herkunft": {
-					"aufmass_positionen": [z.get("name") for z in zeilen if z.get("name")],
-					"raeume": list(dict.fromkeys(z.get("raum") for z in zeilen if z.get("raum"))),
-					"bauteile": list(dict.fromkeys(z.get("bauteil") for z in zeilen if z.get("bauteil"))),
-					"verfahren": item.cv_verfahren
-					or next((z.get("verfahren") for z in zeilen if z.get("verfahren")), None),
-					"stueckliste": kosten["bom"],
-				},
-			}
-		)
+		leistung = {
+			"item_code": code,
+			"bezeichnung": item.item_name,
+			"einheit": item.stock_uom,
+			"leistungsregel": regel,
+			"material_je_einheit": kosten["material_je_einheit"],
+			"montage_min_je_einheit": kosten["montage_min_je_einheit"],
+			"herkunft": {
+				"aufmass_positionen": [z.get("name") for z in zeilen if z.get("name")],
+				"raeume": list(dict.fromkeys(z.get("raum") for z in zeilen if z.get("raum"))),
+				"bauteile": list(dict.fromkeys(z.get("bauteil") for z in zeilen if z.get("bauteil"))),
+				"verfahren": item.cv_verfahren
+				or next((z.get("verfahren") for z in zeilen if z.get("verfahren")), None),
+				"stueckliste": kosten["bom"],
+			},
+		}
+		if fest is not None:
+			# feste Menge der App statt Mengenregel (Kern: ``kalkuliere`` mit ``menge``)
+			leistung["menge"] = str(flt(fest, 6))
+			leistung["leistungsregel"] = None
+		leistungen.append(leistung)
 	return leistungen, warnungen
 
 
@@ -499,7 +508,7 @@ def erzeuge_angebot(
 	else:
 		doc.insert()
 	warnungen += [w.get("meldung") for w in kalkulation.get("warnungen") or []]
-	warnungen += [h.get("meldung") for h in kalkulation.get("hinweise") or []]
+	warnungen += [h.get("meldung") for h in _hinweise(am, kalkulation)]
 	if not doc.taxes:
 		warnungen.append(_("No sales tax template {0} for company {1}.").format(STEUERVORLAGE, firma))
 	return {
@@ -512,6 +521,21 @@ def erzeuge_angebot(
 		"brutto": doc.grand_total,
 		"warnungen": [w for w in warnungen if w],
 	}
+
+
+def _hinweise(aufmass, kalkulation: dict) -> list[dict]:
+	"""Hinweise der Abbildung ohne „nicht verwendet“ für Zeilen mit fester Menge (die nutzt keine
+	Mengenregel, sondern die Leistung selbst)."""
+	fest = {
+		f"aufmass.positionen[{cint(z.get('idx')) - 1}]"
+		for z in aufmass.get("positionen") or []
+		if cint(z.get("menge_fest"))
+	}
+	return [
+		h
+		for h in kalkulation.get("hinweise") or []
+		if not (h.get("code") == "nicht_verwendet" and h.get("pfad") in fest)
+	]
 
 
 # --------------------------------------------------------------------------- Dashboards

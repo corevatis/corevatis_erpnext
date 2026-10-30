@@ -87,6 +87,10 @@ override_doctype_dashboards = {
 	"Aufmass": "corevatis_erpnext.angebot.generator.aufmass_dashboard",
 }
 
+# Besichtigung in der App bis zum Angebot (Durchstich A1): der Kern ruft Katalog, Generator, Angebote
+# und PDF über diesen Hook (corevatis.api.besichtigung, kein Import über die Lizenzgrenze)
+corevatis_angebot_adapter = "corevatis_erpnext.angebot.mobil"
+
 # Document Events
 # ---------------
 # Gutschriften (Sales Invoice mit is_return) bekommen den Rückgabe-Nummernkreis aus

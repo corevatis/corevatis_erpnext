@@ -6,6 +6,15 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (Durchstich A1: Besichtigung in der App bis zum Angebot)
+
+- `corevatis_erpnext.angebot.mobil` für die App, vom Kern über den Hook `corevatis_angebot_adapter`
+  gerufen: `katalog` (Items mit Verfahren und gebuchter Stückliste, Kurztext), `angebot_erzeugen`
+  (Generator 4.1 mit Status und Summen), `angebote` (Anfrage/Objekt), `angebot_info`, `angebot_pdf`
+  (Standard-Druckformat des Angebots).
+- Generator: Aufmaßzeilen mit `menge_fest` (vom Meister bestätigte Menge) geben die Menge je Item
+  vor (Summe, ohne Mengenregel); Hinweise „nicht verwendet“ dieser Zeilen entfallen.
+
 ### Hinzugefügt (6.1 Abnahmeprotokoll, 6.2 Garantie und Rechnungsfreigabe)
 
 - `corevatis_erpnext.abnahme`: Hook `Abnahmeprotokoll.on_update` (Kern-Doctype) legt beim Abschluss
