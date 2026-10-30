@@ -38,6 +38,11 @@ class TestLeadObjekt(IntegrationTestCase):
 	def tearDown(self):
 		lead_objekt.remove_lead_objekt_field()
 		if frappe.db.exists("DocType", OBJEKT_DOCTYPE):
+			# Datensätze zuerst löschen: delete_doc("DocType") lässt die Tabelle tabObjekt stehen.
+			# Sonst sieht ein späterer Test mit eigenem Stellvertreter (test_prozess) die alten
+			# Objekte - über die zurückgesetzte Lead-Nummernserie sogar am "eigenen" Lead.
+			for name in frappe.get_all(OBJEKT_DOCTYPE, pluck="name"):
+				frappe.delete_doc(OBJEKT_DOCTYPE, name, force=True, ignore_permissions=True)
 			frappe.delete_doc("DocType", OBJEKT_DOCTYPE, force=True, ignore_permissions=True)
 		frappe.db.commit()
 		frappe.clear_cache(doctype="Lead")
