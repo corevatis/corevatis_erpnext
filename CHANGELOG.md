@@ -6,6 +6,28 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (6.1 Abnahmeprotokoll, 6.2 Garantie und Rechnungsfreigabe)
+
+- `corevatis_erpnext.abnahme`: Hook `Abnahmeprotokoll.on_update` (Kern-Doctype) legt beim Abschluss
+  je Mangel einen Task am Projekt an („Mangel: …“, Fälligkeit = Frist, Verweis auf Protokoll und
+  Mangelzeile, idempotent über `Task.cv_abnahmeprotokoll`/`cv_mangel_zeile`, Projektende wird bei
+  späterer Frist verschoben); Fehler halten den Abschluss nicht auf (Error Log, Meldung, Button
+  „Mangel-Aufgaben erzeugen“ = `corevatis_erpnext.abnahme.maengel_tasks_erzeugen`).
+- `Task.on_update`: erledigter Mangel-Task setzt die Mangelzeile auf „Behoben“ (wieder offen →
+  „Offen“, über `corevatis.abnahme.mangel.status_setzen`); „Behoben“ im Protokoll erledigt den Task.
+- Projekt: `cv_abnahmeprotokoll`, `cv_abnahme_ergebnis`, `cv_abgenommen_am` (nur Server),
+  `cv_vertragsgrundlage`, `cv_gewaehrleistung_jahre`, `cv_gewaehrleistung_bis` (berechnet);
+  Single „Corevatis Abnahme Einstellungen“ (Vorgabe BGB 5 Jahre, VOB/B 4 Jahre, Mangel-Tasks,
+  Rechnungssperre).
+- `Sales Invoice.validate`: Rechnung zu einem nicht abgenommenen Projekt wird abgelehnt
+  (`RechnungOhneAbnahme`), außer Abschlagsrechnung (`cv_abschlag`, Vorgabe 0 – bis 7.1) oder
+  Übersteuerung durch einen System Manager mit Begründung (`cv_abnahme_uebersteuert`,
+  `cv_uebersteuerung_grund`, `cv_uebersteuert_von`, Kommentar).
+- Prozessleiste: Schritt „Abnahme“ über das Abnahmeprotokoll (`projekt`; erledigt bei
+  abgeschlossenem Protokoll „Abgenommen“/„mit Mängeln“, verweigert = aktiv) statt Projektstatus
+  „Completed“; Aktion „Abnahmeprotokoll anlegen“; Leiste auch im Abnahmeprotokoll; Ausführung gilt
+  mit der Abnahme als erledigt.
+
 ### Hinzugefügt (5.2 Wochenplan und Zuweisung)
 
 - `corevatis_erpnext.planung.zuweisung`: `zuweisen(task, employee)` und

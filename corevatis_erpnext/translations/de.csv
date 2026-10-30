@@ -159,5 +159,33 @@ Days after the planned start (or the order date) without time booking or daily r
 Process Overview,Vorgangsübersicht
 Maximum Processes in the Overview,Höchstens Vorgänge in der Übersicht
 Newest inquiries first; older ones are not evaluated.,Neueste Anfragen zuerst; ältere werden nicht ausgewertet.
+Acceptance Protocol,Abnahmeprotokoll
+Defect Line,Mangelzeile
+Acceptance and Warranty,Abnahme und Gewährleistung
+Acceptance Result,Ergebnis der Abnahme
+Accepted On,Abgenommen am
+Contract Basis,Vertragsgrundlage
+Empty: default from the acceptance settings,Leer: Vorgabe aus den Abnahme-Einstellungen
+Warranty (Years),Gewährleistung (Jahre)
+"Empty: from the contract basis (BGB 5, VOB/B 4 years)","Leer: aus der Vertragsgrundlage (BGB 5, VOB/B 4 Jahre)"
+Warranty Until,Gewährleistung bis
+Down Payment Invoice,Abschlagsrechnung
+Down payment invoices are allowed before the acceptance of the project,Abschlagsrechnungen sind vor der Abnahme des Projekts erlaubt
+Invoice without Acceptance (Override),Rechnung ohne Abnahme (Übersteuerung)
+"System Manager only, with a reason","Nur System Manager, mit Begründung"
+Reason for Override,Begründung der Übersteuerung
+Overridden By,Übersteuert von
+Corevatis Abnahme Einstellungen,Corevatis Abnahme-Einstellungen
+"Settings for acceptance protocols: contract basis and warranty period, defect tasks, invoice release (Corevatis)","Einstellungen für Abnahmeprotokolle: Vertragsgrundlage und Gewährleistungsdauer, Mangel-Aufgaben, Rechnungsfreigabe (Corevatis)"
+Warranty,Gewährleistung
+Default Contract Basis,Vorgabe Vertragsgrundlage
+Used when the project has no contract basis of its own.,"Gilt, wenn das Projekt keine eigene Vertragsgrundlage hat."
+Warranty Years (BGB),Gewährleistung in Jahren (BGB)
+Warranty Years (VOB/B),Gewährleistung in Jahren (VOB/B)
+Defects and Invoicing,Mängel und Rechnung
+Create Defect Tasks on Completion,Mangel-Aufgaben beim Abschluss anlegen
+When an acceptance protocol is completed: one task per defect with the deadline as due date.,Beim Abschluss eines Abnahmeprotokolls: eine Aufgabe je Mangel mit der Frist als Fälligkeit.
+Block Invoices without Acceptance,Rechnungen ohne Abnahme sperren
+Sales invoices for a project without acceptance are rejected (except down payment invoices).,Rechnungen zu einem Projekt ohne Abnahme werden abgelehnt (außer Abschlagsrechnungen).
 Assignment (Corevatis),Zuweisung (Corevatis)
 Assigned Employees,Zugewiesene Mitarbeiter

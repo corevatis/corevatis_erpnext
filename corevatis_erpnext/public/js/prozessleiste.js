@@ -12,7 +12,17 @@ frappe.provide("corevatis_erpnext.prozess");
 	P._eingerichtet = true;
 
 	const METHODE = "corevatis_erpnext.prozess.status";
-	const DOCTYPES = ["Lead", "Objekt", "Aufmass", "Befund", "Quotation", "Sales Order", "Project", "Sales Invoice"];
+	const DOCTYPES = [
+		"Lead",
+		"Objekt",
+		"Aufmass",
+		"Befund",
+		"Quotation",
+		"Sales Order",
+		"Project",
+		"Abnahmeprotokoll",
+		"Sales Invoice",
+	];
 	const SYMBOL = { erledigt: "✓", aktiv: "●", offen: "○", entfaellt: "–", verloren: "✕" };
 	const AMPEL = { rot: "red", gelb: "orange", "grün": "green", grau: "gray" };
 	const esc = (s) => frappe.utils.escape_html(s === null || s === undefined ? "" : String(s));

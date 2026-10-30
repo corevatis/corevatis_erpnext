@@ -20,7 +20,7 @@ Verknüpfungen (Feldnamen sind Verträge der jeweiligen Aufgaben):
 | Angebot | Quotation | ``cv_aufmass`` (4.1), ``cv_lead`` (4.4), ``party_name`` = Lead |
 | Auftrag | Sales Order | ``Sales Order Item.prevdoc_docname`` = Angebot, ``cv_lead`` (4.4) |
 | Ausführung | Project, Task, Timesheet, Tagesrapport (Kern, 5.3) | ``Project.sales_order``, ``cv_lead``, ``cv_angebot``, ``Lead.cv_projekt`` (4.4) |
-| Abnahme | Abnahmeprotokoll (Kern, 6.1) oder Projektstatus „Completed“ | Projekt |
+| Abnahme | Abnahmeprotokoll (Kern, 6.1) | ``Abnahmeprotokoll.projekt`` |
 | Rechnung | Sales Invoice | ``project`` oder ``Sales Invoice Item.sales_order`` |
 
 Rechte: Der Benutzer braucht Leserecht auf den Startdatensatz. Die Kette wird ohne Rechte
@@ -67,13 +67,17 @@ STARTDOCTYPES = (
 	"Quotation",
 	"Sales Order",
 	"Project",
+	"Abnahmeprotokoll",
 	"Sales Invoice",
 )
 
 OBJEKT, AUFMASS, BEFUND = "Objekt", "Aufmass", "Befund"
-# Kern-Doctypes späterer Aufgaben (5.3, 6.1): Verknüpfung zum Projekt über ``projekt``/``project``
-# oder ``referenz_doctype``/``referenz_name`` (ANNAHME, im Vertragstest des Kerns zu bestätigen)
+# Kern-Doctypes (5.3, 6.1): Verknüpfung zum Projekt über ``projekt`` (Vertragstest im Kern)
 TAGESRAPPORT, ABNAHMEPROTOKOLL = "Tagesrapport", "Abnahmeprotokoll"
+# Abnahme (6.1): abgeschlossenes Protokoll mit einem dieser Ergebnisse = Schritt erledigt
+ABNAHME_ABGESCHLOSSEN = "Abgeschlossen"
+ABNAHME_ERLEDIGT = ("Abgenommen", "Abgenommen mit Mängeln")
+ABNAHME_VERWEIGERT = "Abnahme verweigert"
 AUFMASS_ABGESCHLOSSEN = "Abgeschlossen"
 
 ROLLEN_ANGEBOT = ("Büro", "Meister", "System Manager")
@@ -233,6 +237,9 @@ def lead_von(doctype: str, name: str, tiefe: int = 0) -> str | None:
 			if lead := lead_von("Sales Order", w.sales_order, weiter):
 				return lead
 		return _lead_vom_kunden(w.get("customer"))
+	if doctype == ABNAHMEPROTOKOLL:
+		projekt = _wert(ABNAHMEPROTOKOLL, name, ("projekt",)).get("projekt")
+		return lead_von("Project", projekt, weiter) if projekt else None
 	if doctype == "Sales Invoice":
 		w = _wert("Sales Invoice", name, ("project", "customer"))
 		if w.get("project"):
@@ -312,6 +319,8 @@ def sammeln(
 		auftraege.append(start_name)
 	elif start_doctype == "Project":
 		projekte.append(start_name)
+	elif start_doctype == ABNAHMEPROTOKOLL:
+		projekte.append(_wert(ABNAHMEPROTOKOLL, start_name, ("projekt",)).get("projekt"))
 	elif start_doctype == "Sales Invoice":
 		rechnungen.append(start_name)
 		w = _wert("Sales Invoice", start_name, ("project",))
@@ -415,7 +424,9 @@ def sammeln(
 		k.zeiten = _zeitbuchungen(namen)
 		k.rapporte = len(_kern_belege(TAGESRAPPORT, namen))
 		k.abnahmen = _zeilen(
-			ABNAHMEPROTOKOLL, _kern_belege(ABNAHMEPROTOKOLL, namen), ("name", "docstatus", "status")
+			ABNAHMEPROTOKOLL,
+			_kern_belege(ABNAHMEPROTOKOLL, namen),
+			("name", "docstatus", "status", "ergebnis", "datum", "abgeschlossen_am", "creation"),
 		)
 	if k.angebote:
 		k.nachfass = frappe.get_all(
@@ -619,6 +630,11 @@ def schritte(k: frappe._dict, einst=None) -> list[dict]:
 			_schritt("auftrag", AKTIV, _("Auftrag im Entwurf"), belege, auftrag.creation, betrieb=True)
 		)
 
+	# Abnahme (6.1): das zuletzt abgeschlossene Protokoll zählt (Nachabnahme nach Verweigerung)
+	abgeschlossen = [a for a in k.abnahmen if a.get("status") == ABNAHME_ABGESCHLOSSEN]
+	letzte_abnahme = max(abgeschlossen, key=lambda a: str(a.get("abgeschlossen_am") or ""), default=None)
+	abgenommen = bool(letzte_abnahme) and letzte_abnahme.get("ergebnis") in ABNAHME_ERLEDIGT
+
 	# 6 Ausführung
 	belege = [_beleg("Project", p.name, p.get("project_name") or "") for p in k.projekte]
 	projekt = _neuestes(k.projekte)
@@ -631,20 +647,24 @@ def schritte(k: frappe._dict, einst=None) -> list[dict]:
 		]
 		if doctype_da(TAGESRAPPORT):
 			teile.append(_("{0} Rapport(e)").format(k.rapporte))
-		fertig = projekt.status == "Completed" or flt(projekt.percent_complete) >= 100
+		fertig = projekt.status == "Completed" or flt(projekt.percent_complete) >= 100 or abgenommen
 		status = ERLEDIGT if fertig else AKTIV
 		text = _("Ausgeführt") if fertig else ", ".join(teile)
 		ergebnis.append(
 			_schritt("ausfuehrung", status, text, belege, projekt.expected_start_date or projekt.creation)
 		)
 
-	# 7 Abnahme (Abnahmeprotokoll aus 6.1; bis dahin Projektstatus „Completed“ - ANNAHME)
-	belege = [_beleg(ABNAHMEPROTOKOLL, a.name) for a in k.abnahmen]
-	abgenommen = [a for a in k.abnahmen if a.get("docstatus") == 1 or a.get("status") == "Abgeschlossen"]
-	if abgenommen or (projekt and projekt.status == "Completed"):
-		ergebnis.append(_schritt("abnahme", ERLEDIGT, _("Abgenommen"), belege))
-	elif k.abnahmen:
-		ergebnis.append(_schritt("abnahme", AKTIV, _("Abnahmeprotokoll in Arbeit"), belege))
+	# 7 Abnahme (Abnahmeprotokoll aus 6.1, Feld ``projekt``; löst den Projektstatus „Completed“ ab)
+	belege = [_beleg(ABNAHMEPROTOKOLL, a.name, a.get("ergebnis") or _("Entwurf")) for a in k.abnahmen]
+	entwurf = any(a.get("status") != ABNAHME_ABGESCHLOSSEN for a in k.abnahmen)
+	if abgenommen:
+		text = _("{0} am {1}").format(_(letzte_abnahme.ergebnis), _datum(letzte_abnahme.datum))
+		ergebnis.append(_schritt("abnahme", ERLEDIGT, text, belege, letzte_abnahme.datum))
+	elif entwurf:
+		ergebnis.append(_schritt("abnahme", AKTIV, _("Abnahmeprotokoll in Arbeit"), belege, betrieb=True))
+	elif letzte_abnahme:
+		text = _("Abnahme verweigert am {0} - Nachabnahme nötig").format(_datum(letzte_abnahme.datum))
+		ergebnis.append(_schritt("abnahme", AKTIV, text, belege, letzte_abnahme.datum, betrieb=True))
 	else:
 		ergebnis.append(_schritt("abnahme", OFFEN, _("Noch nicht abgenommen")))
 
@@ -659,6 +679,8 @@ def schritte(k: frappe._dict, einst=None) -> list[dict]:
 		ergebnis.append(_schritt("rechnung", AKTIV, text, belege))
 	elif k.rechnungen:
 		ergebnis.append(_schritt("rechnung", AKTIV, _("Rechnung im Entwurf"), belege))
+	elif projekt and not abgenommen:
+		ergebnis.append(_schritt("rechnung", OFFEN, _("Schlussrechnung nach der Abnahme (Abschlag möglich)")))
 	else:
 		ergebnis.append(_schritt("rechnung", OFFEN, _("Noch keine Rechnung")))
 
@@ -879,6 +901,20 @@ def aktionen(k: frappe._dict, liste: list[dict]) -> None:
 			schritt["ausfuehrung"]["aktion"] = _aktion(
 				_("Arbeitspaket anlegen"), neu="Task", werte={"project": projekt.name}
 			)
+
+	# Abnahmeprotokoll anlegen (6.1, Formular des Kerns; Meister/Büro mit Anlegerecht)
+	abn = schritt["abnahme"]
+	if (
+		projekt
+		and doctype_da(ABNAHMEPROTOKOLL)
+		and not any(a.get("status") != ABNAHME_ABGESCHLOSSEN for a in k.abnahmen)
+		and abn["status"] in (OFFEN, AKTIV)
+		and _darf(ABNAHMEPROTOKOLL, "create")
+		and lesbar("Project", projekt.name)
+	):
+		abn["aktion"] = _aktion(
+			_("Abnahmeprotokoll anlegen"), neu=ABNAHMEPROTOKOLL, werte={"projekt": projekt.name}
+		)
 
 	# Rechnung erstellen (ERPNext „Erstellen → Rechnung“ am Auftrag)
 	auftrag = _neuestes(k.auftraege, lambda a: a.docstatus == 1)
