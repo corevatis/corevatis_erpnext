@@ -120,7 +120,7 @@ def zustand_bestimmen(
 			"{0}, {1} zugewiesen. Nächster Schritt: Monteure im Wochenplan zuweisen {2} dann sehen sie die"
 			" Baustelle in der App unter „Baustellen heute“."
 		).format(_anzahl(n), k.zugewiesen, WEITER)
-		return {"zustand": NICHT_ZUGEWIESEN, "text": text, "farbe": "orange", "aktion": "wochenplan"}
+		return {"zustand": NICHT_ZUGEWIESEN, "text": text, "farbe": "blue", "aktion": "wochenplan"}
 	text = herkunft + _(
 		"{0}, alle zugewiesen, {1} Zeitbuchung(en). Die Monteure sehen die Baustelle in der App unter"
 		" „Baustellen heute“ (ab Beginn ihres Pakets). Was auf der Baustelle passiert: Baustellenakte."
