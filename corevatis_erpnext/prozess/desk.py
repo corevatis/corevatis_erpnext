@@ -101,3 +101,13 @@ def ensure_block_modules_bestand() -> None:
 		if sorted(r.module for r in doc.get("block_modules", [])) != vorher:
 			doc.flags.ignore_permissions = True
 			doc.save()
+
+
+def boot_session(bootinfo) -> None:
+	"""Boot-Daten des Desks: die Kachel „ERPNext“ (Finanz-Dashboard, Module) sehen nur System
+	Manager; Benutzer mit Fachrolle starten in „Betrieb“."""
+	if frappe.session.user == "Administrator" or _voll(frappe.get_roles()):
+		return
+	for app in bootinfo.get("app_data") or []:
+		if app.get("app_name") == "erpnext":
+			app["on_apps_screen"] = False

@@ -34,6 +34,7 @@
 		"add_taxes_from_item_tax_template": 0
 	},
 	"naming_series": {
+		"Lead": {"series": "ANF-.YYYY.-"},
 		"Quotation": {"series": "ANG-.YYYY.-"},
 		"Sales Order": {"series": "AB-.YYYY.-"},
 		"Delivery Note": {"series": "LS-.YYYY.-"},

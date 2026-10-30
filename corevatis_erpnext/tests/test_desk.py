@@ -103,3 +103,28 @@ class TestDesk(IntegrationTestCase):
 		self.assertIn("corevatis_erpnext", namen)
 		frappe.set_user("Administrator")
 		self.assertIn("erpnext", [a["name"] for a in desk.get_apps()])
+
+	def test_boot_session_blendet_erpnext_kachel_aus(self):
+		_user(BUERO, ["Büro"])
+		frappe.set_user(BUERO)
+		boot = frappe._dict(
+			app_data=[
+				{"app_name": "erpnext", "on_apps_screen": True},
+				{"app_name": "corevatis_erpnext", "on_apps_screen": True},
+			]
+		)
+		desk.boot_session(boot)
+		self.assertEqual([a["on_apps_screen"] for a in boot.app_data], [False, True])
+		frappe.set_user("Administrator")
+		boot = frappe._dict(app_data=[{"app_name": "erpnext", "on_apps_screen": True}])
+		desk.boot_session(boot)
+		self.assertTrue(boot.app_data[0]["on_apps_screen"])
+
+	def test_lead_formular_ohne_nummernkreis_und_anrede(self):
+		from corevatis_erpnext.prozess.setup import ensure_lead_formular
+
+		ensure_lead_formular()
+		meta = frappe.get_meta("Lead")
+		self.assertTrue(meta.get_field("naming_series").hidden)
+		self.assertTrue(meta.get_field("salutation").hidden)
+		self.assertIn("ANF-.YYYY.-", meta.get_field("naming_series").options or "")

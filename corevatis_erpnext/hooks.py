@@ -34,6 +34,8 @@ add_to_apps_screen = [
 after_install = "corevatis_erpnext.setup.install.after_install"
 # Custom Fields und Fachrollen (ab 1.4 auch der Workflow) nach jedem migrate - idempotent
 after_migrate = ["corevatis_erpnext.setup.install.after_migrate"]
+# Durchstich D2: Kachel „ERPNext“ auf /desk nur für System Manager (Boot-Daten filtern)
+boot_session = ["corevatis_erpnext.prozess.desk.boot_session"]
 # Kern-App corevatis nachträglich installiert/entfernt: Lead.cv_objekt anlegen/entfernen (2.1)
 after_app_install = "corevatis_erpnext.vor_ort.lead_objekt.after_app_install"
 before_app_uninstall = "corevatis_erpnext.vor_ort.lead_objekt.before_app_uninstall"
