@@ -24,6 +24,7 @@ ERWARTET = {
 	},
 	"Quotation Item": {
 		"cv_raum": "Data",
+		"cv_waende": "Small Text",
 		"cv_bauteil": "Data",
 		"cv_verfahren": "Data",
 		"cv_aufmass_position": "Data",

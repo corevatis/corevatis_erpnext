@@ -51,6 +51,42 @@ SOLL = {
 	"IA-08": ("26.80", "23.85", "639.18", ["R1", "R2"]),
 }
 NETTO, UST, BRUTTO = 4009.12, 761.73, 4770.85  # 19 % von 4.009,12 = 761,7328
+# Beiträge der Wände (Engine, Quelle „wand“) für IA-05 im Testaufmaß: R1/N … R2/W wie im Kern
+WAND_BEITRAEGE = {
+	"IA-05": [
+		{"quelle": "wand", "id": f"{raum}/{wand}", "raum": raum, "bauteil": "Keller außen", "menge": menge}
+		for raum, wand, menge in (
+			("R1", "N", "5.92"),
+			("R1", "O", "0"),
+			("R1", "W", "4.50"),
+			("R2", "S", "6.19"),
+		)
+	]
+}
+
+# Abnahme 3.3 (AUF-2026-00013, docs/3.3-aufmass-editor.md): feste Mengen der App und die Engine-Mengen
+# je Wand (``aufmass.mengen``) - Keller L aus dem Demo-Scan (W1 …), Keller 1 von Hand (A-D)
+ENGINE_WAENDE_33 = {
+	"IA-05": [
+		("Keller L", "W1", "6.15"),
+		("Keller L", "W3", "3.00"),
+		("Keller L", "W5", "4.50"),
+		("Keller L", "W6", "6.00"),
+		("Keller 1", "A", "6.00"),
+		("Keller 1", "C", "6.00"),
+		("Keller 1", "D", "4.50"),
+	],
+	"HS-02": [
+		("Keller L", "W1", "4.10"),
+		("Keller L", "W3", "2.00"),
+		("Keller L", "W5", "3.00"),
+		("Keller L", "W6", "4.00"),
+		("Keller 1", "A", "4.00"),
+		("Keller 1", "B", "3.00"),
+		("Keller 1", "C", "4.00"),
+		("Keller 1", "D", "3.00"),
+	],
+}
 
 
 def testaufmass(name="AUF-TEST-4.1", **werte) -> frappe._dict:
@@ -98,7 +134,10 @@ class KernStellvertreter:
 					"mengen_herkunft": f"Regel {leistung['leistungsregel']}: … Summe {menge}",
 					"mengen": {
 						"je_raum": [{"raum": r, "menge": "1.00"} for r in raeume],
-						"beitraege": [{"bauteil": "Keller außen", "menge": "1.00"}] if raeume else [],
+						"beitraege": WAND_BEITRAEGE.get(
+							leistung["item_code"],
+							[{"bauteil": "Keller außen", "menge": "1.00"}] if raeume else [],
+						),
 					},
 					"kalkulation": {"herstellkosten": f"{hk:.2f}"},
 					"einzelpreis": ep,
@@ -426,6 +465,96 @@ class TestAngebotGenerator(IntegrationTestCase):
 		self.assertNotIn("Zeile 10 ohne Kategorie", r["warnungen"])
 		for leistung in leistungen:
 			self.assertLessEqual(set(leistung), set(generator.LEISTUNG_SCHLUESSEL))
+
+	def test_waende_aus_den_engine_mengen(self):
+		"""Rückmeldung 31.10.: jede Position nennt die Wände des Grundrisses, aus denen ihre Menge kommt -
+		``cv_waende`` je Raum mit Menge, im Langtext (Druck) „Grundlage: …“; feste Mengen „vom Meister
+		bestätigt“. Quelle: Engine-Mengen je Wand (``aufmass_mengen`` aus ``kalkuliere``)."""
+		self.aufmass = testaufmass("AUF-TEST-WAENDE")
+		self.aufmass.positionen = [
+			frappe._dict(name="w1", idx=1, item_code="IA-05", raum="Keller L", menge=19.65, menge_fest=1),
+			frappe._dict(name="w2", idx=2, item_code="IA-05", raum="Keller 1", menge=16.5, menge_fest=1),
+			frappe._dict(name="w3", idx=3, item_code="HS-02", raum="Keller L", menge=13.1, menge_fest=1),
+			frappe._dict(name="w4", idx=4, item_code="HS-02", raum="Keller 1", menge=14, menge_fest=1),
+			frappe._dict(name="w5", idx=5, item_code="AL-01", menge=1, menge_fest=1),
+		]
+		kern = self.kern
+
+		def kalkuliere(aufmass, leistungen, schema=None, erschwernis_prozent=None):
+			r = KernStellvertreter.__call__(kern, aufmass, leistungen, schema, erschwernis_prozent)
+			for p, l in zip(r["positionen"], leistungen, strict=True):
+				p.update(menge=l["menge"], menge_quelle="fest", mengen=None)
+			r["aufmass_mengen"] = {
+				code: {
+					"menge": "x",
+					"waende": [
+						{"id": f"{raum}/{wand}", "raum": raum, "menge": menge, "brutto": menge, "formel": "…"}
+						for raum, wand, menge in waende
+					],
+				}
+				for code, waende in ENGINE_WAENDE_33.items()
+			}
+			return r
+
+		self.kern = kalkuliere
+		frappe.set_user(BUERO)
+		q = frappe.get_doc("Quotation", self.erzeugen()["angebot"])
+		zeilen = {z.item_code: z for z in q.items}
+		self.assertEqual(
+			zeilen["IA-05"].cv_waende, "Keller L: W1, W3, W5, W6 · 19,65 m²\nKeller 1: A, C, D · 16,50 m²"
+		)
+		self.assertEqual(
+			zeilen["HS-02"].cv_waende,
+			"Keller L: W1, W3, W5, W6 · 13,10 lfm\nKeller 1: A, B, C, D · 14,00 lfm",
+		)
+		self.assertIn(
+			'<p class="cv-grundlage">Grundlage: Keller L W1, W3, W5, W6; Keller 1 A, C, D. '
+			"Menge vom Meister bestätigt.</p>",
+			zeilen["IA-05"].description,
+		)
+		self.assertTrue(
+			zeilen["IA-05"].description.startswith(frappe.db.get_value("Item", "IA-05", "description"))
+		)
+		# Pauschale ohne Wände: nur die Bestätigung, kein Raum
+		self.assertIsNone(zeilen["AL-01"].cv_waende)
+		self.assertIn('<p class="cv-grundlage">Menge vom Meister bestätigt.</p>', zeilen["AL-01"].description)
+		# Raum für die Gruppen im Druck unverändert
+		self.assertEqual(zeilen["IA-05"].cv_raum, "Keller L, Keller 1")
+		if frappe.db.exists("Print Format", "Angebot Corevatis"):
+			frappe.set_user("Administrator")
+			lang = frappe.local.lang
+			self.addCleanup(setattr, frappe.local, "lang", lang)
+			html = frappe.get_print("Quotation", q.name, print_format="Angebot Corevatis", doc=q)
+			self.assertIn("Grundlage: Keller L W1, W3, W5, W6; Keller 1 A, C, D.", html)
+
+	def test_waende_aus_der_mengenregel_und_rueckfall(self):
+		"""Mengenregel: Wände aus den Beiträgen der Engine (Menge 0 zählt nicht); ohne ``aufmass_mengen``
+		(älterer Kern) die Zeilen „Wandfläche netto“ des Aufmaßes."""
+		frappe.set_user(BUERO)
+		q = frappe.get_doc("Quotation", self.erzeugen()["angebot"])
+		ia05 = next(z for z in q.items if z.item_code == "IA-05")
+		self.assertEqual(ia05.cv_waende, "R1: N, W · 10,42 m²\nR2: S · 6,19 m²")
+		self.assertIn('<p class="cv-grundlage">Grundlage: R1 N, W; R2 S.</p>', ia05.description)
+		self.assertNotIn("Meister", ia05.description)
+		# ohne Wandbeiträge (z. B. Außenabschnitte): keine Wände, Beschreibung wie das Item
+		aa01 = next(z for z in q.items if z.item_code == "AA-01")
+		self.assertIsNone(aa01.cv_waende)
+		self.assertNotIn("cv-grundlage", aa01.description or "")
+
+		aufmass = frappe._dict(
+			positionen=[
+				frappe._dict(art="Wandfläche netto", item_code="IA-05", raum="Keller 1", wand="A", menge=6),
+				frappe._dict(art="Wandfläche netto", item_code="IA-05", raum="Keller 1", wand="C", menge=6),
+				frappe._dict(art="Wandfläche netto", item_code="IA-08", raum="Keller 1", wand="B", menge=4.5),
+			]
+		)
+		p = {"item_code": "IA-05", "mengen": None, "menge_quelle": "fest"}
+		waende = generator.waende_der_position(p, {}, aufmass)
+		self.assertEqual(generator.waende_text(waende, "m²"), "Keller 1: A, C · 12,00 m²")
+		self.assertEqual(
+			generator.grundlage_text(waende, True), "Grundlage: Keller 1 A, C. Menge vom Meister bestätigt."
+		)
+		self.assertIsNone(generator.grundlage_text([], False))
 
 	def test_mobil_katalog_angebote_pdf(self):
 		"""Durchstich A1: Funktionen für die App (Hook ``corevatis_angebot_adapter``)."""

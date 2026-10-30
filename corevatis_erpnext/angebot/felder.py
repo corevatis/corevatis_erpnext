@@ -52,6 +52,7 @@ QUOTATION_FELDER = (
 )
 QUOTATION_ITEM_FELDER = (
 	"cv_raum",
+	"cv_waende",
 	"cv_bauteil",
 	"cv_verfahren",
 	"cv_aufmass_position",
@@ -181,10 +182,18 @@ def quotation_item_fields() -> list[dict]:
 			"insert_after": "cv_section_herkunft",
 		},
 		{
+			"fieldname": "cv_waende",
+			"fieldtype": "Small Text",
+			"label": "Walls",
+			"description": "Walls of the floor plan the quantity comes from, per room (W1 … from the scan, A-D by hand)",
+			"read_only": 1,
+			"insert_after": "cv_raum",
+		},
+		{
 			"fieldname": "cv_bauteil",
 			"fieldtype": "Data",
 			"label": "Building Component",
-			"insert_after": "cv_raum",
+			"insert_after": "cv_waende",
 		},
 		{
 			"fieldname": "cv_verfahren",
