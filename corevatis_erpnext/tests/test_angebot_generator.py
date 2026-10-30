@@ -293,6 +293,24 @@ class TestAngebotGenerator(IntegrationTestCase):
 			self.erzeugen(neu_erzeugen=1)
 		self.assertEqual(self.erzeugen()["angebot"], erstes)
 
+	def test_entwurf_ersetzen_am_folgetag(self):
+		"""Befund mvp-test 31.10.: Entwurf vom Vortag neu erzeugen - der alte Zahlungsplan (Fälligkeit
+		vor dem neuen Buchungsdatum) brachte „Fälligkeitsdatum darf nicht vor dem Buchungsdatum liegen“."""
+		erstes = self.erzeugen()["angebot"]
+		gestern = add_days(nowdate(), -1)
+		frappe.db.set_value("Quotation", erstes, {"transaction_date": gestern, "valid_till": add_days(gestern, 30)})
+		frappe.db.sql(
+			"update `tabPayment Schedule` set due_date=%s where parenttype='Quotation' and parent=%s",
+			(gestern, erstes),
+		)
+		self.assertTrue(frappe.get_all("Payment Schedule", {"parenttype": "Quotation", "parent": erstes}))
+		r = self.erzeugen(neu_erzeugen=1)
+		self.assertEqual((r["angebot"], r["ersetzt"]), (erstes, True))
+		q = frappe.get_doc("Quotation", erstes)
+		self.assertEqual(str(q.transaction_date), nowdate())
+		for z in q.payment_schedule:
+			self.assertGreaterEqual(getdate(z.due_date), getdate(nowdate()))
+
 	def test_entwurf_ersetzen_warnt_bei_manuellen_positionen(self):
 		"""Review Epic 4 G-2: von Hand ergänzte Positionen gehen nur nach Bestätigung verloren."""
 		erstes = self.erzeugen()["angebot"]
