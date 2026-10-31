@@ -348,6 +348,20 @@ class TestMahnwesen(IntegrationTestCase):
 			H._als(H.MONTEUR, offene_posten.offene_posten)
 		# Meister darf die Liste öffnen (Zeilen nur mit Leserecht an Rechnungen)
 		self.assertIsInstance(H._als(H.MEISTER, offene_posten.offene_posten), list)
+		# ... und braucht dafür Lese-, Druck- und Berichtsrecht an der Rechnung (Script Report über Sales
+		# Invoice; auf mvp-test fehlte es, Abnahme Build 27), aber kein Anlegen oder Buchen
+		self.assertTrue(
+			all(
+				frappe.has_permission("Sales Invoice", r, user=H.MEISTER) for r in ("read", "print", "report")
+			)
+		)
+		self.assertFalse(
+			any(
+				frappe.has_permission("Sales Invoice", r, user=H.MEISTER)
+				for r in ("create", "submit", "write")
+			)
+		)
+		self.assertFalse(frappe.has_permission("Sales Invoice", "read", user=H.MONTEUR))
 		zeilen = [z for z in H._als(H.BUERO, offene_posten.offene_posten) if z["rechnung"] == si]
 		self.assertEqual(len(zeilen), 1)
 		self.assertEqual(
