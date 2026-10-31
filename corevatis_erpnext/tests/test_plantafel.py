@@ -21,6 +21,7 @@ Reihenfolge und Filter, Druck (HTML, PDF), Felder, Seite, Leiste, Übersetzungen
 from __future__ import annotations
 
 import datetime as dt
+import json
 import shutil
 from unittest.mock import patch
 
@@ -637,7 +638,6 @@ class TestPlantafel(IntegrationTestCase):
 		self.assertIn("benutzer", abwesenheit.permission_query_conditions(MONTEUR))
 		# Meister sieht alle Abwesenheiten des Betriebs (Liste und Formular), aber Art und Notiz nur beim Büro
 		# (Feldrecht Stufe 1, Krank ist ein Gesundheitsdatum); User Permission auf Employee filtert nicht
-		self.assertEqual(abwesenheit.permission_query_conditions(MEISTER2), "")
 		frappe.set_user(MEISTER2)
 		try:
 			zeilen = frappe.get_list(
@@ -651,8 +651,41 @@ class TestPlantafel(IntegrationTestCase):
 			fremd = frappe.get_doc("Abwesenheit", self.abw_berta)
 			fremd.apply_fieldlevel_read_permissions()
 			self.assertIsNone(fremd.get("art"))
+			# Filtern, Sortieren oder Gruppieren nach Art/Notiz verrät, wer krank ist: nur mit Stufe-1-Recht
+			for anfrage in (
+				{"filters": json.dumps({"art": "Krank"})},
+				{"filters": json.dumps([["Abwesenheit", "art", "=", "Krank"]])},
+				{"or_filters": [["notiz", "like", "%Grippe%"]]},
+				{"order_by": "`tabAbwesenheit`.`art` asc"},
+				{"group_by": "art"},
+				{"field": "art", "current_filters": "[]"},
+				{"aggregate_on_field": "art"},
+			):
+				frappe.local.form_dict = frappe._dict(doctype="Abwesenheit", **anfrage)
+				try:
+					with self.assertRaises(frappe.PermissionError, msg=anfrage):
+						frappe.get_list("Abwesenheit", fields=["name"])
+				finally:
+					frappe.local.form_dict = frappe._dict()
+			frappe.local.form_dict = frappe._dict(
+				doctype="Abwesenheit", filters=json.dumps({"mitarbeiter": self.e_berta}), order_by="von desc"
+			)
+			try:
+				self.assertTrue(frappe.get_list("Abwesenheit", fields=["name"]))
+			finally:
+				frappe.local.form_dict = frappe._dict()
 		finally:
 			frappe.set_user("Administrator")
+		# Rahmen des Meisters ist seine Firma, nicht „alle“
+		bedingung = abwesenheit.permission_query_conditions(MEISTER2)
+		self.assertIn("`tabEmployee`", bedingung)
+		self.assertIn(firma(), bedingung)
+		# Büro darf nach Art filtern
+		frappe.local.form_dict = frappe._dict(doctype="Abwesenheit", filters=json.dumps({"art": "Urlaub"}))
+		try:
+			abwesenheit.geschuetzte_felder_pruefen(BUERO)
+		finally:
+			frappe.local.form_dict = frappe._dict()
 		frappe.set_user(BUERO)
 		try:
 			zeilen = frappe.get_list("Abwesenheit", fields=["name", "art"], filters={"name": self.abw_berta})

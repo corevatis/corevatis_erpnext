@@ -4,8 +4,9 @@ Ohne ``hrms`` (nicht installiert) ist das die einzige Quelle für „nicht verf�
 (D14) und Wochenplan/Plantafel werten den Zeitraum als belegt (``planung.abwesenheit``).
 Ganztags = ganzer Kalendertag von ``von`` bis ``bis``; mit Uhrzeiten nur ein Tag (``von`` = ``bis``).
 ``benutzer`` ist der Benutzer des Mitarbeiters - darüber liest der Monteur nur seine eigenen Abwesenheiten
-(``permission_query_conditions``/``has_permission`` in ``hooks.py``). Der Meister sieht alle Einträge des
-Betriebs, ``art`` und ``notiz`` aber nur beim Büro (Feldrecht Stufe 1): Krankheit ist ein Gesundheitsdatum.
+(``permission_query_conditions``/``has_permission`` in ``hooks.py``). Der Meister sieht alle Einträge seiner
+Firma, ``art`` und ``notiz`` aber nur beim Büro (Feldrecht Stufe 1): Krankheit ist ein Gesundheitsdatum. Deshalb
+auch ohne Änderungsverfolgung (``track_changes``): Versionen würden die Art jedem Leser zeigen.
 """
 
 import frappe

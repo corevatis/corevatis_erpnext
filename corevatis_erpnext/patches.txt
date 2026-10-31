@@ -8,3 +8,4 @@ corevatis_erpnext.patches.v0_3.lead_dubletten_pruefung
 corevatis_erpnext.patches.v0_4.angebot_steuern_druck
 corevatis_erpnext.patches.v0_4.preislisten_standardwert
 corevatis_erpnext.patches.v0_4.alternativ_sets_aufloesen
+corevatis_erpnext.patches.v0_4.abwesenheit_versionen
