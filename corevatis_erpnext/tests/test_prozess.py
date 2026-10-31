@@ -664,6 +664,34 @@ class TestNachrichtenLeiste(IntegrationTestCase):
 		self.assertEqual(aufrufe[0], (nachrichten.KERN_ANKER, ("Lead", self.lead.name)))
 		self.assertEqual(aufrufe[1], (nachrichten.KERN_STAND, ("ANF-TEST-NACH",)))
 
+	def test_ohne_anker_oder_zugang_kein_stand(self):
+		"""Kein Anker (kein Rückfall auf den Belegnamen) und Ablehnung des Kerns → ``None``."""
+		from unittest.mock import patch
+
+		from corevatis_erpnext import nachrichten
+
+		def ohne_anker(pfad):
+			return lambda *args: None if pfad == nachrichten.KERN_ANKER else {"gesamt": 9, "ungelesen": 9}
+
+		def ohne_zugang(pfad):
+			return lambda *args: "ANF-FREMD" if pfad == nachrichten.KERN_ANKER else None
+
+		with (
+			patch.object(nachrichten, "kern_da", return_value=True),
+			patch.object(nachrichten, "_kern", ohne_anker),
+		):
+			self.assertIsNone(nachrichten.stand("Lead", self.lead.name))
+		with (
+			patch.object(nachrichten, "kern_da", return_value=True),
+			patch.object(nachrichten, "_kern", ohne_zugang),
+		):
+			self.assertIsNone(nachrichten.stand("Lead", self.lead.name))
+			frappe.set_user(BUERO)
+			try:
+				self.assertIsNone(status("Lead", self.lead.name)["nachrichten"])
+			finally:
+				frappe.set_user("Administrator")
+
 	def test_sidebar_und_js(self):
 		import json
 		import pathlib

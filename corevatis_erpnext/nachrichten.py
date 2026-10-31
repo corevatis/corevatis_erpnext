@@ -30,11 +30,16 @@ def _kern(pfad: str):
 
 def stand(doctype: str, name: str) -> dict | None:
 	"""Zeile „Nachrichten: n ungelesen“ für die Prozessleiste eines Belegs (``prozess.kette``):
-	``vorgang`` (Anker), ``gesamt``, ``ungelesen``, ``letzte``; ``None`` ohne Kern."""
+	``vorgang`` (Anker), ``gesamt``, ``ungelesen``, ``letzte``. ``None`` ohne Kern, ohne Anker oder
+	wenn der Kern den Zugang des Benutzers zum Vorgang ablehnt (keine Zähler zu fremden Vorgängen)."""
 	if not kern_da():
 		return None
-	anker = _kern(KERN_ANKER)(doctype, name) or name
-	s = _kern(KERN_STAND)(anker) or {}
+	anker = _kern(KERN_ANKER)(doctype, name)
+	if not anker:
+		return None
+	s = _kern(KERN_STAND)(anker)
+	if not s:
+		return None
 	return {
 		"vorgang": anker,
 		"gesamt": cint(s.get("gesamt")),
