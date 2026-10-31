@@ -583,3 +583,135 @@ class TestProzessEinrichtung(IntegrationTestCase):
 		for df in meta.fields:
 			if df.label:
 				self.assertIn(df.label, de, df.label)
+
+
+class TestNachrichtenLeiste(IntegrationTestCase):
+	"""Nachrichten am Vorgang (P1.6): Zeile in der Prozessleiste und Zähler der Leiste „Betrieb“ -
+	ohne Kern ``None``/``0``, mit nachgestelltem Kern (``frappe.get_attr`` ersetzt) die Werte des Kerns."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		from corevatis_erpnext import nachrichten
+
+		if nachrichten.KERN_APP in frappe.get_installed_apps():
+			raise unittest.SkipTest("corevatis installiert - die Tests stellen den Kern nach")
+		make_user(BUERO, "Birgit", ["Büro", "Sales User", "Projects User"], "Büro")
+		cls.lead = make_lead(last_name=f"Nachrichten {frappe.generate_hash(length=6)}")
+		frappe.db.commit()
+
+	@classmethod
+	def tearDownClass(cls):
+		frappe.set_user("Administrator")
+		frappe.delete_doc_if_exists("Lead", cls.lead.name, force=True)
+		frappe.db.commit()
+		super().tearDownClass()
+
+	def test_ohne_kern(self):
+		from corevatis_erpnext import nachrichten
+
+		self.assertFalse(nachrichten.kern_da())
+		self.assertIsNone(nachrichten.stand("Lead", self.lead.name))
+		self.assertEqual(nachrichten.ungelesen_gesamt(), 0)
+		frappe.set_user(BUERO)
+		try:
+			stand = status("Lead", self.lead.name)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertIn("nachrichten", stand)
+		self.assertIsNone(stand["nachrichten"])
+
+	def test_mit_kern_attrappe(self):
+		from unittest.mock import patch
+
+		from corevatis_erpnext import nachrichten
+
+		aufrufe = []
+
+		def get_attr(pfad):
+			def fn(*args):
+				aufrufe.append((pfad, args))
+				if pfad == nachrichten.KERN_ANKER:
+					return "ANF-TEST-NACH"
+				if pfad == nachrichten.KERN_STAND:
+					return {
+						"vorgang": args[0],
+						"gesamt": 5,
+						"ungelesen": 2,
+						"letzte": "2026-10-31 20:00:00.000000",
+					}
+				if pfad == nachrichten.KERN_UNGELESEN:
+					return 3
+				raise AssertionError(pfad)
+
+			return fn
+
+		with (
+			patch.object(nachrichten, "kern_da", return_value=True),
+			patch.object(nachrichten, "_kern", get_attr),
+		):
+			frappe.set_user(BUERO)
+			try:
+				stand = status("Lead", self.lead.name)
+				gesamt = nachrichten.ungelesen_gesamt()
+			finally:
+				frappe.set_user("Administrator")
+		self.assertEqual(
+			stand["nachrichten"],
+			{"vorgang": "ANF-TEST-NACH", "gesamt": 5, "ungelesen": 2, "letzte": "2026-10-31 20:00:00.000000"},
+		)
+		self.assertEqual(gesamt, 3)
+		self.assertEqual(aufrufe[0], (nachrichten.KERN_ANKER, ("Lead", self.lead.name)))
+		self.assertEqual(aufrufe[1], (nachrichten.KERN_STAND, ("ANF-TEST-NACH",)))
+
+	def test_ohne_anker_oder_zugang_kein_stand(self):
+		"""Kein Anker (kein Rückfall auf den Belegnamen) und Ablehnung des Kerns → ``None``."""
+		from unittest.mock import patch
+
+		from corevatis_erpnext import nachrichten
+
+		def ohne_anker(pfad):
+			return lambda *args: None if pfad == nachrichten.KERN_ANKER else {"gesamt": 9, "ungelesen": 9}
+
+		def ohne_zugang(pfad):
+			return lambda *args: "ANF-FREMD" if pfad == nachrichten.KERN_ANKER else None
+
+		with (
+			patch.object(nachrichten, "kern_da", return_value=True),
+			patch.object(nachrichten, "_kern", ohne_anker),
+		):
+			self.assertIsNone(nachrichten.stand("Lead", self.lead.name))
+		with (
+			patch.object(nachrichten, "kern_da", return_value=True),
+			patch.object(nachrichten, "_kern", ohne_zugang),
+		):
+			self.assertIsNone(nachrichten.stand("Lead", self.lead.name))
+			frappe.set_user(BUERO)
+			try:
+				self.assertIsNone(status("Lead", self.lead.name)["nachrichten"])
+			finally:
+				frappe.set_user("Administrator")
+
+	def test_sidebar_und_js(self):
+		import json
+		import pathlib
+
+		from corevatis_erpnext import hooks, nachrichten
+
+		basis = pathlib.Path(hooks.__file__).parent
+		sidebar = json.loads(
+			(basis / "corevatis_erpnext" / "sidebar" / "betrieb" / "betrieb.json").read_text(encoding="utf-8")
+		)
+		eintraege = {
+			(i.get("link_to"), i.get("link_type")) for i in sidebar["items"] if i.get("type") == "Link"
+		}
+		self.assertIn((nachrichten.PAGE, "Page"), eintraege)
+		self.assertIn(
+			nachrichten.PAGE,
+			[i.link_to for i in frappe.get_doc("Sidebar", "Betrieb").items if i.link_type == "Page"],
+		)
+		leiste = (basis / "public" / "js" / "prozessleiste.js").read_text(encoding="utf-8")
+		self.assertIn("cv-pl-nachrichten-knopf", leiste)
+		self.assertIn('frappe.set_route("nachrichten"', leiste)
+		betrieb = (basis / "public" / "js" / "betrieb.js").read_text(encoding="utf-8")
+		self.assertIn("corevatis_erpnext.nachrichten.ungelesen_gesamt", betrieb)
