@@ -369,7 +369,7 @@ def kandidaten(bt: frappe._dict, rechnungen: list[frappe._dict]) -> list[dict]:
 		if aehnlich >= 0.5:
 			# gewichtet: voller Name 30, teilweise Übereinstimmung weniger (gleicher Vorname+Nachname bei
 			# zwei Kunden entscheidet dann der Rest des Namens)
-			punkte += int(round(P_NAME * aehnlich))
+			punkte += round(P_NAME * aehnlich)
 			gruende.append(_("Zahler passt zum Kunden {0}").format(r.customer_name))
 		if punkte < MINDESTPUNKTE:
 			continue
