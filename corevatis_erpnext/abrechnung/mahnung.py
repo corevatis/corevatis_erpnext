@@ -58,8 +58,26 @@ def _abbr(company: str) -> str:
 	return frappe.get_cached_value("Company", company, "abbr") or company
 
 
+def typ_label(stufe: int, company: str) -> str:
+	"""Bezeichnung des Mahntyps (``Dunning Type.dunning_type``). ERPNext erzwingt sie firmenübergreifend
+	eindeutig, darum mit Firmenkürzel; der Brief zeigt die Stufe ohne Kürzel (über ``cv_mahnstufe``)."""
+	return f"{LABELS[stufe]} ({_abbr(company)})"
+
+
 def typ_name(stufe: int, company: str) -> str:
-	return f"{LABELS[stufe]} - {_abbr(company)}"
+	"""Name, wie ERPNext ihn vergibt: Bezeichnung plus Firmenkürzel."""
+	return f"{typ_label(stufe, company)} - {_abbr(company)}"
+
+
+def vorhandener_typ(stufe: int, company: str) -> str | None:
+	"""Name des vorhandenen Mahntyps der Firma für die Stufe: aktueller Name, sonst über ``cv_mahnstufe``
+	(ältere Anlage ohne Kürzel in der Bezeichnung), sonst None."""
+	name = typ_name(stufe, company)
+	if frappe.db.exists("Dunning Type", name):
+		return name
+	if frappe.get_meta("Dunning Type").has_field("cv_mahnstufe"):
+		return frappe.db.get_value("Dunning Type", {"company": company, "cv_mahnstufe": stufe})
+	return None
 
 
 def gebuehr(stufe: int, e: frappe._dict | None = None) -> float:
@@ -93,7 +111,10 @@ def brieftext(stufe: int) -> tuple[str, str]:
 
 def ensure_mahntypen(company: str | None = None) -> list[str]:
 	"""Mahntypen je Firma anlegen, wenn sie fehlen (idempotent); vorhandene bleiben unverändert,
-	nur ein fehlendes ``cv_mahnstufe`` wird nachgetragen. Rückgabe: angelegte Namen."""
+	nur ein fehlendes ``cv_mahnstufe`` wird nachgetragen. Rückgabe: angelegte Namen.
+
+	Die Bezeichnung trägt das Firmenkürzel, weil ERPNext ``dunning_type`` über alle Firmen eindeutig
+	verlangt (auf mvp-test mit zwei Firmen schlug die Migration sonst fehl)."""
 	if not frappe.db.exists("DocType", "Dunning Type"):
 		return []
 	firmen = [company] if company else frappe.get_all("Company", pluck="name")
@@ -102,9 +123,9 @@ def ensure_mahntypen(company: str | None = None) -> list[str]:
 	mit_stufe = frappe.get_meta("Dunning Type").has_field("cv_mahnstufe")
 	angelegt = []
 	for firma in firmen:
-		for stufe, label in STUFEN:
-			name = typ_name(stufe, firma)
-			if frappe.db.exists("Dunning Type", name):
+		for stufe in LABELS:
+			name = vorhandener_typ(stufe, firma)
+			if name:
 				if mit_stufe and frappe.db.get_value("Dunning Type", name, "cv_mahnstufe") is None:
 					frappe.db.set_value("Dunning Type", name, "cv_mahnstufe", stufe, update_modified=False)
 				continue
@@ -113,7 +134,7 @@ def ensure_mahntypen(company: str | None = None) -> list[str]:
 			doc = frappe.get_doc(
 				{
 					"doctype": "Dunning Type",
-					"dunning_type": label,
+					"dunning_type": typ_label(stufe, firma),
 					"company": firma,
 					"dunning_fee": fee,
 					"rate_of_interest": 0,
@@ -138,9 +159,10 @@ def ensure_mahntypen(company: str | None = None) -> list[str]:
 
 
 def mahntyp(stufe: int, company: str) -> str:
-	name = typ_name(stufe, company)
-	if not frappe.db.exists("Dunning Type", name):
+	name = vorhandener_typ(stufe, company)
+	if not name:
 		ensure_mahntypen(company)
+		name = vorhandener_typ(stufe, company) or typ_name(stufe, company)
 	return name
 
 

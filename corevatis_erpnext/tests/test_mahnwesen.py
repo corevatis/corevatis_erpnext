@@ -67,9 +67,11 @@ class TestMahnwesen(IntegrationTestCase):
 			name = mahnung.typ_name(stufe, self.firma)
 			self.assertTrue(frappe.db.exists("Dunning Type", name), name)
 			typ = frappe.get_doc("Dunning Type", name)
+			# Bezeichnung mit Firmenkürzel (ERPNext: dunning_type firmenübergreifend eindeutig)
+			self.assertTrue(typ.dunning_type.startswith(label + " ("), typ.dunning_type)
 			self.assertEqual(
 				(typ.dunning_type, typ.cv_mahnstufe, flt(typ.dunning_fee)),
-				(label, stufe, mahnung.gebuehr(stufe, e)),
+				(mahnung.typ_label(stufe, self.firma), stufe, mahnung.gebuehr(stufe, e)),
 			)
 			self.assertEqual(len(typ.dunning_letter_text), 1)
 			self.assertIn("<p>", typ.dunning_letter_text[0].body_text)
@@ -123,6 +125,35 @@ class TestMahnwesen(IntegrationTestCase):
 		standard = json.loads((ordner / "_standard.json").read_text())
 		self.assertIn("Ausgangsrechnung", standard["print_formats_replace"]["Sales Invoice"])
 		self.assertIn("Mahnung", standard["print_formats_replace"]["Dunning"])
+
+	def test_mahntypen_zwei_firmen(self):
+		"""ERPNext verlangt ``dunning_type`` über alle Firmen eindeutig: mit zweiter Firma scheiterte die
+		Migration auf mvp-test (Duplicate entry 'Zahlungserinnerung'). Bezeichnung trägt darum das Kürzel."""
+		firma2 = "Zweite Firma Mahntest"
+		if not frappe.db.exists("Company", firma2):
+			frappe.get_doc(
+				{
+					"doctype": "Company",
+					"company_name": firma2,
+					"abbr": "ZFM",
+					"default_currency": "EUR",
+					"country": "Germany",
+					"create_chart_of_accounts_based_on": "Standard Template",
+					"chart_of_accounts": "Standard",
+				}
+			).insert(ignore_permissions=True)
+		mahnung.ensure_mahntypen()
+		for firma in (self.firma, firma2):
+			for stufe in mahnung.LABELS:
+				name = mahnung.typ_name(stufe, firma)
+				self.assertTrue(frappe.db.exists("Dunning Type", name), name)
+				self.assertEqual(mahnung.mahntyp(stufe, firma), name)
+				self.assertEqual(frappe.db.get_value("Dunning Type", name, "cv_mahnstufe"), stufe)
+		self.assertEqual(
+			frappe.db.get_value("Dunning Type", mahnung.typ_name(1, firma2), "dunning_type"),
+			"1. Mahnung (ZFM)",
+		)
+		self.assertEqual(mahnung.ensure_mahntypen(), [])
 
 	# --- Vorschlag ------------------------------------------------------------------------------
 
