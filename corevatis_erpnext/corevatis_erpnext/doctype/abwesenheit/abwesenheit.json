@@ -27,6 +27,7 @@
   {
    "fieldname": "mitarbeiter",
    "fieldtype": "Link",
+   "ignore_user_permissions": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Employee",
@@ -64,6 +65,7 @@
    "in_standard_filter": 1,
    "label": "Absence Type",
    "options": "Urlaub\nKrank\nSchulung\nSonstiges",
+   "permlevel": 1,
    "reqd": 1
   },
   {
@@ -120,12 +122,13 @@
   {
    "fieldname": "notiz",
    "fieldtype": "Small Text",
-   "label": "Note"
+   "label": "Note",
+   "permlevel": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-31 20:00:00.000000",
+ "modified": "2026-11-01 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Corevatis ERPNext",
  "name": "Abwesenheit",
@@ -179,6 +182,18 @@
    "role": "Monteur",
    "share": 0,
    "write": 0
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Büro",
+   "write": 1
   }
  ],
  "sort_field": "von",

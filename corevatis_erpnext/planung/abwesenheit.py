@@ -2,8 +2,9 @@
 Plantafel werten Urlaub, Krankheit, Schulung und Sonstiges als „nicht verfügbar“.
 
 ``hrms`` ist nicht installiert (``frappe.get_installed_apps()``); der eigene Doctype ist bewusst klein:
-Mitarbeiter, von, bis, Art, ganztags oder Uhrzeiten, Notiz. Rechte: Büro schreibt, Meister und Monteur
-lesen nur die eigenen (``permission_query_conditions``/``has_permission``).
+Mitarbeiter, von, bis, Art, ganztags oder Uhrzeiten, Notiz. Rechte: Büro schreibt; der Meister liest alle
+Abwesenheiten des Betriebs, aber Art und Notiz nur die eigenen (Feldrecht Stufe 1, Mike 01.11.: „Ja soll er“);
+der Monteur liest nur die eigenen (``permission_query_conditions``/``has_permission``).
 """
 
 from __future__ import annotations
@@ -18,6 +19,8 @@ from corevatis_erpnext.planung.slotrechner import ART_ABWESENHEIT, EIN_TAG, UNBE
 
 DOCTYPE = "Abwesenheit"
 ROLLEN_ALLE = ("Büro", "System Manager")
+# sehen alle Abwesenheiten des Betriebs, aber ohne Art und Notiz (Feldrecht Stufe 1 im Doctype)
+ROLLEN_TEAM = ("Meister",)
 
 
 def hrms_installiert() -> bool:
@@ -130,17 +133,29 @@ def darf_alle(user: str | None = None) -> bool:
 	return bool(set(ROLLEN_ALLE) & set(frappe.get_roles(user)))
 
 
-def permission_query_conditions(user: str | None = None) -> str:
-	"""Liste/Report: Meister und Monteur sehen nur ihre eigenen Abwesenheiten."""
+def sieht_team(user: str | None = None) -> bool:
+	"""Büro, System Manager und Meister sehen alle Abwesenheiten des Betriebs. Art und Notiz liegen auf
+	Feldrechtstufe 1 (nur Büro und System Manager); der Meister sieht fremde Einträge als „Abwesend“.
+	Der Link ``mitarbeiter`` ignoriert Benutzerberechtigungen, sonst filtert ERPNexts automatische
+	User Permission auf den eigenen Employee die Liste wieder auf die eigene Zeile."""
 	user = user or frappe.session.user
-	if darf_alle(user):
+	return darf_alle(user) or bool(set(ROLLEN_TEAM) & set(frappe.get_roles(user)))
+
+
+def permission_query_conditions(user: str | None = None) -> str:
+	"""Liste/Report: Monteure sehen nur ihre eigenen Abwesenheiten, Meister und Büro alle."""
+	user = user or frappe.session.user
+	if sieht_team(user):
 		return ""
 	return f"`tabAbwesenheit`.`benutzer` = {frappe.db.escape(user)}"
 
 
 def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
-	"""Formular/API: eigene Abwesenheit lesbar; alles andere nur Büro/System Manager."""
+	"""Formular/API: Meister lesen jede Abwesenheit (ohne Art), Monteure nur die eigene; schreiben darf
+	laut Doctype nur Büro/System Manager."""
 	user = user or frappe.session.user
 	if darf_alle(user):
+		return True
+	if ptype == "read" and sieht_team(user):
 		return True
 	return bool(doc.get("benutzer")) and doc.get("benutzer") == user

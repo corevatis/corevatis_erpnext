@@ -6,6 +6,15 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Geändert (Abwesenheiten: Meister sieht das Team, Phase 2 P2.5, Handwerker#88)
+
+- Liste und Formular „Abwesenheit“: der Meister sieht jetzt alle Abwesenheiten des Betriebs (Entscheidung Mike
+  01.11.), aber ohne Art und Notiz - beide Felder liegen auf Feldrechtstufe 1 (nur Büro und System Manager),
+  fremde Einträge erscheinen als „Abwesend“ (Krank ist ein Gesundheitsdatum). Der Monteur sieht weiter nur die
+  eigenen Einträge, auch ohne Art; die eigene Art steht im Stundenkonto (Ansicht „Tage“) und in der App.
+  Der Link `mitarbeiter` ignoriert Benutzerberechtigungen, weil ERPNexts automatische User Permission auf den
+  eigenen Employee die Liste sonst auf die eigene Zeile filtert (`planung/abwesenheit.py`: `sieht_team`).
+
 ### Hinzugefügt (Mitarbeiter: Urlaub, Krank, Stundenkonto, Phase 2 P2.5, Handwerker#88)
 
 - Felder am Employee (`corevatis_erpnext.mitarbeiter.ensure_setup`, nach `after_install`/`after_migrate`):

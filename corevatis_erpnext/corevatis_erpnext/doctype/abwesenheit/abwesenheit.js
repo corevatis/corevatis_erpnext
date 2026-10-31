@@ -1,6 +1,11 @@
 // Abwesenheit (P1.4, P2.5): bei Urlaub den Resturlaub des Jahres vor und nach dem Eintrag zeigen.
 frappe.ui.form.on("Abwesenheit", {
 	refresh(frm) {
+		if (!frm.is_new() && frm.doc.art === undefined) {
+			// Feldrecht Stufe 1: Art und Notiz sieht nur das Büro; der Meister sieht „Abwesend“
+			frm.set_intro(__("Abwesend. Art und Notiz der Abwesenheit sieht nur das Büro."), "blue");
+			return;
+		}
 		frm.trigger("urlaub_hinweis");
 	},
 	mitarbeiter(frm) {
