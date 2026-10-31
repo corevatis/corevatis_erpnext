@@ -11,7 +11,7 @@ frappe.provide("corevatis_erpnext.abrechnung");
 	const METHODE = "corevatis_erpnext.abrechnung.";
 	const ROLLEN = ["Büro", "System Manager", "Administrator"];
 	const esc = (s) => frappe.utils.escape_html(s == null ? "" : String(s));
-	const geld = (w, waehrung) => format_currency(w || 0, waehrung || frappe.boot.sysdefaults.currency);
+	const geld = (w, waehrung) => format_currency(parseFloat(w) || 0, waehrung || frappe.boot.sysdefaults.currency);
 	const datum = (d) => (d ? frappe.datetime.str_to_user(d) : "");
 	const darf = () => ROLLEN.some((r) => frappe.user.has_role(r));
 	const link = (doctype, name, label) =>

@@ -30,6 +30,12 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   kein E-Mail-Versand.
 - Übersetzungen: „Terms and Conditions“ heißt im Desk „Textbaustein“. Tests: `tests/test_textbausteine.py`.
 
+### Behoben (Schlussrechnung, Abnahme Build 30, Handwerker#49)
+
+- Bestätigungsmeldung „Schlussrechnung angelegt“ zeigte alle Beträge hundertfach: die Engine liefert Dezimal-Zeichenketten,
+  `format_currency` las den Punkt im deutschen Zahlenformat als Tausendertrenner. `geld()` (Abrechnung, Mahnwesen) und die
+  Angebotsmeldung wandeln jetzt zuerst in Zahlen. Rechnung und Druck waren richtig.
+
 ### Behoben (Desk-Assets, Abnahme Build 29, Handwerker#85)
 
 - `betrieb.js`, `betrieb.css`, `mahnung_zahlung.js`, `zuweisung.js`, `lead_termin.js` sind jetzt Bundles
