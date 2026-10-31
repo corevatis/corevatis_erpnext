@@ -183,6 +183,41 @@ Timesheets bleiben Entwurf, das Büro reicht sie im Desk ein.
   (Purchase / Material Transfer Hauptlager → Fahrzeug), Verschnitt (5 %), Bestand berücksichtigen,
   Haupt- und Fahrzeuglager.
 
+## Plantafel (Phase 1 P1.4)
+
+Desk-Seite **Plantafel** (`/desk/betrieb/plantafel`, Leiste „Betrieb“, Arbeitsbereich „Vorgänge“; der
+Report „Wochenplan“ 5.2 leitet mit seinen Filtern dorthin um und bleibt als REST-Quelle
+`…planung.wochenplan.wochenplan`). Zeilen = planbare Mitarbeiter (aktiver Mitarbeiter mit Benutzer
+und Rolle Monteur/Meister, Reihenfolge einstellbar), Spalten = Tage (Woche Mo–Fr, Sa/So einblendbar,
+Monat), Zeitraster nach Arbeitsbeginn und Tagesarbeitszeit der Planungseinstellungen.
+
+- **Zellen:** Besichtigungstermine (Event, Kunde/PLZ-Ort und Uhrzeit), Arbeitspakete (Task mit
+  Zuweisung, Projekt, Zeitraum mit Uhrzeiten), Abwesenheiten, Feiertage (`Company.default_holiday_list`),
+  Fahrzeug je Einsatz; Farben nach Art, Überschneidungen und doppelt eingeplante Fahrzeuge rot,
+  Fahrzeitlücken (Regeln der Terminplanung D14) als Hinweis; Tageslast wie im Wochenplan.
+- **Verschieben per Ziehen:** Arbeitspaket auf anderen Tag/Mitarbeiter
+  (`POST …planung.plantafel.arbeitspaket_verschieben` mit `task`, `datum`, `mitarbeiter`,
+  `von_mitarbeiter`, `freigeben`, `trotzdem`), Termin
+  (`POST …crm.termin.termin_verschieben` mit `termin`, `beginn`, `meister`, `trotzdem` - dieselbe
+  Konfliktprüfung wie `termin_anlegen`, `TerminKonflikt` 417 mit `konflikte`; Zuweisung und Freigabe
+  ziehen nach, die Kundenbestätigung wird neu gerendert, nicht gesendet). Jede Verschiebung schreibt
+  einen Kommentar an den Beleg; bei Konflikt Meldung mit Grund und „Trotzdem verschieben“.
+- **Abwesenheiten:** Doctype **Abwesenheit** (Mitarbeiter, von, bis, Art Urlaub/Krank/Schulung/
+  Sonstiges, ganztags oder Uhrzeiten, Notiz; `hrms` ist nicht installiert). Büro schreibt, Meister und
+  Monteur lesen nur die eigenen; die Art fremder Abwesenheiten sehen nur Büro/System Manager (sonst
+  „Abwesend“). Terminplanung D14 (Vorschläge, Konflikte) und Zuweisung 5.2 (Hinweis) werten Abwesenheiten
+  als belegt.
+- **Fahrzeuge:** Doctype **Fahrzeug** (Kennzeichen, Bezeichnung, aktiv, optional Fahrzeuglager),
+  Feld `cv_fahrzeug` an Task und Event; Zuordnung in der Zelle (`POST …planung.plantafel.fahrzeug_zuordnen`
+  mit `doctype`, `name`, `fahrzeug`, `trotzdem`); dasselbe Fahrzeug in zwei Einsätzen zugleich = Konflikt.
+- **Druck:** „Wochenplan drucken“ (`GET …planung.plantafel.drucken?von=&wochenende=&projekt=`) als PDF
+  im Querformat: Mitarbeiter × Tage mit Einsätzen, Fahrzeug, Adresse (volle Anschrift nur für lesbare
+  Vorgänge, sonst PLZ/Ort), Abwesenheiten, Feiertage.
+- **Rechte:** `…planung.plantafel.tafel` für Büro/Meister/System Manager (alle Zeilen) und Monteure
+  (nur die eigene Zeile, schreibgeschützt); Verschieben, Fahrzeuge, Reihenfolge und Druck nur Büro/
+  Meister/System Manager. Keine Kundendaten fremder Vorgänge über das hinaus, was der Kalender 1.3
+  zeigt (Termin ohne Leserecht: „Besichtigung“ und PLZ/Ort).
+
 ## Materialentnahme aus dem Fahrzeuglager (3.11)
 
 Modul `corevatis_erpnext.material` - Adapter für die Mobile-API des Kerns
@@ -242,11 +277,12 @@ corevatis_erpnext/
   angebot/              Angebot: Preis-Hinweis, Annahme/Ablehnung (4.4), Nachfassen (4.5), Feld-Spiegel
   planung/              Auftrag → Arbeitspakete (Task) und Materialbedarf (Material Request) (5.1),
                         Wochenplan (5.2), Terminplanung Besichtigung (terminplanung, slotrechner,
-                        geokodierung - D14)
+                        geokodierung - D14), Plantafel (plantafel, abwesenheit - P1.4)
   public/js/            Desk-Skripte (hooks.doctype_js): galerie.js, lead_galerie.js, lead_termin.js,
                         quotation_annahme.js, planung.js
   corevatis_erpnext/    Modul "Corevatis ERPNext" (Singles „Corevatis Vertrieb Einstellungen“,
-                        „Corevatis Planung Einstellungen“)
+                        „Corevatis Planung Einstellungen“; Doctypes Abwesenheit, Fahrzeug, Geokoordinate;
+                        Seite plantafel; Report Wochenplan; Leiste „Betrieb“)
   translations/de.csv   deutsche Übersetzungen
   tests/                Installationstests
 ```

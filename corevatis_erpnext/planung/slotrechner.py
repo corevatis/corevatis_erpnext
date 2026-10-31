@@ -33,6 +33,7 @@ FENSTER: dict[str, tuple[dt.time, dt.time] | None] = {
 ART_TERMIN = "Termin"
 ART_ARBEITSPAKET = "Arbeitspaket"
 ART_FEIERTAG = "Feiertag"
+ART_ABWESENHEIT = "Abwesenheit"
 ART_FIRMA = "Firma"
 
 
@@ -184,8 +185,8 @@ def ueberschneidung(a_von, a_bis, b_von, b_bis) -> bool:
 
 
 def _mit_ort(b: Belegung) -> bool:
-	# Feiertage und ganztägige Sperren sind keine Orte, von denen man anreist
-	return b.art != ART_FEIERTAG
+	# Feiertage, Abwesenheiten und ganztägige Sperren sind keine Orte, von denen man anreist
+	return b.art not in (ART_FEIERTAG, ART_ABWESENHEIT)
 
 
 def _vorige(belegungen: list[Belegung], start: dt.datetime) -> Belegung | None:

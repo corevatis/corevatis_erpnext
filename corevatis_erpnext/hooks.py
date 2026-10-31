@@ -75,7 +75,8 @@ doctype_js = {
 	"Aufmass": ["public/js/aufmass_angebot.js", _PROZESSLEISTE],
 	# Foto-Galerie am Befund (3.7): Fotos der App; Doctype aus corevatis, ohne Kern lädt es nie
 	"Befund": ["public/js/galerie.js", "public/js/befund_galerie.js", _PROZESSLEISTE],
-	# Arbeitspakete und Materialbedarf erzeugen (5.1), am Projekt Button „Wochenplan“ (5.2)
+	# Arbeitspakete und Materialbedarf erzeugen (5.1), am Projekt Button „Wochenplan öffnen“
+	# (5.2; öffnet die Plantafel P1.4 mit Projektfilter)
 	"Sales Order": ["public/js/planung.js", _PROZESSLEISTE],
 	"Project": ["public/js/planung.js", _PROZESSLEISTE],
 	# Zuweisung Mitarbeiter (5.2): Abschnitt „Zuweisung“ mit Dropdown; zuweisung.js ist die
@@ -187,6 +188,14 @@ doc_events = {
 		# Durchstich A2: Monteur/Meister bekommen automatisch einen Mitarbeiter (Employee)
 		"on_update": "corevatis_erpnext.prozess.mitarbeiter.user_on_update",
 	},
+}
+
+# Plantafel (P1.4): Meister und Monteur lesen nur ihre eigenen Abwesenheiten (Büro alle)
+permission_query_conditions = {
+	"Abwesenheit": "corevatis_erpnext.planung.abwesenheit.permission_query_conditions",
+}
+has_permission = {
+	"Abwesenheit": "corevatis_erpnext.planung.abwesenheit.has_permission",
 }
 
 # Web Form „Kostenlose Einschätzung“ (1.2): Honeypot, Datenschutz, Rate-Limit und private

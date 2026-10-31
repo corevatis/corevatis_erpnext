@@ -15,6 +15,10 @@ mehrere Mitarbeiter zugewiesen, trägt jeder seinen Anteil (Stunden ÷ Anzahl).
 über der Tagesarbeitszeit (8 h) ist der Tag markiert (``ueberlast``).
 
 Zuweisung = ToDo auf die Task (``planung.zuweisung``), offene und erledigte zählen.
+
+Abwesenheiten (Plantafel P1.4, Doctype ``Abwesenheit``) stehen je Mitarbeiter-Zeile in ``abwesend``
+(Spalten der Tage mit ganztägiger Abwesenheit) - die Plantafel zeigt sie, der Plan rechnet nicht mit
+ihnen (die Last eines abwesenden Mitarbeiters bleibt sichtbar, damit das Büro umplant).
 """
 
 from __future__ import annotations
@@ -179,6 +183,7 @@ def plan(von=None, projekt: str | None = None, mitarbeiter: str | None = None) -
 
 	leute = mitarbeiter_liste()
 	nach_user = {m["user"]: m for m in leute}
+	abwesend = _abwesend([m["user"] for m in leute], von, bis)
 	# Zuweisungen an Benutzer ohne planbaren Employee (z. B. Büro, deaktiviert) nicht verschweigen
 	for users in zuweisung.values():
 		for user in users:
@@ -236,6 +241,7 @@ def plan(von=None, projekt: str | None = None, mitarbeiter: str | None = None) -
 			kinder.append(_task_zeile(p, anteil, "M:" + m["user"], m))
 		ueberlast = [spalte(tag) for tag in tage if flt(last[tag], 2) > grenze]
 		ueberlast_gesamt += len(ueberlast)
+		tage_abwesend = abwesend.get(m["user"], {})
 		eltern = {
 			"zeile": "M:" + m["user"],
 			"eltern": None,
@@ -247,6 +253,8 @@ def plan(von=None, projekt: str | None = None, mitarbeiter: str | None = None) -
 			"user": m["user"],
 			"summe": flt(sum(last.values()), 2),
 			"ueberlast": ueberlast,
+			"abwesend": [spalte(tag) for tag in tage if tag in tage_abwesend],
+			"abwesenheit": {spalte(tag): art for tag, art in tage_abwesend.items() if tag in im_zeitraum},
 			"anzahl": len(kinder),
 		}
 		for tag in tage:
@@ -289,6 +297,22 @@ def plan(von=None, projekt: str | None = None, mitarbeiter: str | None = None) -
 		"mitarbeiter": sum(1 for z in zeilen if z["typ"] == "mitarbeiter"),
 		"ueberlast_tage": ueberlast_gesamt,
 	}
+
+
+def _abwesend(users: list[str], von: dt.date, bis: dt.date) -> dict[str, dict[dt.date, str]]:
+	"""Ganztägige Abwesenheiten je Benutzer: Tag → Art (Plantafel P1.4)."""
+	from corevatis_erpnext.planung.abwesenheit import abwesenheiten, art_anzeige
+
+	ergebnis: dict[str, dict[dt.date, str]] = {}
+	for a in abwesenheiten(von, bis, users=users):
+		if not a.benutzer or not a.ganztags:
+			continue
+		tag = max(getdate(a.von), von)
+		ende = min(getdate(a.bis), bis)
+		while tag <= ende:
+			ergebnis.setdefault(a.benutzer, {}).setdefault(tag, art_anzeige(a.art, a.benutzer))
+			tag += dt.timedelta(days=1)
+	return ergebnis
 
 
 def _task_zeile(p: dict, anteil: dict, eltern: str, m: dict | None) -> dict:

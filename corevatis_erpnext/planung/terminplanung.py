@@ -5,7 +5,8 @@ Meister, Fahrzeit, Vorschläge und Doppelbuchungsschutz.
   die Anzahl ergibt sich aus den Stammdaten, nicht aus einer Einstellung.
 - **Belegt** ist ein Meister durch Termine (Event: ihm zugewiesen, von ihm angelegt oder mit seinem
   Mitarbeiter/Benutzer als Teilnehmer), Arbeitspakete (Task mit Zuweisung, Zeitraum wie im
-  Wochenplan 5.2) und die Feiertage der Firma; frei ist er innerhalb der Arbeitszeit (Arbeitsbeginn,
+  Wochenplan 5.2), Abwesenheiten (Doctype ``Abwesenheit``: Urlaub, Krank, Schulung, Sonstiges -
+  Plantafel P1.4) und die Feiertage der Firma; frei ist er innerhalb der Arbeitszeit (Arbeitsbeginn,
   Tagesarbeitszeit, Mo-Fr) aus „Corevatis Planung Einstellungen“.
 - **Fahrzeit** von der vorigen Belegung (bzw. der Firma am Tagesbeginn) zum Objekt und weiter zur
   nächsten (bzw. zurück zur Firma): Luftlinie mal Umwegfaktor durch Geschwindigkeit, Koordinaten über
@@ -42,9 +43,10 @@ from frappe.utils import (
 )
 
 from corevatis_erpnext.crm import termin as crm_termin
-from corevatis_erpnext.planung import geokodierung, slotrechner
+from corevatis_erpnext.planung import abwesenheit, geokodierung, slotrechner
 from corevatis_erpnext.planung.einstellungen import einstellungen
 from corevatis_erpnext.planung.slotrechner import (
+	ART_ABWESENHEIT,
 	ART_ARBEITSPAKET,
 	ART_FEIERTAG,
 	ART_FIRMA,
@@ -331,36 +333,42 @@ def _task_belegungen(user: str, von: dt.datetime, bis: dt.datetime, ctx: Kontext
 		fields=["name", "subject", "project", "exp_start_date", "exp_end_date"],
 		order_by="exp_start_date asc",
 	)
-	beginn = arbeitsbeginn(ctx.e)
-	tagesstunden = flt(ctx.e.tagesarbeitszeit) or 8.0
 	ergebnis = []
 	for t in tasks:
-		if not t.exp_start_date:
-			continue
-		start = get_datetime(t.exp_start_date)
-		ende = get_datetime(t.exp_end_date) if t.exp_end_date else start
-		if start.time() == dt.time.min:
-			start = dt.datetime.combine(start.date(), beginn)
-		if ende.time() == dt.time.min:
-			# Ende nur als Datum: der ganze Arbeitstag gehört dazu (wie der Wochenplan 5.2)
-			ende = slotrechner.arbeitszeit(ende.date(), beginn, tagesstunden)[1]
-		ende = max(ende, start + dt.timedelta(minutes=1))
-		if ende < von:
-			continue
-		adresse, lead = _projekt_adresse(t.project, ctx)
-		ergebnis.append(
-			Belegung(start, ende, ctx.ort(adresse), ART_ARBEITSPAKET, t.subject or "", "Task", t.name, lead)
-		)
+		b = task_belegung(t, ctx)
+		if b is not None and b.bis >= von:
+			ergebnis.append(b)
 	return ergebnis
+
+
+def task_belegung(t, ctx: Kontext) -> Belegung | None:
+	"""Arbeitspaket (Zeile mit ``name``, ``subject``, ``project``, ``exp_start_date``, ``exp_end_date``)
+	als Belegung. Beginn nur als Datum → Arbeitsbeginn; Ende nur als Datum → Ende des Arbeitstags (der
+	ganze Tag gehört dazu, wie im Wochenplan 5.2). Ohne Beginn ``None``. Auch für die Plantafel (P1.4)."""
+	if not t.exp_start_date:
+		return None
+	beginn = arbeitsbeginn(ctx.e)
+	tagesstunden = flt(ctx.e.tagesarbeitszeit) or 8.0
+	start = get_datetime(t.exp_start_date)
+	ende = get_datetime(t.exp_end_date) if t.exp_end_date else start
+	if start.time() == dt.time.min:
+		start = dt.datetime.combine(start.date(), beginn)
+	if ende.time() == dt.time.min:
+		ende = slotrechner.arbeitszeit(ende.date(), beginn, tagesstunden)[1]
+	ende = max(ende, start + dt.timedelta(minutes=1))
+	adresse, lead = _projekt_adresse(t.project, ctx)
+	return Belegung(start, ende, ctx.ort(adresse), ART_ARBEITSPAKET, t.subject or "", "Task", t.name, lead)
 
 
 def belegungen(
 	user: str, von: dt.date, bis: dt.date, ctx: Kontext, firma: str | None = None
 ) -> list[Belegung]:
-	"""Alle Belegungen des Meisters im Zeitraum (Termine, Arbeitspakete, Feiertage), sortiert."""
+	"""Alle Belegungen des Meisters im Zeitraum (Termine, Arbeitspakete, Abwesenheiten, Feiertage),
+	sortiert."""
 	von_dt = dt.datetime.combine(getdate(von), dt.time.min)
 	bis_dt = dt.datetime.combine(getdate(bis), dt.time.min) + EIN_TAG
 	liste = _event_belegungen(user, von_dt, bis_dt, ctx) + _task_belegungen(user, von_dt, bis_dt, ctx)
+	liste += abwesenheit.belegungen(user, getdate(von), getdate(bis))
 	for tag, bezeichnung in _feiertage(firma, getdate(von), getdate(bis)).items():
 		anfang = dt.datetime.combine(tag, dt.time.min)
 		liste.append(Belegung(anfang, anfang + EIN_TAG, UNBEKANNT, ART_FEIERTAG, bezeichnung))
@@ -631,10 +639,26 @@ def _zeit_text(b: Belegung) -> str:
 	return f"{tag_text(b.von.date())} {b.von:%H:%M} \u2013 {tag_text(b.bis.date())} {b.bis:%H:%M}"
 
 
+def _zeit_text_tage(b: Belegung) -> str:
+	"""Zeitraum einer ganztägigen Belegung als Tage, sonst Tag mit Uhrzeiten."""
+	letzter = (b.bis - dt.timedelta(microseconds=1)).date()
+	if b.von.time() == dt.time.min and b.bis.time() == dt.time.min:
+		if b.von.date() == letzter:
+			return tag_text(b.von.date())
+		return f"{tag_text(b.von.date())} \u2013 {tag_text(letzter)}"
+	return f"{tag_text(b.von.date())} {b.von:%H:%M}\u2013{b.bis:%H:%M}"
+
+
 def konflikt_text(meister_name: str, b: Belegung, fahrt: int | None) -> str:
 	"""„Martin Meister ist 09:00-10:30 bei Mühlenweg 5, 25 min Fahrt.“"""
 	if b.art == ART_FEIERTAG:
 		return _("{0} ist Feiertag ({1}).").format(f"{tag_text(b.von.date())}{b.von:%Y}", b.titel)
+	if b.art == ART_ABWESENHEIT:
+		# Abwesenheit (Urlaub, Krank, …): ganztags „Di 04.11.“, sonst mit Uhrzeiten; die Art nur, wenn
+		# der Aufrufer sie sehen darf (abwesenheit.belegungen setzt sonst keinen Titel)
+		if b.titel:
+			return _("{0} ist {1} abwesend ({2}).").format(meister_name, _zeit_text_tage(b), b.titel)
+		return _("{0} ist {1} abwesend.").format(meister_name, _zeit_text_tage(b))
 	ort = belegung_ort(b)
 	if ort:
 		text = _("{0} ist {1} bei {2}").format(meister_name, _zeit_text(b), ort)

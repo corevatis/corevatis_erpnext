@@ -253,3 +253,27 @@ Match on the Map,Treffer auf der Karte
 Geocoded address (OpenStreetMap / Nominatim) for travel times of inspection appointments (Corevatis),Geokodierte Adresse (OpenStreetMap / Nominatim) für die Fahrzeiten der Besichtigungstermine (Corevatis)
 Found,Gefunden
 "Coordinates found (0 = no match, latitude and longitude 0)",Koordinaten gefunden (0 = kein Treffer; Breiten- und Längengrad 0)
+"Absence of an employee (holiday, sick leave, training) for the planning board (Corevatis)","Abwesenheit eines Mitarbeiters (Urlaub, Krank, Schulung) für die Plantafel (Corevatis)"
+Employee Name,Name des Mitarbeiters
+User,Benutzer
+User of the employee; set automatically,Benutzer des Mitarbeiters; wird automatisch gesetzt
+Absence Type,Art der Abwesenheit
+Period,Zeitraum
+From,Von
+To,Bis
+All Day,Ganztags
+Unchecked: only the hours below count (single day),"Ohne Haken zählen nur die Uhrzeiten unten (ein Tag)"
+From Time,Von Uhrzeit
+To Time,Bis Uhrzeit
+Note,Notiz
+Vehicle of the company as a planning resource (Corevatis planning board),Fahrzeug des Betriebs als Planungsressource (Plantafel Corevatis)
+Licence Plate,Kennzeichen
+Vehicle Description,Bezeichnung
+"e.g. Sprinter, Pritsche, Anhänger","z. B. Sprinter, Pritsche, Anhänger"
+Active,Aktiv
+Only active vehicles can be assigned on the planning board,Nur aktive Fahrzeuge lassen sich in der Plantafel zuordnen
+"Optional: warehouse of this vehicle (material withdrawal, 3.11)","Optional: Lager dieses Fahrzeugs (Materialentnahme, 3.11)"
+Vehicle,Fahrzeug
+Planning Board,Plantafel
+Row Order of Employees,Reihenfolge der Mitarbeiter-Zeilen
+One employee ID per line; set via “Reihenfolge” on the planning board. Employees not listed follow alphabetically.,"Eine Mitarbeiter-Nummer je Zeile; wird über „Reihenfolge“ in der Plantafel gesetzt. Nicht aufgeführte Mitarbeiter folgen alphabetisch."

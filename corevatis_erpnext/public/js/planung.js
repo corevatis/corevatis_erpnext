@@ -222,8 +222,8 @@ frappe.provide("corevatis_erpnext.planung");
 		} else if (key === "arbeitspaket_anlegen") {
 			frappe.new_doc("Task", { project: frm.doc.name });
 		} else if (key === "wochenplan") {
-			frappe.route_options = { projekt: frm.doc.name };
-			frappe.set_route("query-report", "Wochenplan");
+			// Plantafel (P1.4) mit Projektfilter - der Wochenplan 5.2 ist darin aufgegangen
+			frappe.set_route("plantafel", { projekt: frm.doc.name, ansicht: "woche" });
 		} else if (key === "baustellenakte") {
 			corevatis_erpnext.planung.baustellenakte(frm);
 		}

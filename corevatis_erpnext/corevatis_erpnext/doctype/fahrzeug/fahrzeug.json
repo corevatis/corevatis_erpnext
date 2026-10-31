@@ -1,0 +1,116 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:kennzeichen",
+ "creation": "2026-10-31 18:00:00.000000",
+ "description": "Vehicle of the company as a planning resource (Corevatis planning board)",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "kennzeichen",
+  "bezeichnung",
+  "column_break_aktiv",
+  "aktiv",
+  "lager"
+ ],
+ "fields": [
+  {
+   "fieldname": "kennzeichen",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Licence Plate",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "description": "e.g. Sprinter, Pritsche, Anhänger",
+   "fieldname": "bezeichnung",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Vehicle Description"
+  },
+  {
+   "fieldname": "column_break_aktiv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "Only active vehicles can be assigned on the planning board",
+   "fieldname": "aktiv",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Active"
+  },
+  {
+   "description": "Optional: warehouse of this vehicle (material withdrawal, 3.11)",
+   "fieldname": "lager",
+   "fieldtype": "Link",
+   "label": "Vehicle Warehouse",
+   "options": "Warehouse"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-31 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Fahrzeug",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "export": 1,
+   "print": 0,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "export": 1,
+   "print": 0,
+   "read": 1,
+   "report": 1,
+   "role": "Büro",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 1,
+   "role": "Meister",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 0,
+   "role": "Monteur",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

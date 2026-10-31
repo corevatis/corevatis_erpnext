@@ -5,6 +5,7 @@
   ``cv_positionen`` (JSON: Positionen des Arbeitspakets mit Menge, Raum, Minuten je Einheit),
   ab 5.2 Abschnitt ``cv_section_zuweisung`` mit HTML-Feld ``cv_zuweisung`` (Zuweisung per Dropdown).
 - Material Request: ``cv_auftrag`` (Link Sales Order, Idempotenz, Listenansicht).
+- Plantafel (P1.4): ``cv_fahrzeug`` (Link Fahrzeug) an Task und Event - das Fahrzeug je Einsatz.
 
 Labels sind englische Quelltexte, die deutsche Oberfläche kommt aus ``translations/de.csv``.
 """
@@ -66,6 +67,16 @@ def task_felder() -> list[dict]:
 			"no_copy": 1,
 			"insert_after": "cv_sollstunden",
 		},
+		# Plantafel (P1.4): Fahrzeug je Einsatz
+		{
+			"fieldname": "cv_fahrzeug",
+			"fieldtype": "Link",
+			"options": "Fahrzeug",
+			"label": "Vehicle",
+			"no_copy": 1,
+			"in_standard_filter": 1,
+			"insert_after": "cv_positionen",
+		},
 		# 5.2: Zuweisung (ToDo) mit Dropdown im Formular - Inhalt aus public/js/task_zuweisung.js
 		{
 			"fieldname": "cv_section_zuweisung",
@@ -99,11 +110,29 @@ def material_request_felder() -> list[dict]:
 	]
 
 
+def event_felder() -> list[dict]:
+	return [
+		# Plantafel (P1.4): Fahrzeug je Besichtigungstermin
+		{
+			"fieldname": "cv_fahrzeug",
+			"fieldtype": "Link",
+			"options": "Fahrzeug",
+			"label": "Vehicle",
+			"no_copy": 1,
+			"insert_after": "send_reminder",
+		},
+	]
+
+
 def ensure_planung_felder() -> None:
-	felder = {"Task": task_felder(), "Material Request": material_request_felder()}
+	felder = {
+		"Task": task_felder(),
+		"Material Request": material_request_felder(),
+		"Event": event_felder(),
+	}
 	for liste in felder.values():
 		for feld in liste:
 			feld.setdefault("module", MODULE)
 	create_custom_fields(felder, update=True)
-	frappe.clear_cache(doctype="Task")
-	frappe.clear_cache(doctype="Material Request")
+	for doctype in felder:
+		frappe.clear_cache(doctype=doctype)

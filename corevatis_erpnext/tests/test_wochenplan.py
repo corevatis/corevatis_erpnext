@@ -518,13 +518,18 @@ class TestWochenplan(IntegrationTestCase):
 		bericht = frappe.get_doc("Report", "Wochenplan")
 		self.assertEqual((bericht.report_type, bericht.ref_doctype), ("Script Report", "Task"))
 		self.assertEqual({r.role for r in bericht.roles}, {"Büro", "Meister", "System Manager"})
+		# Plantafel (P1.4): der Wochenplan ist in der Seite „plantafel“ aufgegangen; Arbeitsbereich und
+		# Leiste „Betrieb“ zeigen sie, der Report leitet dorthin um (bleibt als REST-/Testquelle)
 		ws = frappe.get_doc("Workspace", "Vorgänge")
-		self.assertIn("Wochenplan", {s.link_to for s in ws.shortcuts if s.type == "Report"})
-		self.assertIn("Wochenplan", {l.link_to for l in ws.links if l.type == "Link"})
+		self.assertIn("plantafel", {s.link_to for s in ws.shortcuts if s.type == "Page"})
+		self.assertIn(
+			"plantafel", {l.link_to for l in ws.links if l.type == "Link" and l.link_type == "Page"}
+		)
 		inhalt = frappe.parse_json(ws.content)
 		self.assertIn(
-			"Wochenplan", {b["data"].get("shortcut_name") for b in inhalt if b["type"] == "shortcut"}
+			"Plantafel", {b["data"].get("shortcut_name") for b in inhalt if b["type"] == "shortcut"}
 		)
+		self.assertNotIn("Wochenplan", {s.link_to for s in ws.shortcuts})
 		from frappe.translate import get_translations_from_csv
 
 		de = get_translations_from_csv("de", "corevatis_erpnext")
