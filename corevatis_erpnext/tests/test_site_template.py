@@ -307,7 +307,10 @@ class TestSiteTemplate(IntegrationTestCase):
 				("Project", "create", True),
 				("Quotation", "submit", True),
 				("BOM", "submit", True),
-				("Sales Invoice", "read", False),
+				# 7.3/7.5: der Meister liest und druckt Rechnungen (Offene Posten), stellt aber keine
+				("Sales Invoice", "read", True),
+				("Sales Invoice", "create", False),
+				("Sales Invoice", "submit", False),
 			],
 			"Monteur": [
 				("Timesheet", "create", True),
