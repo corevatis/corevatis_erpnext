@@ -30,7 +30,6 @@ import frappe
 
 from corevatis_erpnext.abrechnung.abschlag import abschlag_stellen, abschlag_vorschlag
 from corevatis_erpnext.abrechnung.mahnung import mahnung_erstellen, mahnvorschlag
-from corevatis_erpnext.abrechnung.offene_posten import offene_posten
 from corevatis_erpnext.abrechnung.rechnung import zustand
 from corevatis_erpnext.abrechnung.schluss import schlussrechnung_erstellen, schlussrechnung_vorschlag
 from corevatis_erpnext.abrechnung.zahlungseingang import (
@@ -48,7 +47,6 @@ __all__ = [
 	"kontoauszug_importieren",
 	"mahnung_erstellen",
 	"mahnvorschlag",
-	"offene_posten",
 	"schlussrechnung_erstellen",
 	"schlussrechnung_vorschlag",
 	"vorschlaege",

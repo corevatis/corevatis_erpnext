@@ -111,6 +111,15 @@ def datieren(rechnung: str, tage_alt: int, zahlungsziel: int = 14) -> None:
 	doc.due_date = add_days(doc.posting_date, zahlungsziel)
 	doc.set("payment_schedule", [])
 	doc.save()
+	# Fälligkeit unabhängig von Zahlungsbedingungen der Site fest auf posting + zahlungsziel
+	frappe.db.set_value("Sales Invoice", doc.name, "due_date", doc.due_date, update_modified=False)
+	frappe.db.set_value(
+		"Payment Schedule",
+		{"parent": doc.name, "parenttype": "Sales Invoice"},
+		"due_date",
+		doc.due_date,
+		update_modified=False,
+	)
 
 
 def freigeben(rechnung: str, user: str = BUERO):

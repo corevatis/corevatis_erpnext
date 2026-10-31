@@ -315,7 +315,9 @@ class TestMahnwesen(IntegrationTestCase):
 		si, _auftrag, _projekt = self.rechnung(tage_alt=3)  # fällig in 11 Tagen
 		with self.assertRaises(frappe.PermissionError):
 			H._als(H.MONTEUR, offene_posten.offene_posten)
-		zeilen = [z for z in H._als(H.MEISTER, offene_posten.offene_posten) if z["rechnung"] == si]
+		# Meister darf die Liste öffnen (Zeilen nur mit Leserecht an Rechnungen)
+		self.assertIsInstance(H._als(H.MEISTER, offene_posten.offene_posten), list)
+		zeilen = [z for z in H._als(H.BUERO, offene_posten.offene_posten) if z["rechnung"] == si]
 		self.assertEqual(len(zeilen), 1)
 		self.assertEqual(
 			(zeilen[0]["tage_ueberfaellig"], zeilen[0]["mahnstufe"], zeilen[0]["vorschlag"]), (0, "", "")

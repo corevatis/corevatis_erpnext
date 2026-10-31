@@ -55,7 +55,7 @@ SPALTEN: dict[str, tuple[str, ...]] = {
 	"konto": ("auftragskonto", "iban auftragskonto", "kontonummer auftragskonto"),
 }
 PFLICHT = ("datum", "betrag")
-DATUMSFORMATE = ("%d.%m.%y", "%d.%m.%Y", "%Y-%m-%d", "%d/%m/%Y", "%d.%m.%Y %H:%M:%S")
+DATUMSFORMATE = ("%d.%m.%Y", "%d.%m.%y", "%Y-%m-%d", "%d/%m/%Y", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M")
 CAMT_VERBOTEN = (b"<!DOCTYPE", b"<!ENTITY")
 
 
@@ -118,9 +118,11 @@ def text_dekodieren(daten: bytes | str) -> str:
 def betrag_parsen(text) -> float:
 	"""„1.234,56“, „-12,30“, „1234.56“, „1,234.56“, „12,5 EUR“ → float; leer → 0."""
 	t = re.sub(r"[\s\u00a0]", "", str(text or ""))
-	t = re.sub(r"[A-Za-z€$]", "", t)
 	if not t:
 		return 0.0
+	if not any(c.isdigit() for c in t):
+		raise KontoauszugFehler(f"Betrag nicht lesbar: {text!r}")
+	t = re.sub(r"[A-Za-z€$]", "", t)
 	negativ = t.startswith("-") or t.endswith("-") or (t.startswith("(") and t.endswith(")"))
 	t = t.strip("-()+")
 	if "," in t and "." in t:
@@ -141,16 +143,18 @@ def betrag_parsen(text) -> float:
 
 
 def datum_parsen(text) -> date | None:
+	"""``dd.mm.yy``, ``dd.mm.yyyy``, ``yyyy-mm-dd`` (auch mit Uhrzeit), ``dd/mm/yyyy``; sonst ``None``.
+	Formate passen nur vollständig („03.11.2026“ ist nicht „03.11.20“)."""
 	t = str(text or "").strip()
 	if not t:
 		return None
 	for fmt in DATUMSFORMATE:
 		try:
-			return datetime.strptime(t[: len(datetime(2000, 1, 1).strftime(fmt))], fmt).date()
+			return datetime.strptime(t, fmt).date()
 		except ValueError:
 			continue
 	try:
-		return date.fromisoformat(t[:10])
+		return datetime.fromisoformat(t).date()
 	except ValueError:
 		return None
 

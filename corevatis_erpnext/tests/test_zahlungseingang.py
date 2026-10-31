@@ -425,7 +425,7 @@ class TestZahlungseingang(IntegrationTestCase):
 		with self.assertRaises(frappe.PermissionError):
 			H._als(H.BUERO, Z.kontoauszug_importieren, fremd)
 		with self.assertRaises(ZahlungFehler):
-			H._als(H.BUERO, Z.kontoauszug_importieren, self.datei(b"%PDF-1.4", name="auszug.pdf"))
+			H._als(H.BUERO, Z.kontoauszug_importieren, self.datei(b"hallo", name="auszug.doc"))
 		with patch.object(Z, "MAX_BYTES", 100):
 			with self.assertRaises(ZahlungFehler):
 				H._als(

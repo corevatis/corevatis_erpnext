@@ -123,7 +123,7 @@ def schritt(
 	if gebucht and (not auftrag or abgerechnet >= 100) and not abschlaege:
 		return {
 			"status": erledigt,
-			"text": _("Abgerechnet"),
+			"text": _("Abgerechnet") + ", " + zahlung(gebucht[-1]),
 			"belege": belege,
 			"betrieb": False,
 			"datum": None,
@@ -162,7 +162,9 @@ def schritt(
 	if gebucht:
 		return {
 			"status": aktiv,
-			"text": _("Teilweise abgerechnet ({0} %)").format(cint(abgerechnet)),
+			"text": _("Teilweise abgerechnet ({0} %)").format(cint(abgerechnet))
+			+ ", "
+			+ zahlung(gebucht[-1]),
 			"belege": belege,
 			"betrieb": False,
 			"datum": None,

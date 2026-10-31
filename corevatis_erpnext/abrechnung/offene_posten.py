@@ -148,7 +148,10 @@ def _felder() -> list[str]:
 
 
 def offene_rechnungen(filters: dict | None = None, company: str | None = None) -> list[frappe._dict]:
-	"""Gebuchte, nicht bezahlte Rechnungen (keine Gutschriften) mit den Rechten des Benutzers."""
+	"""Gebuchte, nicht bezahlte Rechnungen (keine Gutschriften) mit den Rechten des Benutzers; ohne
+	Leserecht an Rechnungen leer."""
+	if not frappe.has_permission("Sales Invoice", "read"):
+		return []
 	f = {"docstatus": 1, "outstanding_amount": [">", 0], "is_return": 0}
 	filters = filters or {}
 	if company or filters.get("company"):

@@ -367,7 +367,9 @@ def kandidaten(bt: frappe._dict, rechnungen: list[frappe._dict]) -> list[dict]:
 			gruende.append(_("Betrag entspricht dem Rechnungsbetrag"))
 		aehnlich = K.namensaehnlichkeit(bt.bank_party_name, r.customer_name)
 		if aehnlich >= 0.5:
-			punkte += P_NAME
+			# gewichtet: voller Name 30, teilweise Übereinstimmung weniger (gleicher Vorname+Nachname bei
+			# zwei Kunden entscheidet dann der Rest des Namens)
+			punkte += int(round(P_NAME * aehnlich))
 			gruende.append(_("Zahler passt zum Kunden {0}").format(r.customer_name))
 		if punkte < MINDESTPUNKTE:
 			continue
@@ -384,6 +386,7 @@ def kandidaten(bt: frappe._dict, rechnungen: list[frappe._dict]) -> list[dict]:
 				"projekt": r.project,
 				"auftrag": auftrag,
 				"punkte": punkte,
+				"aehnlichkeit": round(aehnlich, 2),
 				"gruende": gruende,
 				"sicherheit": "sicher"
 				if punkte >= P_RECHNUNG
@@ -393,7 +396,7 @@ def kandidaten(bt: frappe._dict, rechnungen: list[frappe._dict]) -> list[dict]:
 				"ueberzahlung": betrag > offen + CENT,
 			}
 		)
-	ergebnis.sort(key=lambda k: (-k["punkte"], str(k["faellig"] or ""), k["rechnung"]))
+	ergebnis.sort(key=lambda k: (-k["punkte"], -k["aehnlichkeit"], str(k["faellig"] or ""), k["rechnung"]))
 	return ergebnis
 
 
