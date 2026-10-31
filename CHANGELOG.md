@@ -6,6 +6,27 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (Nachkalkulation, Phase 2 P2.1, Handwerker#87)
+
+- **Bericht „Nachkalkulation“** (Leiste „Betrieb“ → Abrechnung; Rollen Büro, Meister, System Manager; Filter
+  Projekt, Firma, Ist-Zeitraum, Verfahren, nur laufende Projekte): je Projekt eine Summenzeile, darunter je
+  Verfahren (Arbeitspaket) Soll- und Ist-Stunden (davon Fahrt), Verbrauch in Prozent, Fortschritt, Lohn Soll/Ist,
+  Material Soll/Ist, Erlös netto, Marge Soll/Ist und Ampel. Soll aus der Kalkulation des angenommenen Angebots
+  (`Quotation.cv_kalkulation_json`: Minuten und Material je Einheit, Stundensatz des Schemas), sonst aus der
+  Stückliste; Ist aus den Timesheets (Arbeitszeit + Fahrzeit, 3.9) und den Materialentnahmen (Stock Entry
+  „Material Issue“, 3.11) des Projekts, zugeordnet über das Arbeitspaket (`Task.cv_verfahren`). Nach freigegebener
+  Schlussrechnung (7.2) zählt deren Netto je Verfahren als Erlös. Ampel: Ist ÷ (Soll × Fortschritt) bis 100 % grün,
+  bis 115 % gelb, darüber rot; Ist ohne Soll gelb, ohne Ist grau. Modul `corevatis_erpnext.nachkalkulation`.
+- **Bericht „Mengenregeln nachjustieren“** (Leiste „Betrieb“ → Abrechnung → „Regeln nachjustieren“): Lernschleife
+  über freigegebene Schlussrechnungen - je Leistung, Mengenregel und Verfahren Angebotsmenge gegen Ist-Menge
+  (Mengenfaktor) und Soll- gegen Ist-Minuten je Einheit (Zeitfaktor) mit Vorschlagstext ab 5 % Abweichung.
+  Nur Anzeige: Leistungsregeln und Stücklisten bleiben unverändert.
+- **Prozessleiste am Projekt**: Pille „Nachkalkulation: 68 % der Sollstunden, Marge 31 %“ mit Ampel und Knopf
+  „Bericht“ (öffnet den Bericht mit dem Projekt als Filter), nur für Büro und Meister (`kette.status` →
+  `nachkalkulation`).
+- Seitenleiste „Betrieb“: Einträge „Nachkalkulation“ und „Regeln nachjustieren“ unter Abrechnung (Zeitstempel
+  angehoben, damit `migrate` sie nachzieht).
+
 ### Behoben (Desk-Assets, Abnahme Build 29, Handwerker#85)
 
 - `betrieb.js`, `betrieb.css`, `mahnung_zahlung.js`, `zuweisung.js`, `lead_termin.js` sind jetzt Bundles

@@ -235,6 +235,8 @@ frappe.provide("corevatis_erpnext.prozess");
 		const mappe = daten.mappe || null;
 		// Nachrichten am Vorgang (P1.6): „Nachrichten: 2 ungelesen“ mit Sprung zur Kern-Page, nur mit Kern
 		const nachrichten = daten.nachrichten || null;
+		// Nachkalkulation (P2.1): Ampel-Pille „Nachkalkulation: 92 % der Sollstunden, Marge 31 %“ am Projekt
+		const nachkalkulation = daten.nachkalkulation || null;
 		const nachrichten_text = nachrichten
 			? nachrichten.ungelesen
 				? __("Nachrichten: {0} ungelesen", [nachrichten.ungelesen])
@@ -255,6 +257,15 @@ frappe.provide("corevatis_erpnext.prozess");
 						? `<span class="indicator-pill ${AMPEL[mappe.ampel] || "gray"} cv-pl-mappe" title="${esc(mappe.text || "")}">${esc(
 								mappe.text || __("Mappe")
 						  )}</span><button class="btn btn-xs btn-default cv-pl-mappe-knopf">${esc(__("Mappe"))}</button>`
+						: ""
+				}
+				${
+					nachkalkulation
+						? `<span class="indicator-pill ${AMPEL[nachkalkulation.ampel] || "gray"} cv-pl-nachkalkulation" title="${esc(
+								nachkalkulation.text || ""
+						  )}">${esc(nachkalkulation.text || __("Nachkalkulation"))}</span><button class="btn btn-xs btn-default cv-pl-nachkalkulation-knopf">${esc(
+								__("Bericht")
+						  )}</button>`
 						: ""
 				}
 				${
@@ -281,6 +292,10 @@ frappe.provide("corevatis_erpnext.prozess");
 		el.find(".cv-pl-nachrichten-knopf").on("click", () =>
 			frappe.set_route("nachrichten", { vorgang: nachrichten.vorgang })
 		);
+		el.find(".cv-pl-nachkalkulation-knopf").on("click", () => {
+			frappe.route_options = { projekt: nachkalkulation.projekt };
+			frappe.set_route("query-report", "Nachkalkulation");
+		});
 	}
 
 	P.render = function (frm) {
