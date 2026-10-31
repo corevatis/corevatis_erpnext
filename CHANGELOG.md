@@ -47,6 +47,18 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 - Tests `test_terminplanung` (Rechenregeln, Geokodierung mit gemocktem Nominatim, Vorschläge, Konflikte,
   Rechte, Prozessleiste), Webform-Tests zum Wunschtermin.
 
+### Hinzugefügt (Durchstich A10: Termin aus der Anfrage in der App)
+
+- `corevatis_erpnext.crm.termin_mobil`: Sync-Entität `termin_anlegen` für die App, registriert über den
+  Hook `corevatis_sync_handlers` des Kerns. Rechte wie „Termin anlegen“ im Desk (Büro/Meister,
+  Schreibrecht an der Anfrage; Monteur abgelehnt), Payload geprüft (Beginn höchstens einen Tag zurück,
+  Dauer 15–720 min, Meister aktiv mit Rolle Meister, Notiz), ruft `crm.termin.termin_anlegen` ohne
+  Kundenmail (Bestätigungstext in der Antwort zum Teilen), Anfrage über den Workflow von „Neu“ auf
+  „Termin“; Überschneidung (`crm.termin.TerminKonflikt`, D14) → `rejected`/`CONFLICT` mit
+  `details.grund = ueberschneidung`, Klartext und `details.konflikte`, `trotzdem` wird durchgereicht
+  (die App bietet „Trotzdem anlegen“). Antwort: Terminzeile wie `befunde` plus Meister, `anfrage` und
+  `bestaetigung`. Idempotent über das Sync-Journal des Kerns.
+
 ### Geändert (Wand-Bezeichnungen, Rückmeldung 31.10.)
 
 - Angebotsgenerator: jede Position nennt die Wände des Grundrisses, aus denen ihre Menge kommt –
