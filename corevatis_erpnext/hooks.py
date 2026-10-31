@@ -98,6 +98,12 @@ override_doctype_dashboards = {
 # und PDF über diesen Hook (corevatis.api.besichtigung, kein Import über die Lizenzgrenze)
 corevatis_angebot_adapter = "corevatis_erpnext.angebot.mobil"
 
+# Termin aus der Anfrage in der App (Durchstich A10): Sync-Entität des Kerns (corevatis.api.sync_schema,
+# Hook corevatis_sync_handlers) - legt den Besichtigungstermin wie „Termin anlegen“ im Desk an
+corevatis_sync_handlers = {
+	"termin_anlegen": "corevatis_erpnext.crm.termin_mobil.termin_anlegen",
+}
+
 # Document Events
 # ---------------
 # Gutschriften (Sales Invoice mit is_return) bekommen den Rückgabe-Nummernkreis aus
