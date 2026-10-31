@@ -6,6 +6,16 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Behoben (DATEV-Export, Abnahme Build 28, Handwerker#51)
+
+- Debitorennummer vergeben: Zeilensperre auf den DATEV Settings der Firma bis zum Commit. Zwei fast gleichzeitige
+  Exporte legten je eine Kontozeile des Kunden an; erpnext_datev verknüpft jede Buchung mit der Kontozeile, die
+  Kundenbuchungen erschienen im nächsten Export doppelt (mvp-test: 17 statt 12 Zeilen).
+- Export bricht ab, wenn ein beteiligter Kunde mehr als eine Kontozeile für die Firma hat (Hinweis mit Kundennamen).
+- Seitenleiste „Betrieb“: Zeitstempel angehoben, damit `migrate` den Eintrag „DATEV-Export“ nachzieht (der Eintrag
+  war im JSON, aber ohne neuen Zeitstempel wurde die Leiste auf bestehenden Sites nicht aktualisiert).
+- Offene Posten: Knopf „Mahnen“ nur, wenn der Benutzer Mahnungen anlegen darf (Meister sah ihn und bekam 403).
+
 ### Geändert (Nachrichten in Echtzeit, Handwerker#85)
 
 - Ungelesen-Pille der Leiste „Betrieb“ (`betrieb.js`) aktualisiert sofort beim socket.io-Ereignis

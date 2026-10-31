@@ -97,6 +97,13 @@ def vergeben(customer: str, company: str, e: frappe._dict | None = None) -> tupl
 	e = e or einstellungen(company)
 	if not e:
 		return None, False
+	# Zeilensperre auf den DATEV Settings der Firma bis zum Commit: zwei gleichzeitige Exporte (oder Export
+	# und neuer Kunde) lasen sonst beide „keine Nummer“, legten je eine Kontozeile an und die Buchungszeilen
+	# des Kunden erschienen danach doppelt (mvp-test, 31.10.2026). Nach der Sperre noch einmal lesen.
+	frappe.db.sql(f"select name from `tab{SETTINGS_DOCTYPE}` where name = %s for update", e.name)
+	vorhanden = nummer(customer, company)
+	if vorhanden:
+		return vorhanden, False
 	neu = str(naechste_nummer(company, _start(e)))
 	zeile = frappe.db.get_value(
 		"Party Account", {"parent": customer, "parenttype": "Customer", "company": company}, "name"
@@ -110,6 +117,26 @@ def vergeben(customer: str, company: str, e: frappe._dict | None = None) -> tupl
 		row.db_insert()
 	frappe.clear_document_cache("Customer", customer)
 	return neu, True
+
+
+def doppelte_kontozeilen(kunden: Iterable[str], company: str) -> list[str]:
+	"""Kunden mit mehr als einer Kontozeile („Konten“ im Kundenstamm) für die Firma. erpnext_datev verknüpft
+	jede Buchungszeile mit der Kontozeile des Kunden; bei zwei Zeilen erschiene jede Kundenbuchung doppelt."""
+	kunden = [k for k in kunden if k]
+	if not kunden:
+		return []
+	rows = frappe.db.sql(
+		"""
+		SELECT parent
+		FROM `tabParty Account`
+		WHERE parenttype = 'Customer' AND company = %(company)s AND parent IN %(kunden)s
+		GROUP BY parent
+		HAVING COUNT(*) > 1
+		ORDER BY parent
+		""",
+		{"company": company, "kunden": tuple(kunden)},
+	)
+	return [r[0] for r in rows]
 
 
 def kunde_validate(doc, method=None) -> None:

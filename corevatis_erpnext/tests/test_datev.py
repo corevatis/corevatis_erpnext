@@ -734,6 +734,44 @@ class TestDatevExport(IntegrationTestCase):
 			with self.assertRaises(DatevFehler):
 				H._als(H.BUERO, export_erstellen, leer.name)
 
+	def test_doppelte_kontozeile_blockiert_export(self):
+		"""Zwei Kontozeilen eines Kunden für die Firma (wie nach zwei gleichzeitigen Exporten vor der Sperre)
+		würden jede Kundenbuchung doppelt ausgeben; der Export bricht mit Hinweis auf den Kunden ab."""
+		from corevatis_erpnext.datev import debitoren, export_erstellen
+		from corevatis_erpnext.datev.export import DatevFehler
+
+		H = self.H
+		_auftrag, projekt = H.vorgang()
+		re1 = self.abschlag(projekt)
+		kunde = frappe.db.get_value("Sales Invoice", re1, "customer")
+		nr, _neu = debitoren.vergeben(kunde, self.firma)
+		self.assertTrue(nr)
+		erste = frappe.db.get_value(
+			"Party Account", {"parent": kunde, "parenttype": "Customer", "company": self.firma}, "account"
+		)
+		doc = frappe.get_doc("Customer", kunde)
+		zweite = doc.append(
+			"accounts", {"company": self.firma, "account": erste, "debtor_creditor_number": nr}
+		)
+		zweite.db_insert()
+		frappe.clear_document_cache("Customer", kunde)
+		try:
+			self.assertEqual(debitoren.doppelte_kontozeilen([kunde], self.firma), [kunde])
+			a = self.export_anlegen()
+			with self.assertRaises(DatevFehler) as cm:
+				H._als(H.BUERO, export_erstellen, a.name)
+			self.assertIn("mehreren Kontozeilen", str(cm.exception))
+			self.assertIn(kunde, str(cm.exception))
+			a.reload()
+			self.assertEqual((a.status, a.datei_buchungsstapel), ("Entwurf", None))
+		finally:
+			frappe.db.delete("Party Account", {"name": zweite.name})
+			frappe.clear_document_cache("Customer", kunde)
+		self.assertEqual(debitoren.doppelte_kontozeilen([kunde], self.firma), [])
+		b, rb = self.export()
+		self.assertTrue(rb["ok"])
+		self.assertEqual(b.anzahl_rechnungen, 1)
+
 	def test_formatfehler_speichert_nichts(self):
 		from corevatis_erpnext.datev import export_erstellen
 

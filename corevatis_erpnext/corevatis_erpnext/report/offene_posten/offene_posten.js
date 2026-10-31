@@ -16,6 +16,8 @@ frappe.query_reports["Offene Posten"] = {
 		if (!data) return formatiert;
 		const esc = frappe.utils.escape_html;
 		if (column.fieldname === "aktion" && data.rechnung) {
+			// Nur wer Mahnungen anlegen darf, sieht den Knopf (Meister liest und druckt nur; Abnahme Build 28)
+			if (!frappe.model.can_create("Dunning")) return "";
 			const name = encodeURIComponent(data.rechnung);
 			const label = data.vorschlag ? __("Mahnen") : __("Mahnen …");
 			const klasse = data.vorschlag ? "btn-primary" : "btn-default";
