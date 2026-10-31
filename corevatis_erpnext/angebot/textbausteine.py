@@ -107,9 +107,15 @@ def standard_texte(doc, method=None) -> None:
 	Felder, die schon etwas enthalten, bleiben. Ohne die Custom Fields (4.1) nur ``terms``.
 	"""
 	if not doc.get("tc_name") and not cstr(doc.get("terms")).strip() and doc.get("company"):
+		# P2.6: ein Baustein mit Firma oder Verfahren schlägt den Firmenstandard; sonst der Standard
+		# (``default_selling_terms``), und erst ohne ihn ein Baustein nur nach Belegart
+		b = _baustein("Zahlungsbedingungen", doc)
 		standard = frappe.get_cached_value("Company", doc.company, "default_selling_terms")
 		text = _terms(standard)
-		if text:
+		if b and (b.punkte > 1 or not text):
+			doc.tc_name = b.name
+			doc.terms = b.terms
+		elif text:
 			doc.tc_name = standard
 			doc.terms = text
 
@@ -124,13 +130,29 @@ def texte_einsetzen(doc) -> None:
 		meta.has_field("cv_vorbemerkung")
 		and not frappe.utils.strip_html(cstr(doc.get("cv_vorbemerkung"))).strip()
 	):
-		text = _terms(VORBEMERKUNG_STANDARD)
+		b = _baustein("Vorbemerkung", doc)
+		text = cstr(b.terms) if b else _terms(VORBEMERKUNG_STANDARD)
 		if text:
 			doc.cv_vorbemerkung = text
 	if meta.has_field("cv_garantiehinweis") and not cstr(doc.get("cv_garantiehinweis")).strip():
-		text = _terms(GARANTIE_STANDARD)
+		b = _baustein("Gewährleistung", doc)
+		text = cstr(b.terms) if b else _terms(GARANTIE_STANDARD)
 		if text:
 			doc.cv_garantiehinweis = absaetze_als_text(text)
+
+
+def _baustein(art: str, doc):
+	"""Passendster Baustein der Art für das Angebot (P2.6: Firma, Verfahren der Positionen, Belegart
+	Angebot); ``None`` ohne Treffer - dann gelten die festen Titel aus 4.3."""
+	from corevatis_erpnext import textbausteine as tb
+	from corevatis_erpnext.textbausteine import platzhalter
+
+	return tb.bester(
+		art,
+		firma=doc.get("company"),
+		belegart="Angebot",
+		verfahren=platzhalter.verfahren_des_belegs(doc),
+	)
 
 
 def absaetze_als_text(html: str) -> str:
