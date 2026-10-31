@@ -160,6 +160,24 @@ class TestTextbausteine(IntegrationTestCase):
 			doc.cv_mahnstufe = ""
 			doc.save(ignore_permissions=True)
 
+	def test_mahntext_ohne_vorlagen_syntax(self):
+		"""Jinja-Marken im Mahntext werden beim Speichern abgelehnt (Platzhalter nur als [[…]])."""
+		from corevatis_erpnext.textbausteine import ART_MAHNTEXT, TextbausteinFehler
+
+		doc = frappe.get_doc(
+			{
+				"doctype": "Terms and Conditions",
+				"title": "Test Mahntext Vorlagen-Syntax",
+				"terms": "<p>Sehr geehrte Damen und Herren, {{ grand_total }} offen.</p>",
+				"selling": 1,
+				"cv_art": ART_MAHNTEXT,
+				"cv_mahnstufe": "1",
+			}
+		)
+		doc.flags.cv_kein_sync = True
+		with self.assertRaises(TextbausteinFehler):
+			doc.insert(ignore_permissions=True)
+
 	def test_serienbrief_pdf(self):
 		from pypdf import PdfReader
 

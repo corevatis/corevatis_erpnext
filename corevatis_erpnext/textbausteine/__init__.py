@@ -48,6 +48,7 @@ ANSCHREIBEN_STANDARD = "Anschreiben Standard"
 MAHNTEXT_PRAEFIX = "Mahntext"
 # Felder der Belege, in denen Platzhalter ersetzt werden: (Feld, HTML?)
 BELEG_TEXTFELDER = (("terms", True), ("cv_vorbemerkung", True), ("cv_garantiehinweis", False))
+JINJA_MARKEN = ("{{", "{%", "{#")
 
 
 class TextbausteinFehler(frappe.ValidationError):
@@ -257,6 +258,15 @@ def tc_validate(doc, method=None) -> None:
 	if doc.get("cv_art") == ART_MAHNTEXT:
 		if cstr(doc.get("cv_mahnstufe")) == "":
 			frappe.throw(_("Ein Mahntext braucht die Mahnstufe (0, 1 oder 2)."), TextbausteinFehler)
+		# ERPNext rendert den Brieftext des Mahntyps als Jinja-Vorlage (eingeschränkte Umgebung). Bürotext
+		# soll kein Vorlagen-Code sein: Platzhalter nur als [[…]], sonst bricht eine Mahnung an einem Tippfehler.
+		if any(marke in cstr(doc.get("terms")) for marke in JINJA_MARKEN):
+			frappe.throw(
+				_(
+					"Mahntexte dürfen keine Vorlagen-Syntax ({0}) enthalten. Platzhalter schreiben Sie als [[Name]]."
+				).format(", ".join(JINJA_MARKEN)),
+				TextbausteinFehler,
+			)
 		doc.cv_belegart = BELEGART_MAHNUNG
 	elif doc.get("cv_mahnstufe"):
 		doc.cv_mahnstufe = ""
@@ -293,7 +303,8 @@ def mahntext_uebernehmen(doc) -> list[str]:
 			)
 			if z.cv_firma
 		}
-		firmen = [f for f in frappe.get_all("Company", pluck="name") if f not in eigene]
+		# Nur Firmen, die der Speichernde lesen darf (Benutzerberechtigungen); fremde bleiben unberührt.
+		firmen = [f for f in frappe.get_list("Company", pluck="name") if f not in eigene]
 	geaendert = []
 	for firma in firmen:
 		typ = vorhandener_typ(stufe, firma)
