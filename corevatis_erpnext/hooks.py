@@ -69,7 +69,7 @@ doctype_js = {
 		"public/js/lead.js",
 		"public/js/galerie.js",
 		"public/js/lead_galerie.js",
-		"public/js/lead_termin.js",
+		"public/js/lead_termin.bundle.js",
 		_PROZESSLEISTE,
 		"public/js/prozess_lead.js",
 	],
@@ -86,20 +86,20 @@ doctype_js = {
 	"Project": ["public/js/planung.js", "public/js/abrechnung.js", _PROZESSLEISTE],
 	# Zuweisung Mitarbeiter (5.2): Abschnitt „Zuweisung“ mit Dropdown; zuweisung.js ist die
 	# Bibliothek (auch vom Wochenplan per frappe.require geladen)
-	"Task": ["public/js/zuweisung.js", "public/js/task_zuweisung.js"],
+	"Task": ["public/js/zuweisung.bundle.js", "public/js/task_zuweisung.js"],
 	"Objekt": [_PROZESSLEISTE],
 	# Rechnung: Mappenprüfung übersteuern (Epic D, D.5); Abrechnung (7.1/7.2): Zustandstext,
 	# „Rechnung freigeben“, ERPNext-Ballast ausblenden; 7.5: „Mahnen“
 	"Sales Invoice": [
 		"public/js/abrechnung.js",
-		"public/js/mahnung_zahlung.js",
+		"public/js/mahnung_zahlung.bundle.js",
 		_PROZESSLEISTE,
 		"public/js/mappe_uebersteuern.js",
 	],
 	"Abschlagsplan": ["public/js/abrechnung.js"],
 	# Mahnwesen und Zahlungseingang (7.5): Dialoge „Mahnen“, „Rechnung zuordnen“, Zustandstext der Mahnung
-	"Bank Transaction": ["public/js/mahnung_zahlung.js"],
-	"Dunning": ["public/js/mahnung_zahlung.js"],
+	"Bank Transaction": ["public/js/mahnung_zahlung.bundle.js"],
+	"Dunning": ["public/js/mahnung_zahlung.bundle.js"],
 	# Abnahme (6.1): Doctype aus corevatis, ohne Kern lädt es nie; „Mangel-Aufgaben erzeugen“
 	"Abnahmeprotokoll": ["public/js/abnahme.js", _PROZESSLEISTE],
 }
