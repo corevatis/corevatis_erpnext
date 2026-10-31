@@ -193,6 +193,13 @@ class TestPruefung(unittest.TestCase):
 		)
 		self.assertEqual(fehler(**{"Fälligkeit": "2026-10-29"}), [("Fälligkeit", 3)])
 		self.assertEqual(fehler(Festschreibung="2"), [("Festschreibung", 3)])
+		# Formelzeichen (CSV-Injection) in Textzellen
+		self.assertEqual(fehler(Buchungstext="=cmd|' /C calc'!A0"), [("Buchungstext", 3)])
+		self.assertEqual(
+			fehler(**{"Beleginfo - Art 5": "Zahlungsreferenz", "Beleginfo - Inhalt 5": "-2+3"}),
+			[("Beleginfo - Inhalt 5", 3)],
+		)
+		self.assertEqual(fehler(**{"Belegfeld 1": "+RE1"}), [("Belegfeld 1", 3)])
 		self.assertEqual(fehler(), [])
 		# Feldzahl, Zeichensatz, Zeilenende
 		e = pruefung.pruefe_buchungsstapel(_datei(zeilen=[_zeile() + ";x"]))
@@ -246,6 +253,9 @@ class TestPruefung(unittest.TestCase):
 		)
 		self.assertEqual(
 			[f.feld for f in pruefung.pruefe_debitoren(datei(Adressatentyp="3")).fehler], ["Adressatentyp"]
+		)
+		self.assertEqual(
+			[f.feld for f in pruefung.pruefe_debitoren(datei(Telefon="+49 251 1")).fehler], ["Telefon"]
 		)
 
 
@@ -539,7 +549,7 @@ class TestDatevExport(IntegrationTestCase):
 		debitor = debitoren.nummer(v["kunde"], self.firma)
 		self.assertTrue(debitor and debitor.isdigit() and len(debitor) == 5, debitor)
 		ddmm = f"{getdate(today()):%d%m}"
-		z1 = [z for z in zeilen if z["Belegfeld 1"] == v["re1"]]
+		z1 = [z for z in zeilen if z["Beleginfo - Inhalt 1"] == v["re1"]]
 		self.assertEqual({z["Konto"] for z in z1}, {debitor, "8400", "1776"})
 		d1 = next(z for z in z1 if z["Konto"] == debitor)
 		self.assertEqual(
@@ -569,7 +579,7 @@ class TestDatevExport(IntegrationTestCase):
 		s1 = next(z for z in z1 if z["Konto"] == "1776")
 		self.assertEqual((s1["Umsatz (ohne Soll/Haben-Kz)"], s1["Soll/Haben-Kennzeichen"]), ("28,5", "H"))
 		# Schlussrechnung: Rest 330 netto, Abzugszeilen netto gegen 8400
-		z3 = [z for z in zeilen if z["Belegfeld 1"] == v["re3"]]
+		z3 = [z for z in zeilen if z["Beleginfo - Inhalt 1"] == v["re3"]]
 		self.assertEqual(self.saldo(z3), {debitor: 392.7, "8400": -330.0, "1776": -62.7})
 		self.assertEqual({z["Gegenkonto (ohne BU-Schlüssel)"] for z in z3}, {"9090"})
 		self.assertTrue(
@@ -587,7 +597,7 @@ class TestDatevExport(IntegrationTestCase):
 		self.assertEqual({z["Beleginfo - Art 1"] for z in zp}, {"Payment Entry"})
 		self.assertEqual({z["Beleginfo - Inhalt 6"] for z in zp}, {f"{getdate(today()):%d%m%Y}"})
 		# Gutschrift: Erlös und Steuer im Soll, Debitor im Haben
-		zg = [z for z in zeilen if z["Belegfeld 1"] == v["gs"]]
+		zg = [z for z in zeilen if z["Beleginfo - Inhalt 1"] == v["gs"]]
 		self.assertEqual(self.saldo(zg), {"8400": 200.0, "1776": 38.0, debitor: -238.0})
 		self.assertTrue(zg[0]["Buchungstext"].startswith(f"Gutschrift zu {v['re2']} "))
 		self.assertTrue(v["gs"].startswith("GS-"), v["gs"])
@@ -622,7 +632,8 @@ class TestDatevExport(IntegrationTestCase):
 				)
 				self.assertTrue(zf.read(f"{v['re1']}.pdf").startswith(b"%PDF"))
 				liste = zf.read("Belegliste.csv").decode("cp1252")
-				self.assertIn(f"{v['re1']};", liste)
+				self.assertIn(f'"{v["re1"]}";', liste)
+				self.assertTrue(liste.startswith('"Belegnummer";"Datum";"Kunde";"Brutto";"Datei"\r\n'))
 		# Dateien privat am Export
 		for url in (doc.datei_buchungsstapel, doc.datei_debitoren):
 			f = frappe.get_doc("File", {"file_url": url})

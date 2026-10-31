@@ -86,6 +86,20 @@ MAX_LAENGEN = {
 }
 MAX_BELEGINFO_ART = 20
 MAX_BELEGINFO_INHALT = 210
+# Textzellen dürfen nicht mit Formelzeichen beginnen (Tabellenkalkulation beim Steuerberater)
+FORMELZEICHEN = ("=", "+", "-", "@")
+KEINE_TEXTSPALTEN = frozenset(
+	{
+		"Umsatz (ohne Soll/Haben-Kz)",
+		"Soll/Haben-Kennzeichen",
+		"Konto",
+		"Gegenkonto (ohne BU-Schlüssel)",
+		"BU-Schlüssel",
+		"Belegdatum",
+		"Fälligkeit",
+		"Festschreibung",
+	}
+)
 
 
 @dataclass
@@ -366,6 +380,13 @@ def _buchungszeile_pruefen(nr: int, w: dict, n: int, kopf: dict, ergebnis: Pruef
 			ergebnis.fehler_(nr, "Fälligkeit", f"{faellig!r} ist nicht TTMMJJJJ")
 	if w["Festschreibung"] not in ("", "0", "1"):
 		ergebnis.fehler_(nr, "Festschreibung", f"{w['Festschreibung']!r} statt leer, 0 oder 1")
+	_formelzeichen_pruefen(nr, w, KEINE_TEXTSPALTEN, ergebnis)
+
+
+def _formelzeichen_pruefen(nr: int, w: dict, ausnahmen: frozenset, ergebnis: Pruefergebnis) -> None:
+	for feld, wert in w.items():
+		if wert and feld not in ausnahmen and wert[0] in FORMELZEICHEN:
+			ergebnis.fehler_(nr, feld, f"{wert[:20]!r} beginnt mit einem Formelzeichen")
 
 
 def _belegdatum_pruefen(nr: int, wert: str, kopf: dict, ergebnis: Pruefergebnis) -> None:
@@ -465,4 +486,5 @@ def pruefe_debitoren(daten: bytes | str) -> Pruefergebnis:
 		land = w["Land"]
 		if land and not re.match(r"^[A-Z]{2}$", land):
 			ergebnis.fehler_(nr, "Land", f"{land!r} ist kein zweistelliger Ländercode")
+		_formelzeichen_pruefen(nr, w, frozenset({"Konto", "Adressatentyp"}), ergebnis)
 	return ergebnis

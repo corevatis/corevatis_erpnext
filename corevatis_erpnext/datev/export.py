@@ -21,6 +21,7 @@ Ablauf ``erstellen(doc)`` für einen ``DATEV Export`` (Firma, Zeitraum, Optionen
 
 from __future__ import annotations
 
+import csv
 import io
 import re
 import zipfile
@@ -54,6 +55,7 @@ MAX_BUCHUNGSTEXT = 60
 MAX_BELEGFELD1 = 36
 MAX_BELEGFELD2 = 12
 MAX_AUFTRAGSNUMMER = 30
+MAX_BELEGINFO_INHALT = 210
 RE_BELEGFELD = re.compile(r"[^A-Za-z0-9$&%*+\-/]")
 RE_DATEINAME = re.compile(r"[^A-Za-z0-9_-]+")
 # Spaltennamen des Buchungsstapels (erpnext_datev.utils.datev_constants.TRANSACTION_COLUMNS)
@@ -67,6 +69,24 @@ SP_BUCHUNGSTEXT = "Buchungstext"
 SP_AUFTRAGSNUMMER = "Auftragsnummer"
 SP_ART = {i: f"Beleginfo - Art {i}" for i in range(1, 9)}
 SP_INHALT = {i: f"Beleginfo - Inhalt {i}" for i in range(1, 9)}
+# Zellen mit festem Format (Zahl, Kennzeichen, Konto, Datum), die nicht als Text behandelt werden
+SPALTEN_FEST = frozenset(
+	{
+		SP_UMSATZ,
+		SP_SH,
+		SP_KONTO,
+		"Gegenkonto (ohne BU-Schlüssel)",
+		"BU-Schlüssel",
+		SP_BELEGDATUM,
+		SP_BELEGFELD1,
+		SP_BELEGFELD2,
+		"Fälligkeit",
+		"Festschreibung",
+		SP_INHALT[6],  # Datum (Buchungstag bzw. Lieferanten-Rechnungsdatum)
+	}
+)
+SPALTEN_LAENGE = {SP_BUCHUNGSTEXT: MAX_BUCHUNGSTEXT, SP_AUFTRAGSNUMMER: MAX_AUFTRAGSNUMMER}
+SPALTEN_LAENGE.update({SP_ART[i]: 20 for i in range(1, 9)})
 
 
 class DatevFehler(frappe.ValidationError):
@@ -291,8 +311,9 @@ def belege_laden(zeilen: list[dict]) -> dict[tuple[str, str], Beleg]:
 
 
 def belegfeld(wert: str | None, max_len: int = MAX_BELEGFELD1) -> str:
-	"""Nur die in Belegfeld 1/2 erlaubten Zeichen (Buchstaben, Ziffern, ``$&%*+-/``), gekürzt."""
-	return RE_BELEGFELD.sub("", wert or "")[:max_len]
+	"""Nur die in Belegfeld 1/2 erlaubten Zeichen (Buchstaben, Ziffern, ``$&%*+-/``), ohne führendes
+	``+``/``-`` (Formelzeichen), gekürzt."""
+	return RE_BELEGFELD.sub("", wert or "").lstrip("+-")[:max_len]
 
 
 def belegfeld2(auftrag: str | None) -> str:
@@ -325,9 +346,11 @@ def zeile_ergaenzen(z: dict, beleg: Beleg | None, nummern: dict[str, str]) -> No
 	else:
 		z[SP_BELEGFELD1] = belegfeld(z.get(SP_BELEGFELD1))
 		z[SP_BUCHUNGSTEXT] = debitoren.text(z.get(SP_BUCHUNGSTEXT), MAX_BUCHUNGSTEXT)
-	for i in (1, 2, 3):
-		if z.get(SP_INHALT[i]):
-			z[SP_INHALT[i]] = debitoren.text(z[SP_INHALT[i]], 210)
+	# Jede Textzelle (auch von erpnext_datev gelieferte wie Zahlungsreferenz oder Lieferanten-
+	# Rechnungsnummer) ohne führende Formelzeichen, Anführungszeichen und Semikolon
+	for spalte, wert in z.items():
+		if isinstance(wert, str) and wert and spalte not in SPALTEN_FEST:
+			z[spalte] = debitoren.text(wert, SPALTEN_LAENGE.get(spalte, MAX_BELEGINFO_INHALT))
 
 
 # --- Dateien -----------------------------------------------------------------------------------
@@ -371,7 +394,9 @@ def belegbilder_zip(rechnungen: list[Beleg], druckformat: str | None) -> tuple[b
 	puffer = io.BytesIO()
 	fehler: list[str] = []
 	anzahl = 0
-	index = ["Belegnummer;Datum;Kunde;Brutto;Datei"]
+	liste = io.StringIO()
+	index = csv.writer(liste, delimiter=";", quoting=csv.QUOTE_ALL, lineterminator="\r\n")
+	index.writerow(["Belegnummer", "Datum", "Kunde", "Brutto", "Datei"])
 	with zipfile.ZipFile(puffer, "w", zipfile.ZIP_DEFLATED) as zf:
 		for b in rechnungen:
 			try:
@@ -390,18 +415,16 @@ def belegbilder_zip(rechnungen: list[Beleg], druckformat: str | None) -> tuple[b
 			zf.writestr(datei, pdf)
 			b.belegbild = 1
 			anzahl += 1
-			index.append(
-				";".join(
-					(
-						debitoren.text(b.name, 36),
-						format_date(b.datum) if b.datum else "",
-						debitoren.text(b.kunde_name, 60),
-						f"{b.brutto:.2f}".replace(".", ","),
-						datei,
-					)
-				)
+			index.writerow(
+				[
+					debitoren.text(b.name, 36),
+					format_date(b.datum) if b.datum else "",
+					debitoren.text(b.kunde_name, 60),
+					f"{b.brutto:.2f}".replace(".", ","),
+					datei,
+				]
 			)
-		zf.writestr("Belegliste.csv", ("\r\n".join(index) + "\r\n").encode("cp1252", "replace"))
+		zf.writestr("Belegliste.csv", liste.getvalue().encode("cp1252", "replace"))
 	return puffer.getvalue(), anzahl, fehler
 
 

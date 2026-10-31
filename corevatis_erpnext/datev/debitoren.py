@@ -134,11 +134,11 @@ def kunde_validate(doc, method=None) -> None:
 
 
 def text(wert, max_len: int) -> str:
-	"""Textfeld für die CSV: Leerraum gebündelt, Anführungszeichen ersetzt, führende Formelzeichen
-	entfernt (Tabellenkalkulation des Steuerberaters), auf ``max_len`` gekürzt."""
+	"""Textfeld für die CSV: Leerraum gebündelt, Anführungszeichen und Semikolon (Trennzeichen) ersetzt,
+	führende Formelzeichen entfernt (Tabellenkalkulation des Steuerberaters), auf ``max_len`` gekürzt."""
 	if wert is None:
 		return ""
-	s = " ".join(str(wert).replace('"', "'").split())
+	s = " ".join(str(wert).replace('"', "'").replace(";", ",").split())
 	s = RE_FORMELZEICHEN.sub("", s).strip()
 	return s[:max_len]
 
@@ -197,6 +197,12 @@ def _anrede_kontakt(kontakt: str | None) -> str:
 	return frappe.db.get_value("Contact", kontakt, "salutation") or ""
 
 
+def _rufnummer(wert) -> str:
+	"""``+49 251 ...`` → ``0049 251 ...``, damit ``text()`` das führende Plus nicht als Formelzeichen entfernt."""
+	s = (wert or "").strip()
+	return "00" + s[1:] if s.startswith("+") else s
+
+
 def stammdaten_zeilen(kunden: Iterable[str], company: str) -> tuple[list[dict], list[str]]:
 	"""Zeilen für ``EXTF_Debitoren`` der genannten Kunden. Rückgabe ``(zeilen, hinweise)``."""
 	zeilen: list[dict] = []
@@ -230,8 +236,8 @@ def stammdaten_zeilen(kunden: Iterable[str], company: str) -> tuple[list[dict], 
 			"Ort": text(adr.city if adr else "", 30),
 			"Land": land,
 			"E-Mail": text(adr.email_id if adr else "", 60),
-			"Telefon": text(adr.phone if adr else "", 60),
-			"Fax": text(adr.fax if adr else "", 60),
+			"Telefon": text(_rufnummer(adr.phone if adr else ""), 60),
+			"Fax": text(_rufnummer(adr.fax if adr else ""), 60),
 			"Internet": text(k.website, 60),
 			"Steuernummer": text(k.tax_id, 20),
 		}
