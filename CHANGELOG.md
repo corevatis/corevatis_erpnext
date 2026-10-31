@@ -21,6 +21,8 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   den Rest wird gespeichert, aber gemeldet (keine Sperre). Meister und Monteur dürfen den Report auf Abwesenheit.
 - Hook `corevatis_stundenkonto_adapter` → `corevatis_erpnext.mitarbeiter.fuer_benutzer(user, jahr, monat)` für
   den Kern-Endpunkt `mein_stundenkonto` der App (Monat, Saldo Jahr, Urlaubskonto, Tage des Benutzers).
+- Nachtrag (Review): Tagesansicht eines fremden Mitarbeiters liefert ohne Recht auf die Art nur „Abwesend Tage“
+  gesamt (keine getrennten Kranktage); Link „Tage“ im Bericht ohne Inline-onclick (delegiert in `onload`).
 ### Hinzugefügt (Nachkalkulation, Phase 2 P2.1, Handwerker#87)
 
 - **Bericht „Nachkalkulation“** (Leiste „Betrieb“ → Abrechnung; Rollen Büro, Meister, System Manager; Filter

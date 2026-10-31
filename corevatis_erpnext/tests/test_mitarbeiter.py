@@ -239,6 +239,10 @@ class TestMitarbeiter(IntegrationTestCase):
 		tage = {t["datum"]: t for t in m["tage"]}
 		self.assertEqual(tage["2026-03-09"]["abwesenheit"], "Abwesend")
 		self.assertIsNone(m["urlaub"])
+		self.assertEqual(
+			(m["abwesend_tage"], m["urlaubstage"], m["kranktage"], m["sonstige_tage"]),
+			(6.5, None, None, None),
+		)
 		# die eigene Zeile zeigt die Arten
 		eigene = sk.uebersicht(2026, 3, self.emp_meister)["zeilen"][0]
 		self.assertTrue(eigene["arten_sichtbar"])

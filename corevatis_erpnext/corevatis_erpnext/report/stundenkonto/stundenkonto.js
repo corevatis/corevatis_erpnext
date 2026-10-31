@@ -12,13 +12,19 @@ frappe.query_reports["Stundenkonto"] = {
 			default: "Mitarbeiter",
 		},
 	],
+	onload(report) {
+		// Link „Tage“ je Zeile: einmal delegiert gebunden (kein Inline-onclick mit Mitarbeiternamen)
+		report.page.wrapper.on("click", "a.cv-sk-tage", (ev) => {
+			ev.preventDefault();
+			frappe.query_report.set_filter_value({ mitarbeiter: ev.currentTarget.dataset.mitarbeiter, ansicht: "Tage" });
+		});
+	},
 	formatter(value, row, column, data, default_formatter) {
 		const formatiert = default_formatter(value, row, column, data);
 		if (!data) return formatiert;
 		const esc = frappe.utils.escape_html;
 		if (column.fieldname === "aktion" && data.mitarbeiter) {
-			const name = encodeURIComponent(data.mitarbeiter);
-			return `<a href="#" onclick="frappe.query_report.set_filter_value({mitarbeiter: decodeURIComponent('${name}'), ansicht: 'Tage'}); return false;">${esc(__("Tage"))}</a>`;
+			return `<a href="#" class="cv-sk-tage" data-mitarbeiter="${esc(data.mitarbeiter)}">${esc(__("Tage"))}</a>`;
 		}
 		if (["saldo", "saldo_jahr", "laufend"].includes(column.fieldname) && typeof value === "number" && value !== 0) {
 			return `<span class="${value < 0 ? "text-danger" : "text-success"}">${formatiert}</span>`;
