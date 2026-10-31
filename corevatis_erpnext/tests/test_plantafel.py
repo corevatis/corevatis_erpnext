@@ -13,7 +13,8 @@ Eine Woche ab dem nächsten Montag M (Feiertag Do gemockt, Nominatim gemockt, Fi
 Geprüft: Aufbau der Tafel (Woche/Monat, Sa/So, Feiertag, Segmente, Konflikte, Hinweise, Fahrzeug),
 Verschieben eines Arbeitspakets (Tag, Mitarbeiter, Konflikt mit und ohne „trotzdem“, Freigeben),
 Verschieben eines Termins (Zeit, Meister, Konflikt, Zuweisung, Freigabe, Bestätigungstext),
-Fahrzeugzuordnung mit Konflikt, Rechte des Monteurs (eigene Zeile, nur lesen, eigene Abwesenheiten),
+Fahrzeugzuordnung mit Konflikt, Rechte des Monteurs (eigene Zeile, nur lesen, eigene Abwesenheiten) und des
+Meisters (alle Abwesenheiten ohne Art),
 Reihenfolge und Filter, Druck (HTML, PDF), Felder, Seite, Leiste, Übersetzungen.
 """
 
@@ -634,6 +635,30 @@ class TestPlantafel(IntegrationTestCase):
 		self.assertTrue(frappe.has_permission("Abwesenheit", "create", user=BUERO))
 		self.assertEqual(abwesenheit.permission_query_conditions(BUERO), "")
 		self.assertIn("benutzer", abwesenheit.permission_query_conditions(MONTEUR))
+		# Meister sieht alle Abwesenheiten des Betriebs (Liste und Formular), aber Art und Notiz nur beim Büro
+		# (Feldrecht Stufe 1, Krank ist ein Gesundheitsdatum); User Permission auf Employee filtert nicht
+		self.assertEqual(abwesenheit.permission_query_conditions(MEISTER2), "")
+		frappe.set_user(MEISTER2)
+		try:
+			zeilen = frappe.get_list(
+				"Abwesenheit", fields=["name", "mitarbeiter", "art", "notiz"], limit_page_length=0
+			)
+			self.assertTrue({eigene, self.abw_berta} <= {z.name for z in zeilen})
+			self.assertTrue(all("art" not in z and "notiz" not in z for z in zeilen), zeilen)
+			self.assertTrue(frappe.has_permission("Abwesenheit", "read", doc=self.abw_berta))
+			self.assertFalse(frappe.has_permission("Abwesenheit", "write", doc=self.abw_berta))
+			self.assertFalse(frappe.has_permission("Abwesenheit", "create"))
+			fremd = frappe.get_doc("Abwesenheit", self.abw_berta)
+			fremd.apply_fieldlevel_read_permissions()
+			self.assertIsNone(fremd.get("art"))
+		finally:
+			frappe.set_user("Administrator")
+		frappe.set_user(BUERO)
+		try:
+			zeilen = frappe.get_list("Abwesenheit", fields=["name", "art"], filters={"name": self.abw_berta})
+			self.assertEqual([z.art for z in zeilen], ["Urlaub"])
+		finally:
+			frappe.set_user("Administrator")
 		# Meister 2 sieht Martins Termin ohne Kundendaten: „Besichtigung“ und nur PLZ/Ort, nicht öffnen
 		d = als(MEISTER2, plantafel.tafel, str(self.mo))
 		termin = self.eintrag(self.zeile(d, MEISTER1), "Event", self.termin)
