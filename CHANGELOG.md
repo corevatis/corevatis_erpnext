@@ -6,6 +6,22 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (Mitarbeiter: Urlaub, Krank, Stundenkonto, Phase 2 P2.5, Handwerker#88)
+
+- Felder am Employee (`corevatis_erpnext.mitarbeiter.ensure_setup`, nach `after_install`/`after_migrate`):
+  Urlaubsanspruch in Tagen je Jahr (`cv_urlaubsanspruch`, leer = 30), Resturlaub Vorjahr (`cv_urlaub_uebertrag`),
+  Stundenkonto zum 1. Januar (`cv_saldo_uebertrag`). Kein HRMS, keine Leave Application.
+- Bericht „Stundenkonto“ (Script Report, Leiste „Betrieb“ unter „Stammdaten“): je Mitarbeiter und Monat Solltage,
+  Soll (Tagesarbeitszeit der Planung an Mo-Fr ohne Feiertage und freie Tage der Holiday List, halbe Feiertage halb),
+  Abwesenheiten (Urlaub, Krank, Schulung, Sonstiges senken das Soll), Ist aus den Timesheets ohne Pausen, Saldo,
+  Saldo Jahr (Übertrag plus Monate), Urlaubskonto (Anspruch, genommen, geplant, Rest) und Kranktage. Ansicht
+  „Tage“: Monatsübersicht eines Mitarbeiters je Kalendertag mit laufendem Saldo. Tage nach heute zählen nicht ins
+  Soll. Büro und Meister sehen alle, Monteur nur sich; Urlaubs- und Krankheitsspalten nur Büro und der Betroffene.
+- Formular „Abwesenheit“: Hinweis zum Urlaubskonto (Rest vor und nach dem Eintrag, `urlaub_hinweis`); Urlaub über
+  den Rest wird gespeichert, aber gemeldet (keine Sperre). Meister und Monteur dürfen den Report auf Abwesenheit.
+- Hook `corevatis_stundenkonto_adapter` → `corevatis_erpnext.mitarbeiter.fuer_benutzer(user, jahr, monat)` für
+  den Kern-Endpunkt `mein_stundenkonto` der App (Monat, Saldo Jahr, Urlaubskonto, Tage des Benutzers).
+
 ### Behoben (Desk-Assets, Abnahme Build 29, Handwerker#85)
 
 - `betrieb.js`, `betrieb.css`, `mahnung_zahlung.js`, `zuweisung.js`, `lead_termin.js` sind jetzt Bundles
