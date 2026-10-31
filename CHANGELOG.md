@@ -27,6 +27,36 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 - Seitenleiste „Betrieb“: Einträge „Nachkalkulation“ und „Regeln nachjustieren“ unter Abrechnung (Zeitstempel
   angehoben, damit `migrate` sie nachzieht).
 
+### Hinzugefügt (Textbausteine im Desk, Phase 2 P2.6, Handwerker#89)
+
+- Textbausteine sind ERPNexts „Terms and Conditions“ mit Custom Fields: Art (Vorbemerkung,
+  Zahlungsbedingungen, Gewährleistung, Schlusstext, Mahntext, Anschreiben, Sonstiges), Belegart, Verfahren,
+  Firma, Reihenfolge, Gültig ab/bis, Mahnstufe (`textbausteine/felder.py`). Eintrag „Textbausteine“ in der
+  Leiste „Betrieb“ unter Stammdaten; Büro schreibt, Meister liest (`textbausteine.ensure_rechte`).
+- Platzhalter `[[Kunde]]`, `[[Objekt]]`, `[[Angebot]]`, `[[Betrag]]`, `[[Faelligkeit]]` … aus einem festen
+  Katalog (`textbausteine/platzhalter.py`); unbekannte Platzhalter lehnt das Speichern mit der Liste ab.
+  Angebot, Auftrag und Rechnung setzen die Werte beim Speichern ein (Vorbemerkung, Garantiehinweis,
+  Zahlungsbedingungen), die Mahnung beim Erstellen; HTML-maskiert, kein Jinja über Text des Büros.
+- Auswahl je Firma, Verfahren und Belegart mit Rückfall (`textbausteine.bester`): am Angebot für
+  Vorbemerkung, Gewährleistung und Zahlungsbedingungen (ein Baustein mit Firma oder Verfahren schlägt den
+  Firmenstandard), an Auftrag und Rechnung für Zahlungsbedingungen, wenn der Beleg keine hat.
+- Vorschau am Baustein mit dem letzten Beleg der Belegart (`textbausteine.vorschau`, Knopf „Vorschau“,
+  Platzhalter-Hilfe unter dem Text, `public/js/textbaustein.js`). Im Feld „Textbaustein“ der Belege
+  erscheinen nur Zahlungsbedingungen und Sonstiges (`public/js/beleg_textbaustein.js`).
+- Mahntexte: je Stufe ein Baustein „Mahntext …“ mit dem Brieftext aus 7.5; Speichern schreibt den Text in
+  den Mahntyp der Firma bzw. aller Firmen ohne eigenen Baustein (`textbausteine.mahntext_uebernehmen`).
+- Serienbrief aus der Kundenliste (Aktion „Serienbrief“, `public/js/kunden_serienbrief.js`): Baustein der
+  Art Anschreiben, Betreff, Firma; je Kunde eine Seite mit Briefkopf, Anschrift, Datum, Betreff und Text, als
+  eine private PDF-Datei (`textbausteine/serienbrief.erstellen`, pypdf). Nur Büro, höchstens 200 Kunden,
+  kein E-Mail-Versand.
+- Übersetzungen: „Terms and Conditions“ heißt im Desk „Textbaustein“. Tests: `tests/test_textbausteine.py`.
+
+### Behoben (Schlussrechnung, Abnahme Build 30, Handwerker#49)
+
+- Bestätigungsmeldung „Schlussrechnung angelegt“ zeigte alle Beträge hundertfach: die Engine liefert Dezimal-Zeichenketten,
+  `format_currency` las den Punkt im deutschen Zahlenformat als Tausendertrenner. `geld()` (Abrechnung, Mahnwesen) und die
+  Angebotsmeldung wandeln jetzt zuerst in Zahlen. Rechnung und Druck waren richtig.
+
 ### Behoben (Desk-Assets, Abnahme Build 29, Handwerker#85)
 
 - `betrieb.js`, `betrieb.css`, `mahnung_zahlung.js`, `zuweisung.js`, `lead_termin.js` sind jetzt Bundles

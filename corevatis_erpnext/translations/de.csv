@@ -489,3 +489,17 @@ Der Zeitraum darf höchstens {0} Tage umfassen.,Der Zeitraum darf höchstens {0}
 Nachkalkulation,Nachkalkulation
 Mengenregeln nachjustieren,Mengenregeln nachjustieren
 Regeln nachjustieren,Regeln nachjustieren
+Terms and Conditions,Textbaustein
+Text Block (Corevatis),Textbaustein (Corevatis)
+Text Block Type,Art
+Document Type (Text Block),Belegart
+Empty: for all document types,Leer: für alle Belegarten
+Empty: for all methods,Leer: für alle Verfahren
+Empty: for all companies,Leer: für alle Firmen
+Dunning Level,Mahnstufe
+"0 payment reminder, 1 first dunning, 2 second dunning","0 Zahlungserinnerung, 1 erste Mahnung, 2 zweite Mahnung"
+Sort Order,Reihenfolge
+Lower comes first when several text blocks match,Kleinere Zahl zuerst, wenn mehrere Bausteine passen
+Valid From,Gültig ab
+Valid Until,Gültig bis
+Placeholders,Platzhalter

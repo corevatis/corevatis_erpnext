@@ -58,7 +58,7 @@ frappe.provide("corevatis_erpnext.angebot");
 					message: __("Angebot {0}: {1} Positionen, netto {2}", [
 						m.angebot,
 						m.positionen,
-						format_currency(m.netto),
+						format_currency(parseFloat(m.netto) || 0),
 					]),
 					indicator: "green",
 				});

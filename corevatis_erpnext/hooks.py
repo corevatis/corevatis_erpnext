@@ -64,7 +64,9 @@ before_app_uninstall = "corevatis_erpnext.vor_ort.lead_objekt.before_app_uninsta
 # Prozessleiste (prozessleiste.js) im Formularkopf aller Belege der Kette; prozess_lead.js räumt
 # das Lead-Formular auf (Befunde mvp-test Nr. 21)
 _PROZESSLEISTE = "public/js/prozessleiste.js"
+# Textbausteine (P2.6): Platzhalter-Hilfe und Vorschau am Baustein (Terms and Conditions)
 doctype_js = {
+	"Terms and Conditions": "public/js/textbaustein.js",
 	"Lead": [
 		"public/js/lead.js",
 		"public/js/galerie.js",
@@ -74,7 +76,12 @@ doctype_js = {
 		"public/js/prozess_lead.js",
 	],
 	# Angebot annehmen/ablehnen (4.4), Nachfassen (4.5); Mappenprüfung übersteuern (Epic D)
-	"Quotation": ["public/js/quotation_annahme.js", _PROZESSLEISTE, "public/js/mappe_uebersteuern.js"],
+	"Quotation": [
+		"public/js/beleg_textbaustein.js",
+		"public/js/quotation_annahme.js",
+		_PROZESSLEISTE,
+		"public/js/mappe_uebersteuern.js",
+	],
 	# Angebot aus dem Aufmaß (4.1): Doctype Aufmass aus corevatis, ohne Kern lädt es nie
 	"Aufmass": ["public/js/aufmass_angebot.js", _PROZESSLEISTE],
 	# Foto-Galerie am Befund (3.7): Fotos der App; Doctype aus corevatis, ohne Kern lädt es nie
@@ -82,7 +89,12 @@ doctype_js = {
 	# Arbeitspakete und Materialbedarf erzeugen (5.1), am Projekt Button „Wochenplan öffnen“
 	# (5.2; öffnet die Plantafel P1.4 mit Projektfilter)
 	# Abrechnung (7.1/7.2): „Abschlag stellen“, „Schlussrechnung erstellen“ an Auftrag und Projekt
-	"Sales Order": ["public/js/planung.js", "public/js/abrechnung.js", _PROZESSLEISTE],
+	"Sales Order": [
+		"public/js/beleg_textbaustein.js",
+		"public/js/planung.js",
+		"public/js/abrechnung.js",
+		_PROZESSLEISTE,
+	],
 	"Project": ["public/js/planung.js", "public/js/abrechnung.js", _PROZESSLEISTE],
 	# Zuweisung Mitarbeiter (5.2): Abschnitt „Zuweisung“ mit Dropdown; zuweisung.bundle.js ist die
 	# Bibliothek (auch vom Wochenplan per frappe.require geladen)
@@ -91,6 +103,7 @@ doctype_js = {
 	# Rechnung: Mappenprüfung übersteuern (Epic D, D.5); Abrechnung (7.1/7.2): Zustandstext,
 	# „Rechnung freigeben“, ERPNext-Ballast ausblenden; 7.5: „Mahnen“
 	"Sales Invoice": [
+		"public/js/beleg_textbaustein.js",
 		"public/js/abrechnung.js",
 		"public/js/mahnung_zahlung.bundle.js",
 		_PROZESSLEISTE,
@@ -128,7 +141,15 @@ corevatis_sync_handlers = {
 # ---------------
 # Gutschriften (Sales Invoice mit is_return) bekommen den Rückgabe-Nummernkreis aus
 # dem Site-Template (z. B. GS-.YYYY.-), solange die Standardserie gewählt ist.
+# Textbausteine (P2.6): Aktion „Serienbrief“ in der Kundenliste (Büro)
+doctype_list_js = {"Customer": "public/js/kunden_serienbrief.js"}
+
 doc_events = {
+	# Textbausteine (P2.6): Platzhalter prüfen, Mahntext in den Mahntyp übernehmen
+	"Terms and Conditions": {
+		"validate": "corevatis_erpnext.textbausteine.tc_validate",
+		"on_update": "corevatis_erpnext.textbausteine.tc_on_update",
+	},
 	# Prozess 1 (Epic 1): Symptom-Checkboxen und cv_symptome abgleichen (1.1),
 	# „Verloren“ nur mit Verlustgrund (1.4), cv_termin nur über „Termin anlegen“ (1.3)
 	"Lead": {
@@ -145,7 +166,11 @@ doc_events = {
 		"validate": "corevatis_erpnext.katalog.item.validate",
 	},
 	"Sales Invoice": {
-		"before_insert": "corevatis_erpnext.setup.naming.set_return_naming_series",
+		"before_insert": [
+			"corevatis_erpnext.setup.naming.set_return_naming_series",
+			# Textbausteine (P2.6): Zahlungsbedingungen je Firma/Verfahren, wenn keine gesetzt sind
+			"corevatis_erpnext.textbausteine.beleg_before_insert",
+		],
 		# Dokumentenmappe (D.5) zuerst: Pflichtdokumente ab Schritt Rechnung (Abnahmeprotokoll in der
 		# Mappe), Übersteuern mit Begründung durch das Büro - danach die Abnahmesperre 6.2
 		"validate": [
@@ -153,6 +178,8 @@ doc_events = {
 			"corevatis_erpnext.abrechnung.auftrag.rechnung_validieren",
 			"corevatis_erpnext.mappe.rechnung_pruefen",
 			"corevatis_erpnext.abnahme.rechnung_pruefen",
+			# Textbausteine (P2.6): Platzhalter in Zahlungsbedingungen einsetzen
+			"corevatis_erpnext.textbausteine.beleg_validate",
 		],
 		"on_update": "corevatis_erpnext.abnahme.rechnung.rechnung_kommentar",
 		# 7.1/7.2: Freigabe einer Abschlags-/Schlussrechnung nur durch das Büro, Positionen zum Auftrag
@@ -190,6 +217,8 @@ doc_events = {
 		],
 		"validate": [
 			"corevatis_erpnext.angebot.pruefung.positionen_ohne_preis",
+			# Textbausteine (P2.6): Platzhalter in Vorbemerkung, Garantiehinweis, Zahlungsbedingungen
+			"corevatis_erpnext.textbausteine.beleg_validate",
 			# Security-Review: cv_lead setzt nur der Server
 			"corevatis_erpnext.angebot.annahme.cv_lead_schuetzen",
 			# Dokumentenmappe (D.5): Übersteuerung nur Büro/System Manager, bei jedem Speichern gesichert
@@ -204,6 +233,9 @@ doc_events = {
 	# 5.1 danach: Arbeitspakete (Task) und Materialbedarf (Material Request) - braucht das Projekt
 	# 7.1 danach: Abschlagsplan aus der Vorlage, wenn der Auftrag ein Projekt hat
 	"Sales Order": {
+		# Textbausteine (P2.6): Zahlungsbedingungen der Auftragsbestätigung, Platzhalter
+		"before_insert": "corevatis_erpnext.textbausteine.beleg_before_insert",
+		"validate": "corevatis_erpnext.textbausteine.beleg_validate",
 		"on_submit": [
 			"corevatis_erpnext.angebot.annahme.auftrag_eingereicht",
 			"corevatis_erpnext.planung.auftrag_eingereicht",
