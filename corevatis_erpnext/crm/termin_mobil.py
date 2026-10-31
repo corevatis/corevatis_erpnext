@@ -227,9 +227,10 @@ def _meister(payload: dict) -> str:
 		raise Abgelehnt("VALIDATION_ERROR", "payload.meister is required", "meister_ungueltig")
 	wert = wert.strip()
 	if wert not in {m["name"] for m in termin._meister()}:
+		# Eingabe der App nur gekürzt und ohne Tags zurückgeben (Security-Review, wie terminplanung.pruefen)
 		raise Abgelehnt(
 			"VALIDATION_ERROR",
-			_("{0} ist kein aktiver Benutzer mit der Rolle Meister.").format(wert),
+			_("{0} ist kein aktiver Benutzer mit der Rolle Meister.").format(strip_html_tags(wert)[:140]),
 			"meister_ungueltig",
 		)
 	return wert
