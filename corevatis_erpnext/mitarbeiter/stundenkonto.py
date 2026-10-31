@@ -429,4 +429,8 @@ def monatsuebersicht(employee: str, jahr: int, monat_nr: int, user: str | None =
 	m["saldo_jahr"] = saldo_jahr(emp["name"], jahr, monat_nr, flt(emp.get(FELD_SALDO)), e, heute)
 	m["urlaub"] = urlaubskonto(emp["name"], jahr, e, heute=heute, werte=emp) if sichtbar else None
 	m["arten_sichtbar"] = sichtbar
+	m["abwesend_tage"] = flt(m["urlaubstage"] + m["kranktage"] + m["sonstige_tage"], 2)
+	if not sichtbar:
+		# wie uebersicht(): ohne Recht auf die Art keine Einzelwerte (Kranktage eines Kollegen)
+		m["urlaubstage"] = m["kranktage"] = m["sonstige_tage"] = None
 	return m
