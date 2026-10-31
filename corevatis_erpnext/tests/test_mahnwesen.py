@@ -105,7 +105,7 @@ class TestMahnwesen(IntegrationTestCase):
 			self.assertIn(link, links)
 		js = frappe.get_hooks("doctype_js", app_name="corevatis_erpnext")
 		for doctype in ("Sales Invoice", "Bank Transaction", "Dunning"):
-			self.assertIn("public/js/mahnung_zahlung.js", js[doctype], doctype)
+			self.assertIn("public/js/mahnung_zahlung.bundle.js", js[doctype], doctype)
 		# Übersetzungen der neuen Einstellungen und Felder
 		from frappe.translate import get_translations_from_csv
 

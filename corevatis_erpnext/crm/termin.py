@@ -1,6 +1,6 @@
 """Aufgabe 1.3: Besichtigungstermin aus dem Lead und Terminbestätigung für den Kunden.
 
-Ablauf (Button „Termin anlegen“ am Lead, ``public/js/lead_termin.js``):
+Ablauf (Button „Termin anlegen“ am Lead, ``public/js/lead_termin.bundle.js``):
 
 1. ``termin_anlegen`` legt ein ``Event`` an (Typ Private, freigegeben für den Meister und
    die Büro-Benutzer, Kategorie Meeting, Lead als Teilnehmer über ``event_participants`` -

@@ -595,7 +595,7 @@ table.cv-pt.cv-pt-monat td.cv-pt-zelle { min-height: 44px; height: 44px; }
 		}
 
 		bestaetigung(m) {
-			// Text der Kundenbestätigung neu (wird nicht automatisch gesendet) - Dialog aus lead_termin.js
+			// Text der Kundenbestätigung neu (wird nicht automatisch gesendet) - Dialog aus lead_termin.bundle.js
 			frappe.require("lead_termin.bundle.js", () => {
 				const frm = { doc: { name: m.lead, email_id: m.empfaenger }, reload_doc() {} };
 				const hinweise = [__("Termin {0} verschoben auf {1}.", [m.event, frappe.datetime.str_to_user(m.beginn)])].concat(m.hinweise || []);

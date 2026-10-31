@@ -317,7 +317,7 @@ corevatis_erpnext/
                         Wochenplan (5.2), Terminplanung Besichtigung (terminplanung, slotrechner,
                         geokodierung - D14), Plantafel (plantafel, abwesenheit - P1.4)
   datev/                DATEV-Monatsexport (7.4): export, debitoren, pruefung (ohne Frappe), felder
-  public/js/            Desk-Skripte (hooks.doctype_js): galerie.js, lead_galerie.js, lead_termin.js,
+  public/js/            Desk-Skripte (hooks.doctype_js): galerie.js, lead_galerie.js, lead_termin.bundle.js,
                         quotation_annahme.js, planung.js
   corevatis_erpnext/    Modul "Corevatis ERPNext" (Singles „Corevatis Vertrieb Einstellungen“,
                         „Corevatis Planung Einstellungen“; Doctypes Abwesenheit, Fahrzeug, Geokoordinate;

@@ -60,7 +60,7 @@ before_app_uninstall = "corevatis_erpnext.vor_ort.lead_objekt.before_app_uninsta
 # lead.js: Symptom-Checkboxen schreiben live in cv_symptome (1.1), Verlustgrund-Dialog
 # vor der Workflow-Aktion „Als verloren markieren“ (1.4); galerie.js stellt
 # corevatis_erpnext.galerie(frm) bereit (wiederverwendbar, z. B. für Objekt aus 2.1),
-# lead_galerie.js hängt sie am Lead ein (1.5), lead_termin.js bringt „Termin anlegen“ (1.3)
+# lead_galerie.js hängt sie am Lead ein (1.5), lead_termin.bundle.js bringt „Termin anlegen“ (1.3)
 # Prozessleiste (prozessleiste.js) im Formularkopf aller Belege der Kette; prozess_lead.js räumt
 # das Lead-Formular auf (Befunde mvp-test Nr. 21)
 _PROZESSLEISTE = "public/js/prozessleiste.js"
@@ -84,7 +84,7 @@ doctype_js = {
 	# Abrechnung (7.1/7.2): „Abschlag stellen“, „Schlussrechnung erstellen“ an Auftrag und Projekt
 	"Sales Order": ["public/js/planung.js", "public/js/abrechnung.js", _PROZESSLEISTE],
 	"Project": ["public/js/planung.js", "public/js/abrechnung.js", _PROZESSLEISTE],
-	# Zuweisung Mitarbeiter (5.2): Abschnitt „Zuweisung“ mit Dropdown; zuweisung.js ist die
+	# Zuweisung Mitarbeiter (5.2): Abschnitt „Zuweisung“ mit Dropdown; zuweisung.bundle.js ist die
 	# Bibliothek (auch vom Wochenplan per frappe.require geladen)
 	"Task": ["public/js/zuweisung.bundle.js", "public/js/task_zuweisung.js"],
 	"Objekt": [_PROZESSLEISTE],

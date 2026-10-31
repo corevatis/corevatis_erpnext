@@ -377,7 +377,7 @@ class TestTermin(IntegrationTestCase):
 
 	def test_meister_label_im_dialog_escaped(self):
 		# E-5: Frappe rendert Select-Labels als HTML - User.full_name escapen
-		quelle = frappe.get_app_path("corevatis_erpnext", "public", "js", "lead_termin.js")
+		quelle = frappe.get_app_path("corevatis_erpnext", "public", "js", "lead_termin.bundle.js")
 		with open(quelle, encoding="utf-8") as f:
 			js = f.read()
 		self.assertIn("label: frappe.utils.escape_html(m.full_name || m.name)", js)

@@ -713,5 +713,5 @@ class TestNachrichtenLeiste(IntegrationTestCase):
 		leiste = (basis / "public" / "js" / "prozessleiste.js").read_text(encoding="utf-8")
 		self.assertIn("cv-pl-nachrichten-knopf", leiste)
 		self.assertIn('frappe.set_route("nachrichten"', leiste)
-		betrieb = (basis / "public" / "js" / "betrieb.js").read_text(encoding="utf-8")
+		betrieb = (basis / "public" / "js" / "betrieb.bundle.js").read_text(encoding="utf-8")
 		self.assertIn("corevatis_erpnext.nachrichten.ungelesen_gesamt", betrieb)

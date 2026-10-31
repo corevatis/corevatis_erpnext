@@ -2,7 +2,7 @@
 
 Daten: ``corevatis_erpnext.planung.wochenplan.plan``. Entscheidung Script Report statt Page (wie die
 Vorgangsliste der Prozessleiste): Filter, Baumansicht (Mitarbeiter → Arbeitspakete), Export und Druck
-bringt Frappe mit. Zuweisen per Dialog aus ``public/js/zuweisung.js`` (``wochenplan.js``).
+bringt Frappe mit. Zuweisen per Dialog aus ``public/js/zuweisung.bundle.js`` (``wochenplan.js``).
 """
 
 from frappe import _
