@@ -550,6 +550,8 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 			cv_wunsch_schnell=1,
 		)
 		self.assertEqual(self.submit(again).status_code, 200)
+		# neuer Snapshot (Anfrage lief in eigener Verbindung), wie test_bekannte_email_haengt_an_offenen_lead
+		self.assertEqual(self.leads(data["email_id"]), [name])
 		lead = frappe.get_doc("Lead", name)
 		self.assertFalse(lead.cv_wunsch1_datum)
 		kommentar = frappe.get_all(
