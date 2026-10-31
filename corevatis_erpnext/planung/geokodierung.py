@@ -42,6 +42,7 @@ CACHE_SPERRE = "cv:geo:gesperrt"
 MAX_ADRESSE = 500
 
 _WS = re.compile(r"\s+")
+_KOMMA = re.compile(r"\s*,\s*")
 
 
 class Budget:
@@ -62,8 +63,9 @@ class Budget:
 
 
 def normalisieren(adresse) -> str:
-	"""Zeilen zu „Straße 1, 48143 Münster“: gleiche Adresse, gleicher Schlüssel."""
-	zeilen = [_WS.sub(" ", z).strip(" ,;") for z in str(adresse or "").splitlines()]
+	"""Zeilen zu „Straße 1, 48143 Münster“ (Leerraum und Kommas vereinheitlicht): gleiche Adresse,
+	gleicher Schlüssel."""
+	zeilen = [_KOMMA.sub(", ", _WS.sub(" ", z)).strip(" ,;") for z in str(adresse or "").splitlines()]
 	return ", ".join(z for z in zeilen if z)[:MAX_ADRESSE]
 
 

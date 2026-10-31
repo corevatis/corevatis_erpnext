@@ -66,7 +66,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Geocoding Source",
-   "options": "Nominatim\nManuell\nKein Treffer"
+   "options": "\nNominatim\nManuell\nKein Treffer"
   },
   {
    "fieldname": "stand",
