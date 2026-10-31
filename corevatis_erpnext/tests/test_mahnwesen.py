@@ -67,9 +67,11 @@ class TestMahnwesen(IntegrationTestCase):
 			name = mahnung.typ_name(stufe, self.firma)
 			self.assertTrue(frappe.db.exists("Dunning Type", name), name)
 			typ = frappe.get_doc("Dunning Type", name)
+			# Bezeichnung mit Firmenkürzel (ERPNext: dunning_type firmenübergreifend eindeutig)
+			self.assertTrue(typ.dunning_type.startswith(label + " ("), typ.dunning_type)
 			self.assertEqual(
 				(typ.dunning_type, typ.cv_mahnstufe, flt(typ.dunning_fee)),
-				(label, stufe, mahnung.gebuehr(stufe, e)),
+				(mahnung.typ_label(stufe, self.firma), stufe, mahnung.gebuehr(stufe, e)),
 			)
 			self.assertEqual(len(typ.dunning_letter_text), 1)
 			self.assertIn("<p>", typ.dunning_letter_text[0].body_text)
