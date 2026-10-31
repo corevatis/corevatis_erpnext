@@ -6,6 +6,48 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (DATEV-Monatsexport, Phase 1 P1.2 / Aufgabe 7.4, Issue Handwerker#51)
+
+- **Doctype „DATEV Export“** (Leiste „Betrieb“ → DATEV-Export; Rolle Büro und System Manager, kein
+  Löschen für Büro): Firma, Zeitraum (Vormonat vorbelegt), Belegarten (Rechnungen und Zahlungen oder alle
+  Buchungen), Festschreibung 0/1, „nur noch nicht exportierte Belege“, Belegbilder mit Druckformat.
+  „Export erstellen“ (`corevatis_erpnext.datev.export_erstellen`) liefert drei private Dateien:
+  `EXTF_Buchungsstapel_<Kürzel>_<JJJJ-MM>_<Exportnummer>.csv` (DATEV-Format 700, Buchungsstapel Version 9, 120 Spalten,
+  cp1252, CRLF), `EXTF_Debitoren_…csv` (Stammdaten der betroffenen Kunden) und `Belegbilder_…zip`
+  (Rechnungs-PDFs, Dateiname = Rechnungsnummer, dazu `Belegliste.csv`); Kennzahlen, Protokoll und
+  Belegliste am Export. Ein erstellter Export ist eingefroren; Wiederholung über einen neuen Export.
+  `bench execute corevatis_erpnext.datev.monatsexport --kwargs '{"firma": "…", "jahr": 2026, "monat": 10}'`.
+- **Buchungsstapel über erpnext_datev** (Abfragen `run_query` je Belegart, CSV-Schreiber, Kopfzeile), ergänzt
+  um: nur nicht stornierte Hauptbucheinträge, Konto = Debitorennummer bei Kundenzeilen (statt Sammelkonto
+  1400), Belegfeld 1 = Rechnungsnummer (bei Zahlungen die bezahlte Rechnung), Belegfeld 2 und Auftragsnummer
+  = Auftrag, Buchungstext „Abschlag 1 Kunde Auftrag“ / „Schlussrechnung …“ / „Gutschrift zu RE-…“ /
+  „Zahlung RE-… Kunde“, Beleginfo 7/8 Auftrag und Vorgang, Festschreibung aus dem Export, Texte ohne
+  Formelzeichen (`datev.export`).
+- **Debitorennummern** (`datev.debitoren`): fortlaufend ab `DATEV Settings.cv_debitor_start` (10000) je
+  Kunde und Firma in `Party Account.debtor_creditor_number` - beim Anlegen des Kunden (`Customer.validate`)
+  und im Export; Debitoren-Stammdaten auch ohne „primäre“ Adresse.
+- **Formatprüfung** (`datev.pruefung`, ohne Frappe): Kopfzeile (EXTF, 700, Kategorie, Formatversion,
+  Berater-/Mandantennummer, Wirtschaftsjahr, Sachkontenlänge, Zeitraum, Festschreibung, Währung, SKR),
+  Spaltenzahl und -positionen, je Zeile Umsatz (Dezimalkomma), Soll/Haben, Konto/Gegenkonto, BU-Schlüssel,
+  Belegdatum TTMM im Zeitraum, Belegfeld 1 (Pflicht, Zeichen, 36), Belegfeld 2 (12), Buchungstext (60),
+  Beleginfo, Auftragsnummer, Fälligkeit; Debitoren-Stammdaten. Läuft vor dem Speichern des Exports
+  (Fehler → Status „Fehlgeschlagen“, nichts gespeichert, nichts markiert).
+- **Schutz vor CSV-/Formel-Injection** (Security-Review): jede Textzelle des Buchungsstapels - auch von
+  erpnext_datev gelieferte wie die Zahlungsreferenz aus dem Kontoauszug - läuft über `debitoren.text`
+  (Leerraum, Anführungszeichen, Semikolon, führende `= + - @`), Belegfeld 1/2 ohne führendes `+`/`-`,
+  Belegliste im ZIP über `csv.writer` mit Anführungszeichen; die Formatprüfung lehnt Zellen ab, die mit
+  einem Formelzeichen beginnen. Anrede der Debitoren aus Kunde oder Hauptkontakt (`Customer.salutation`
+  fehlt in v16), Rufnummern `+49 …` als `0049 …`.
+- **Markierung** `cv_datev_export` / `cv_datev_exportiert_am` an Sales Invoice und Payment Entry (nur
+  Server); Wiederholungen werden im Protokoll und in der Belegliste („zuvor exportiert in“) genannt;
+  Hinweis auf Storni nach einem Export.
+- **Site-Template** `datev` (`_standard.json`): DATEV Settings je Firma mit Platzhalter-Berater-/
+  Mandantennummer (0000000/00000, gemeldet), Sachkontenlänge 4, Gegenkonto 9090/9000, Debitoren ab 10000,
+  Druckformat „Rechnung Corevatis“; Prüfpunkte DATEV und Konten Forderungen 1410 (ERPNext-SKR03), Bank 1200, Kasse 1000,
+  Mahngebühren 2650 (SKR04: 1200/1800/1600/7100).
+- CI: erpnext_datev (`version-16`) in der Test-Bench installiert. Tests `test_datev` (Formatprüfung ohne
+  Site; Monatsexport mit Abschlag, Schlussrechnung, Gutschrift, Zahlung; Wiederholung, nur neue, Festschreibung,
+  eingefrorener Export, Rechte, Fehlerpfad). Übersetzungen.
 ### Hinzugefügt (Meine Woche in der App, Phase 1 P1.4b, Issue Handwerker#84)
 
 - `planung.woche.woche(user, von, bis)` als Datenquelle des Kern-Endpunkts `meine_woche` (Hook

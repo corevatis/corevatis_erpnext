@@ -148,6 +148,16 @@
 		"_beschreibung": "Sichtbarkeit von ERPNext-Arbeitsbereichen. CRM ist in v16 fast leer (ein Diagramm, drei Kennzahlen, keine Links); Einstieg ist „Anfragen“ (corevatis_erpnext). Rücknahme: is_hidden auf 0 setzen und das Template erneut ausführen.",
 		"CRM": {"is_hidden": 1}
 	},
+	"datev": {
+		"_beschreibung": "DATEV-Export (7.4) über erpnext_datev: „DATEV Settings“ je Firma. Berater- und Mandantennummer kommen vom Steuerberater (Platzhalter → erpnext_datev-Rückfall 0000000/00000, im Bericht gemeldet, im Export als Hinweis). Sachkontenlänge 4 (Debitoren fünfstellig ab debitor_start je Kunde), Gegenkonto 9090 (Übergangskonto: jede Hauptbuchzeile eine Buchung, Steuerautomatik aus - Ansatz von erpnext_datev), Eröffnungsbuchungen gegen 9000. druckformat: Rechnungs-PDF für die Belegbilder.",
+		"consultant_number": "PLATZHALTER Beraternummer (4-7 Ziffern, vom Steuerberater)",
+		"client_number": "PLATZHALTER Mandantennummer (1-5 Ziffern, vom Steuerberater)",
+		"account_number_length": 4,
+		"temporary_against_account_number": "9090",
+		"opening_against_account_number": "9000",
+		"debitor_start": 10000,
+		"druckformat": "Rechnung Corevatis"
+	},
 	"address_template_germany": true,
 	"erpnext_germany": {
 		"prevent_gaps_in_transaction_naming": 1

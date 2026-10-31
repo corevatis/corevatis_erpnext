@@ -1,0 +1,364 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:DATEV-{YYYY}-{####}",
+ "creation": "2026-11-01 09:00:00.000000",
+ "description": "Monthly DATEV export: posting batch (EXTF CSV), debtor master data and voucher images for the tax consultant (Corevatis)",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_export",
+  "firma",
+  "von",
+  "bis",
+  "column_export",
+  "belegarten",
+  "festschreibung",
+  "nur_neue",
+  "mit_belegbildern",
+  "druckformat",
+  "section_status",
+  "status",
+  "titel",
+  "erstellt_am",
+  "erstellt_von",
+  "column_status",
+  "pruefung",
+  "wiederholung",
+  "section_ergebnis",
+  "anzahl_buchungen",
+  "anzahl_rechnungen",
+  "anzahl_gutschriften",
+  "anzahl_zahlungen",
+  "anzahl_sonstige",
+  "column_ergebnis",
+  "summe_soll",
+  "summe_haben",
+  "rechnungen_brutto",
+  "zahlungen_brutto",
+  "anzahl_debitoren",
+  "anzahl_belegbilder",
+  "section_dateien",
+  "datei_buchungsstapel",
+  "datei_debitoren",
+  "datei_belegbilder",
+  "section_protokoll",
+  "protokoll",
+  "section_belege",
+  "belege"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_export",
+   "fieldtype": "Section Break",
+   "label": "Export"
+  },
+  {
+   "fieldname": "firma",
+   "fieldtype": "Link",
+   "options": "Company",
+   "label": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "remember_last_selected_value": 1
+  },
+  {
+   "fieldname": "von",
+   "fieldtype": "Date",
+   "label": "Period From",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "bis",
+   "fieldtype": "Date",
+   "label": "Period To",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_export",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "belegarten",
+   "fieldtype": "Select",
+   "label": "Voucher Types",
+   "options": "Rechnungen und Zahlungen\nAlle Buchungen",
+   "default": "Rechnungen und Zahlungen",
+   "reqd": 1,
+   "description": "Invoices and payments: sales invoices, credit notes and payment entries. All postings: every general ledger entry of the period (journal entries, purchase invoices)"
+  },
+  {
+   "fieldname": "festschreibung",
+   "fieldtype": "Check",
+   "label": "Lock Postings (Festschreibung)",
+   "default": "0",
+   "description": "Header field of the batch: 1 = the tax consultant cannot change the imported postings any more. Only for final monthly exports"
+  },
+  {
+   "fieldname": "nur_neue",
+   "fieldtype": "Check",
+   "label": "Only Vouchers Not Exported Yet",
+   "default": "0",
+   "description": "Skip vouchers that an earlier export already contained (otherwise they are exported again and listed as repeated)"
+  },
+  {
+   "fieldname": "mit_belegbildern",
+   "fieldtype": "Check",
+   "label": "Include Voucher Images (Invoice PDFs)",
+   "default": "1"
+  },
+  {
+   "fieldname": "druckformat",
+   "fieldtype": "Link",
+   "options": "Print Format",
+   "label": "Print Format for Voucher Images",
+   "depends_on": "eval:doc.mit_belegbildern",
+   "description": "Empty: print format from the DATEV settings of the company, otherwise the default invoice print format"
+  },
+  {
+   "fieldname": "section_status",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Entwurf\nErstellt\nFehlgeschlagen",
+   "default": "Entwurf",
+   "read_only": 1,
+   "no_copy": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "titel",
+   "fieldtype": "Data",
+   "label": "Title",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "erstellt_am",
+   "fieldtype": "Datetime",
+   "label": "Created On",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "erstellt_von",
+   "fieldtype": "Link",
+   "options": "User",
+   "label": "Created By",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pruefung",
+   "fieldtype": "Data",
+   "label": "Format Check",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "wiederholung",
+   "fieldtype": "Int",
+   "label": "Already Exported Vouchers",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Vouchers that an earlier export already contained (repeated export)"
+  },
+  {
+   "fieldname": "section_ergebnis",
+   "fieldtype": "Section Break",
+   "label": "Result",
+   "collapsible": 1,
+   "depends_on": "eval:doc.status != 'Entwurf'"
+  },
+  {
+   "fieldname": "anzahl_buchungen",
+   "fieldtype": "Int",
+   "label": "Posting Lines",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "anzahl_rechnungen",
+   "fieldtype": "Int",
+   "label": "Invoices",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "anzahl_gutschriften",
+   "fieldtype": "Int",
+   "label": "Credit Notes",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "anzahl_zahlungen",
+   "fieldtype": "Int",
+   "label": "Payments",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "anzahl_sonstige",
+   "fieldtype": "Int",
+   "label": "Other Vouchers",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_ergebnis",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "summe_soll",
+   "fieldtype": "Currency",
+   "label": "Total Debit",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "summe_haben",
+   "fieldtype": "Currency",
+   "label": "Total Credit",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "rechnungen_brutto",
+   "fieldtype": "Currency",
+   "label": "Invoices (Gross)",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Invoices minus credit notes"
+  },
+  {
+   "fieldname": "zahlungen_brutto",
+   "fieldtype": "Currency",
+   "label": "Payments (Gross)",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "anzahl_debitoren",
+   "fieldtype": "Int",
+   "label": "Debtors in Master Data",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "anzahl_belegbilder",
+   "fieldtype": "Int",
+   "label": "Voucher Images",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_dateien",
+   "fieldtype": "Section Break",
+   "label": "Files",
+   "depends_on": "eval:doc.status == 'Erstellt'"
+  },
+  {
+   "fieldname": "datei_buchungsstapel",
+   "fieldtype": "Attach",
+   "label": "Posting Batch (EXTF CSV)",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "datei_debitoren",
+   "fieldtype": "Attach",
+   "label": "Debtor Master Data (EXTF CSV)",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "datei_belegbilder",
+   "fieldtype": "Attach",
+   "label": "Voucher Images (ZIP)",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_protokoll",
+   "fieldtype": "Section Break",
+   "label": "Log",
+   "depends_on": "eval:doc.protokoll"
+  },
+  {
+   "fieldname": "protokoll",
+   "fieldtype": "Long Text",
+   "label": "Log",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_belege",
+   "fieldtype": "Section Break",
+   "label": "Vouchers",
+   "collapsible": 1,
+   "depends_on": "eval:doc.status == 'Erstellt'"
+  },
+  {
+   "fieldname": "belege",
+   "fieldtype": "Table",
+   "options": "DATEV Export Beleg",
+   "label": "Vouchers",
+   "read_only": 1,
+   "no_copy": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "links": [],
+ "modified": "2026-11-01 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "DATEV Export",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 0,
+   "share": 0
+  },
+  {
+   "role": "Büro",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "print": 1,
+   "email": 0,
+   "share": 0
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "titel",
+ "track_changes": 1
+}

@@ -40,8 +40,31 @@ from corevatis_erpnext.setup.naming import RETURN_SERIES_DEFAULT_KEY
 
 # Kontonummern je Kontenrahmen (ERPNext-Vorlagen „SKR03/SKR04 mit Kontonummern“)
 SKR_ACCOUNTS = {
-	"SKR03": {"ust19": "1776", "ust7": "1771", "vst19": "1576", "vst7": "1571", "erloese19": "8400"},
-	"SKR04": {"ust19": "3806", "ust7": "3801", "vst19": "1406", "vst7": "1401", "erloese19": "4400"},
+	# Steuer- und Erlöskonten (0.4) sowie die Konten, auf denen die Belege der Abrechnung landen und die
+	# der DATEV-Export (7.4) voraussetzt: Forderungen (ERPNext-SKR03: 1410, 1400 ist dort eine Gruppe), Bank,
+	# Kasse, Mahngebühren
+	"SKR03": {
+		"ust19": "1776",
+		"ust7": "1771",
+		"vst19": "1576",
+		"vst7": "1571",
+		"erloese19": "8400",
+		"forderungen": "1410",
+		"bank": "1200",
+		"kasse": "1000",
+		"mahngebuehren": "2650",
+	},
+	"SKR04": {
+		"ust19": "3806",
+		"ust7": "3801",
+		"vst19": "1406",
+		"vst7": "1401",
+		"erloese19": "4400",
+		"forderungen": "1200",
+		"bank": "1800",
+		"kasse": "1600",
+		"mahngebuehren": "7100",
+	},
 }
 
 
@@ -130,6 +153,7 @@ def apply_site_template(
 	_ensure_angebot(cfg, company, report)
 	_ensure_workspaces(cfg, report)
 	_ensure_erpnext_germany(cfg, report)
+	_ensure_datev(cfg, company, report)
 
 	if commit:
 		frappe.db.commit()
@@ -865,6 +889,89 @@ def _ensure_erpnext_germany(cfg: dict, report: Report) -> None:
 			report.change("erpnext_germany", f"{field}={value}")
 
 
+DATEV_FELDER = {
+	# Vorlagenschlüssel → Feld in „DATEV Settings“ (erpnext_datev; cv_* aus corevatis_erpnext.datev.felder)
+	"client_number": "client_number",
+	"consultant_number": "consultant_number",
+	"account_number_length": "account_number_length",
+	"temporary_against_account_number": "temporary_against_account_number",
+	"opening_against_account_number": "opening_against_account_number",
+	"debitor_start": "cv_debitor_start",
+	"druckformat": "cv_druckformat",
+}
+
+
+def _datev_platzhalter(wert) -> bool:
+	"""erpnext_datev-Rückfallwerte 00000/0000000 gelten als Platzhalter."""
+	return not wert or set(str(wert)) == {"0"}
+
+
+def _ensure_datev(cfg: dict, company: str, report: Report) -> None:
+	"""DATEV Settings je Firma (7.4): Berater-/Mandantennummer (Platzhalter → erpnext_datev-Rückfall
+	00000/0000000, gemeldet), Kontenlänge, Gegenkonten, erste Debitorennummer, Druckformat der Belegbilder.
+	Bestehende Werte werden nur ergänzt; echte Nummern aus der Vorlage ersetzen nur Platzhalter."""
+	spec = cfg.get("datev") or {}
+	if not spec:
+		return
+	if not frappe.db.exists("DocType", "DATEV Settings"):
+		report.skip("DATEV", "erpnext_datev nicht installiert")
+		return
+	from corevatis_erpnext.datev.felder import ensure_datev_felder
+	from corevatis_erpnext.datev.pruefung import PLATZHALTER_BERATER, PLATZHALTER_MANDANT
+
+	if not frappe.get_meta("DATEV Settings").has_field("cv_debitor_start"):
+		ensure_datev_felder()
+	meta = frappe.get_meta("DATEV Settings")
+	werte = {}
+	for key, field in DATEV_FELDER.items():
+		wert = _value(spec.get(key))
+		if key == "druckformat" and wert and not frappe.db.exists("Print Format", wert):
+			report.warn("DATEV", f"Druckformat {wert} für Belegbilder nicht installiert")
+			wert = None
+		if wert is not None and meta.has_field(field):
+			werte[field] = wert
+
+	name = frappe.db.get_value("DATEV Settings", {"client": company})
+	if not name:
+		doc = frappe.new_doc("DATEV Settings")
+		doc.client = company
+		doc.client_number = werte.pop("client_number", PLATZHALTER_MANDANT)
+		doc.consultant_number = werte.pop("consultant_number", PLATZHALTER_BERATER)
+		for field, wert in werte.items():
+			doc.set(field, wert)
+		doc.insert(ignore_permissions=True)
+		report.change(
+			"DATEV",
+			f"DATEV Settings für {company} angelegt (Mandant {doc.client_number}, Berater "
+			f"{doc.consultant_number}, Kontenlänge {doc.account_number_length}, Gegenkonto "
+			f"{doc.temporary_against_account_number})",
+		)
+		if _datev_platzhalter(doc.client_number) or _datev_platzhalter(doc.consultant_number):
+			report.warn(
+				"DATEV",
+				"Berater-/Mandantennummer sind Platzhalter (0000000/00000) - vom Steuerberater erfragen",
+			)
+		return
+
+	doc = frappe.get_doc("DATEV Settings", name)
+	changed = []
+	for field, wert in werte.items():
+		current = doc.get(field)
+		if field in ("client_number", "consultant_number"):
+			if not _datev_platzhalter(current):
+				continue  # echte Nummer aus dem Desk bleibt
+		elif current not in (None, "", 0):
+			continue  # nur leere Felder ergänzen
+		if str(current or "") != str(wert):
+			doc.set(field, wert)
+			changed.append(f"{field}={wert}")
+	if changed:
+		doc.save(ignore_permissions=True)
+		report.change("DATEV", f"DATEV Settings {company}: {', '.join(changed)}")
+	if _datev_platzhalter(doc.client_number) or _datev_platzhalter(doc.consultant_number):
+		report.warn("DATEV", "Berater-/Mandantennummer sind noch Platzhalter - vom Steuerberater erfragen")
+
+
 # ---------------------------------------------------------------------------
 # Prüfung
 # ---------------------------------------------------------------------------
@@ -1085,7 +1192,49 @@ def _verify(cfg: dict) -> dict:
 			got = frappe.db.get_single_value("ERPNext Germany Settings", field)
 			check(f"erpnext_germany {field}", cint(got) == cint(value), str(got))
 
+	_verify_datev(cfg, company, check)
+
 	return _verify_result(checks)
+
+
+def _verify_datev(cfg: dict, company: str, check) -> None:
+	"""Prüfpunkte DATEV (7.4): Einstellungen je Firma, Markierungsfelder, Doctype des Exports."""
+	spec = cfg.get("datev") or {}
+	if not spec:
+		return
+	check("DATEV: Doctype DATEV Export", frappe.db.exists("DocType", "DATEV Export"))
+	for doctype in ("Sales Invoice", "Payment Entry"):
+		check(f"DATEV: Feld {doctype}.cv_datev_export", frappe.get_meta(doctype).has_field("cv_datev_export"))
+	if not frappe.db.exists("DocType", "DATEV Settings"):
+		return
+	meta = frappe.get_meta("DATEV Settings")
+	felder = [f for f in DATEV_FELDER.values() if meta.has_field(f)]
+	s = frappe.db.get_value("DATEV Settings", {"client": company}, felder, as_dict=True)
+	if not check("DATEV: Einstellungen der Firma", s, "fehlen"):
+		return
+	for key, field in DATEV_FELDER.items():
+		if field not in felder or key not in spec:
+			continue
+		soll, ist = spec[key], s.get(field)
+		if key in ("client_number", "consultant_number"):
+			if is_placeholder(soll):
+				laenge = 5 if key == "client_number" else 7
+				check(
+					f"DATEV: {field} gesetzt (Platzhalter erlaubt)",
+					ist and str(ist).isdigit() and len(str(ist)) <= laenge,
+					f"{ist} (Platzhalter, vom Steuerberater zu ersetzen)"
+					if _datev_platzhalter(ist)
+					else str(ist),
+				)
+			else:
+				check(f"DATEV: {field}", str(ist) == str(soll), str(ist))
+		elif key == "druckformat":
+			if frappe.db.exists("Print Format", soll):
+				check(f"DATEV: Druckformat Belegbilder {soll}", ist == soll, ist or "leer")
+		elif isinstance(soll, int):
+			check(f"DATEV: {field} = {soll}", cint(ist) == soll, str(ist))
+		else:
+			check(f"DATEV: {field} = {soll}", str(ist) == str(soll), str(ist))
 
 
 def _verify_result(checks: list[dict]) -> dict:

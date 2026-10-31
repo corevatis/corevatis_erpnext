@@ -261,6 +261,27 @@ Modul `corevatis_erpnext/abrechnung/` (Teil 1 - Abschlagsplan, Abschlag, Schluss
 - Einstellungen: Single „Corevatis Abrechnung Einstellungen“ (Fristen, Gebühren, Ertragskonto, Bankkonto,
   CSV-Mapping). Doku: `docs/7.3-rechnungsdruck.md`, `docs/7.5-mahnwesen-zahlungseingang.md` (Repo Handwerker).
 
+## DATEV-Monatsexport (Epic 7, Aufgabe 7.4)
+
+Modul `corevatis_erpnext/datev/`, baut auf [erpnext_datev](https://github.com/alyf-de/erpnext_datev)
+(ALYF, `version-16`) auf - Abfragen und CSV-Schreiber kommen von dort, ergänzt wird nur, was fehlt.
+
+- Doctype **DATEV Export** (Leiste „Betrieb“ → DATEV-Export, Rolle Büro): Firma, Zeitraum (Vormonat),
+  Belegarten, Festschreibung, „nur neue Belege“, Belegbilder. „Export erstellen“
+  (`corevatis_erpnext.datev.export_erstellen`) erzeugt `EXTF_Buchungsstapel_<Kürzel>_<JJJJ-MM>_<Exportnummer>.csv`
+  (DATEV-Format 700, Buchungsstapel Version 9), `EXTF_Debitoren_….csv` und `Belegbilder_….zip`
+  (Rechnungs-PDFs, Dateiname = Rechnungsnummer), dazu Kennzahlen, Protokoll und Belegliste; markiert
+  Rechnungen und Zahlungen (`cv_datev_export`, `cv_datev_exportiert_am`). Kommandozeile:
+  `bench --site <site> execute corevatis_erpnext.datev.monatsexport --kwargs '{"firma": "…", "jahr": 2026, "monat": 10}'`.
+- `datev.export`: Zeilen über `erpnext_datev … run_query` (ohne stornierte), Konto = Debitorennummer,
+  Belegfeld 1 = Rechnungsnummer, Belegfeld 2/Auftragsnummer = Auftrag, Buchungstext Kunde/Vorgang,
+  Gegenkonto 9090 (Übergangskonto, Ansatz von erpnext_datev).
+- `datev.debitoren`: Debitorennummern ab `DATEV Settings.cv_debitor_start` (10000) je Kunde und Firma
+  (`Party Account.debtor_creditor_number`, Hook `Customer.validate`), Stammdatenzeilen.
+- `datev.pruefung` (ohne Frappe): Formatprüfung des Buchungsstapels und der Debitoren vor dem Speichern.
+- Site-Template `datev` (`_standard.json`): DATEV Settings je Firma (Platzhalter für Berater- und
+  Mandantennummer), Prüfpunkte. Doku: `docs/7.4-datev-export.md` (Repo Handwerker).
+
 ## Lizenz
 
 Copyright (C) 2026 Corevatis
@@ -295,6 +316,7 @@ corevatis_erpnext/
   planung/              Auftrag → Arbeitspakete (Task) und Materialbedarf (Material Request) (5.1),
                         Wochenplan (5.2), Terminplanung Besichtigung (terminplanung, slotrechner,
                         geokodierung - D14), Plantafel (plantafel, abwesenheit - P1.4)
+  datev/                DATEV-Monatsexport (7.4): export, debitoren, pruefung (ohne Frappe), felder
   public/js/            Desk-Skripte (hooks.doctype_js): galerie.js, lead_galerie.js, lead_termin.js,
                         quotation_annahme.js, planung.js
   corevatis_erpnext/    Modul "Corevatis ERPNext" (Singles „Corevatis Vertrieb Einstellungen“,

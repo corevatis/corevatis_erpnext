@@ -1,0 +1,89 @@
+{
+ "actions": [],
+ "creation": "2026-11-01 09:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "belegart",
+  "beleg",
+  "datum",
+  "kunde",
+  "brutto",
+  "zeilen",
+  "zuvor_exportiert_in",
+  "belegbild"
+ ],
+ "fields": [
+  {
+   "fieldname": "belegart",
+   "fieldtype": "Link",
+   "options": "DocType",
+   "label": "Voucher Type",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "beleg",
+   "fieldtype": "Dynamic Link",
+   "options": "belegart",
+   "label": "Voucher",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "datum",
+   "fieldtype": "Date",
+   "label": "Date",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "kunde",
+   "fieldtype": "Data",
+   "label": "Customer",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "brutto",
+   "fieldtype": "Currency",
+   "label": "Gross Amount",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "zeilen",
+   "fieldtype": "Int",
+   "label": "Lines",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "zuvor_exportiert_in",
+   "fieldtype": "Link",
+   "options": "DATEV Export",
+   "label": "Previously Exported In",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "belegbild",
+   "fieldtype": "Check",
+   "label": "Voucher Image",
+   "default": "0"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-01 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "DATEV Export Beleg",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

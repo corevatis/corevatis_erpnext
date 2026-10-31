@@ -287,7 +287,13 @@ class TestSiteTemplate(IntegrationTestCase):
 		# Hülshoff: „Angebot Corevatis“ (4.3), sobald erpnext_druckformate es mitbringt
 		erwartet = "Angebot Corevatis" if frappe.db.exists("Print Format", "Angebot Corevatis") else "Angebot"
 		self.assertEqual(frappe.get_meta("Quotation").default_print_format, erwartet)
-		self.assertEqual(frappe.get_meta("Sales Invoice").default_print_format, "Ausgangsrechnung")
+		# Hülshoff: „Rechnung Corevatis“ (7.3), sobald erpnext_druckformate es mitbringt
+		erwartet_re = (
+			"Rechnung Corevatis"
+			if frappe.db.exists("Print Format", "Rechnung Corevatis")
+			else "Ausgangsrechnung"
+		)
+		self.assertEqual(frappe.get_meta("Sales Invoice").default_print_format, erwartet_re)
 
 	def test_permissions_by_role(self):
 		expected = {
@@ -301,7 +307,10 @@ class TestSiteTemplate(IntegrationTestCase):
 				("Project", "create", True),
 				("Quotation", "submit", True),
 				("BOM", "submit", True),
-				("Sales Invoice", "read", False),
+				# 7.3/7.5: der Meister liest und druckt Rechnungen (Offene Posten), stellt aber keine
+				("Sales Invoice", "read", True),
+				("Sales Invoice", "create", False),
+				("Sales Invoice", "submit", False),
 			],
 			"Monteur": [
 				("Timesheet", "create", True),

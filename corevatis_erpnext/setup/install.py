@@ -60,6 +60,7 @@ def after_install() -> None:
 	# Dokumentenmappe (Epic D): Ampel am Projekt, Übersteuerung an Angebot und Rechnung
 	ensure_mappe()
 	ensure_abrechnung()
+	ensure_datev()
 
 
 def after_migrate() -> None:
@@ -115,12 +116,20 @@ def after_migrate() -> None:
 	ensure_mappe()
 	# Abrechnung (7.1/7.2): Sales-Invoice-Felder nach den Abnahme-Feldern, Abschlagsartikel, negative Preise
 	ensure_abrechnung()
+	# DATEV (7.4): Markierung an Rechnung/Zahlung (hängt sich hinter die Abrechnungsfelder), DATEV Settings
+	ensure_datev()
 
 
 def ensure_abrechnung() -> None:
 	from corevatis_erpnext.abrechnung import ensure_abrechnung_setup
 
 	ensure_abrechnung_setup()
+
+
+def ensure_datev() -> None:
+	from corevatis_erpnext.datev import ensure_datev_setup
+
+	ensure_datev_setup()
 
 
 def ensure_abnahme() -> None:

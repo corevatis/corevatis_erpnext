@@ -24,13 +24,13 @@ Photo 2,Foto 2
 Photo 3,Foto 3
 Inquiry Status,Anfragestatus
 Loss Reason,Verlustgrund
-Please select a loss reason before marking the inquiry as lost.,"Bitte vor „Als verloren markieren“ einen Verlustgrund auswählen."
+Please select a loss reason before marking the inquiry as lost.,Bitte vor „Als verloren markieren“ einen Verlustgrund auswählen.
 Mark as lost,Als verloren markieren
 Inspection Appointment,Besichtigungstermin
 Set by the button “Schedule Appointment”.,Wird über den Button „Termin anlegen“ gesetzt.
 Photo Gallery,Fotogalerie
 Property Record,Objekt
-"Property (building) of this inquiry; created for the on-site appointment","Objekt (Gebäude) dieser Anfrage; wird zum Vor-Ort-Termin angelegt"
+Property (building) of this inquiry; created for the on-site appointment,Objekt (Gebäude) dieser Anfrage; wird zum Vor-Ort-Termin angelegt
 Corevatis Service,Corevatis-Leistung
 Craft Trade,Gewerk
 Remediation Method,Verfahren
@@ -58,7 +58,6 @@ Costing (JSON),Kalkulation (JSON)
 "Complete calculation of the quote engine: quantities, costs, surcharges, prices","Vollständige Kalkulation der Angebotsengine: Mengen, Kosten, Zuschläge, Preise"
 Origin (Corevatis),Herkunft (Corevatis)
 Measured Room,Raum
-Building Component,Bauteil
 Measurement Row,Aufmaßposition
 Name of the Aufmaßposition row(s),Name der Aufmaßzeile(n)
 Quantity Derivation,Mengenherkunft
@@ -100,10 +99,10 @@ Assign Follow-up to,Nachfassen zuweisen an
 Follow-up User,Benutzer für das Nachfassen
 Follow-up Email,Nachfass-E-Mail
 Queue Follow-up Email,Nachfass-E-Mail in die Warteschlange legen
-"Puts a follow-up email to the quotation contact into the email queue. Without an outgoing email account nothing is sent (status Not Sent).","Legt eine Nachfass-E-Mail an den Kontakt des Angebots in die E-Mail-Warteschlange. Ohne ausgehendes E-Mail-Konto wird nichts versendet (Status „Not Sent“)."
+Puts a follow-up email to the quotation contact into the email queue. Without an outgoing email account nothing is sent (status Not Sent).,Legt eine Nachfass-E-Mail an den Kontakt des Angebots in die E-Mail-Warteschlange. Ohne ausgehendes E-Mail-Konto wird nichts versendet (Status „Not Sent“).
 Empty: “Angebot Nachfassen”,Leer: „Angebot Nachfassen“
 Draft {0} contains manually added items that will be lost when it is replaced: {1},"Der Entwurf {0} enthält von Hand ergänzte Positionen, die beim Ersetzen verloren gehen: {1}"
-Company {0} has no services for measurement {1}; the quotation uses company {2}.,"Firma {0} hat keine Leistungen für das Aufmaß {1}; das Angebot läuft über die Firma {2}."
+Company {0} has no services for measurement {1}; the quotation uses company {2}.,Firma {0} hat keine Leistungen für das Aufmaß {1}; das Angebot läuft über die Firma {2}.
 Running time booking (start without stop) from the Corevatis app,Laufende Zeitbuchung (Start ohne Stopp) aus der Corevatis-App
 Zeitbuchung Lauf,Laufende Zeitbuchung
 Started At,Begonnen um
@@ -121,25 +120,25 @@ Corevatis Planung Einstellungen,Corevatis Planung Einstellungen
 Settings for work packages and material requirements from sales orders (Corevatis),Einstellungen für Arbeitspakete und Materialbedarf aus Aufträgen (Corevatis)
 Work Packages,Arbeitspakete
 Create Work Packages on Submit,Arbeitspakete beim Einreichen erzeugen
-"When a sales order with a project is submitted: one task per remediation method with target hours from the BOMs.","Beim Einreichen eines Auftrags mit Projekt: je Verfahren eine Aufgabe mit Sollstunden aus den Stücklisten."
+When a sales order with a project is submitted: one task per remediation method with target hours from the BOMs.,Beim Einreichen eines Auftrags mit Projekt: je Verfahren eine Aufgabe mit Sollstunden aus den Stücklisten.
 Team Size,Teamgröße
-"Fitters working on a site at the same time. Duration of a work package = target hours / (team size)","Monteure gleichzeitig auf der Baustelle. Dauer eines Arbeitspakets = Sollstunden ÷ Teamgröße"
+Fitters working on a site at the same time. Duration of a work package = target hours / (team size),Monteure gleichzeitig auf der Baustelle. Dauer eines Arbeitspakets = Sollstunden ÷ Teamgröße
 Daily Working Hours,Tagesarbeitszeit (h)
 "Working hours per day and fitter (Monday to Friday, holidays of the company's holiday list are skipped)","Arbeitsstunden je Tag und Monteur (Montag bis Freitag, Feiertage aus der Feiertagsliste der Firma entfallen)"
 Start of Work,Arbeitsbeginn
 Material Requirements,Materialbedarf
 Create Material Request on Submit,Materialanforderung beim Einreichen erzeugen
-"When a sales order with a project is submitted: one draft material request with the aggregated BOM materials.","Beim Einreichen eines Auftrags mit Projekt: eine Materialanforderung (Entwurf) mit dem zusammengefassten Material der Stücklisten."
+When a sales order with a project is submitted: one draft material request with the aggregated BOM materials.,Beim Einreichen eines Auftrags mit Projekt: eine Materialanforderung (Entwurf) mit dem zusammengefassten Material der Stücklisten.
 Material Request Type,Art der Materialanforderung
-"Purchase: order into the main warehouse. Material Transfer: from the main warehouse to the vehicle.","Einkauf: Bestellvorschlag ins Hauptlager. Umlagerung: vom Hauptlager ins Fahrzeug."
+Purchase: order into the main warehouse. Material Transfer: from the main warehouse to the vehicle.,Einkauf: Bestellvorschlag ins Hauptlager. Umlagerung: vom Hauptlager ins Fahrzeug.
 Waste Allowance (%),Verschnitt (%)
 Added to every material quantity from the BOMs,Zuschlag auf jede Materialmenge aus den Stücklisten
 Consider Current Stock,Bestand berücksichtigen
 Request only the quantity not covered by the projected stock of the target warehouse,"Nur die Menge anfordern, die der voraussichtliche Bestand des Ziellagers nicht deckt"
 Main Warehouse,Hauptlager
-"Empty: default warehouse of the company (Hauptlager)","Leer: Standardlager der Firma (Hauptlager)"
+Empty: default warehouse of the company (Hauptlager),Leer: Standardlager der Firma (Hauptlager)
 Vehicle Warehouse,Fahrzeuglager
-"Target of a material transfer. Empty: warehouse “Fahrzeug” of the company","Ziel einer Umlagerung. Leer: Lager „Fahrzeug“ der Firma"
+Target of a material transfer. Empty: warehouse “Fahrzeug” of the company,Ziel einer Umlagerung. Leer: Lager „Fahrzeug“ der Firma
 Work Package (Corevatis),Arbeitspaket (Corevatis)
 Target Hours (BOM),Sollstunden (Stückliste)
 "Assembly minutes per unit from the BOMs x quantity, summed","Montageminuten je Einheit aus den Stücklisten × Menge, summiert"
@@ -262,7 +261,7 @@ Period,Zeitraum
 From,Von
 To,Bis
 All Day,Ganztags
-Unchecked: only the hours below count (single day),"Ohne Haken zählen nur die Uhrzeiten unten (ein Tag)"
+Unchecked: only the hours below count (single day),Ohne Haken zählen nur die Uhrzeiten unten (ein Tag)
 From Time,Von Uhrzeit
 To Time,Bis Uhrzeit
 Note,Notiz
@@ -276,11 +275,11 @@ Only active vehicles can be assigned on the planning board,Nur aktive Fahrzeuge 
 Vehicle,Fahrzeug
 Planning Board,Plantafel
 Row Order of Employees,Reihenfolge der Mitarbeiter-Zeilen
-One employee ID per line; set via “Reihenfolge” on the planning board. Employees not listed follow alphabetically.,"Eine Mitarbeiter-Nummer je Zeile; wird über „Reihenfolge“ in der Plantafel gesetzt. Nicht aufgeführte Mitarbeiter folgen alphabetisch."
+One employee ID per line; set via “Reihenfolge” on the planning board. Employees not listed follow alphabetically.,Eine Mitarbeiter-Nummer je Zeile; wird über „Reihenfolge“ in der Plantafel gesetzt. Nicht aufgeführte Mitarbeiter folgen alphabetisch.
 Document Folder,Dokumentenmappe
 Document Folder Status,Mappe (Ampel)
 Document Folder Note,Mappe (Hinweis)
-Set by the document folder: red = a mandatory document is missing for the next step,"Von der Dokumentenmappe gesetzt: rot = für den nächsten Schritt fehlt ein Pflichtdokument"
+Set by the document folder: red = a mandatory document is missing for the next step,Von der Dokumentenmappe gesetzt: rot = für den nächsten Schritt fehlt ein Pflichtdokument
 Document Folder Check,Mappenprüfung
 Folder Check Overridden,Mappenprüfung übersteuert
 Reason for Folder Override,Begründung der Übersteuerung
@@ -434,5 +433,56 @@ Payment Entries,Zahlungen
 sicher,sicher
 wahrscheinlich,wahrscheinlich
 möglich,möglich
+DATEV Export,DATEV-Export
+DATEV Exports,DATEV-Exporte
+DATEV Export Beleg,DATEV-Export Beleg
+"Monthly DATEV export: posting batch (EXTF CSV), debtor master data and voucher images for the tax consultant (Corevatis)","Monatlicher DATEV-Export: Buchungsstapel (EXTF-CSV), Debitoren-Stammdaten und Belegbilder für den Steuerberater (Corevatis)"
+Period From,Zeitraum von
+Period To,Zeitraum bis
+Voucher Types,Belegarten
+"Invoices and payments: sales invoices, credit notes and payment entries. All postings: every general ledger entry of the period (journal entries, purchase invoices)","Rechnungen und Zahlungen: Ausgangsrechnungen, Gutschriften und Zahlungseingänge. Alle Buchungen: jeder Hauptbucheintrag des Zeitraums (Buchungssätze, Eingangsrechnungen)"
+Lock Postings (Festschreibung),Festschreibung (Buchungen beim Steuerberater nicht mehr änderbar)
+Header field of the batch: 1 = the tax consultant cannot change the imported postings any more. Only for final monthly exports,Kopffeld des Stapels: 1 = der Steuerberater kann die importierten Buchungen nicht mehr ändern. Nur für den endgültigen Monatsexport
+Only Vouchers Not Exported Yet,Nur noch nicht exportierte Belege
+Skip vouchers that an earlier export already contained (otherwise they are exported again and listed as repeated),"Belege auslassen, die ein früherer Export schon enthielt (sonst werden sie erneut exportiert und als Wiederholung aufgeführt)"
+Include Voucher Images (Invoice PDFs),Belegbilder (Rechnungs-PDFs) beilegen
+Print Format for Voucher Images,Druckformat der Belegbilder
+"Empty: print format from the DATEV settings of the company, otherwise the default invoice print format","Leer: Druckformat aus den DATEV-Einstellungen der Firma, sonst das Standard-Druckformat der Rechnung"
+Created On,Erstellt am
+Created By,Erstellt von
+Format Check,Formatprüfung
+Already Exported Vouchers,Bereits exportierte Belege
+Vouchers that an earlier export already contained (repeated export),"Belege, die ein früherer Export schon enthielt (Wiederholung)"
+Posting Lines,Buchungszeilen
+Credit Notes,Gutschriften
+Other Vouchers,Sonstige Belege
+Total Debit,Summe Soll
+Total Credit,Summe Haben
+Invoices (Gross),Rechnungen brutto
+Invoices minus credit notes,Rechnungen abzüglich Gutschriften
+Payments (Gross),Zahlungen brutto
+Debtors in Master Data,Debitoren in den Stammdaten
+Voucher Images,Belegbilder
+Posting Batch (EXTF CSV),Buchungsstapel (EXTF-CSV)
+Debtor Master Data (EXTF CSV),Debitoren-Stammdaten (EXTF-CSV)
+Voucher Images (ZIP),Belegbilder (ZIP)
+Log,Protokoll
+Vouchers,Belege
+Voucher,Beleg
+Gross Amount,Bruttobetrag
+Lines,Zeilen
+Previously Exported In,Zuvor exportiert in
+Voucher Image,Belegbild
+DATEV (Corevatis),DATEV (Corevatis)
+Last DATEV export that contained this voucher (set by the export),"Letzter DATEV-Export, der diesen Beleg enthielt (setzt der Export)"
+Exported to DATEV On,An DATEV exportiert am
+Monthly Export (Corevatis),Monatsexport (Corevatis)
+First Debtor Number,Erste Debitorennummer
+Debtor numbers are assigned per customer from this number on (account number length plus one digit; DATEV: 10000 to 69999),Debitorennummern werden je Kunde ab dieser Nummer vergeben (Sachkontenlänge plus eine Stelle; DATEV: 10000 bis 69999)
+Invoice PDF in the voucher image ZIP (empty: default print format of the invoice),Rechnungs-PDF im Belegbilder-ZIP (leer: Standard-Druckformat der Rechnung)
+DATEV-Export,DATEV-Export
+Company,Firma
+Payments,Zahlungen
+Voucher Type,Belegart
 Die Woche anderer Mitarbeiter sehen nur Büro und Meister.,Die Woche anderer Mitarbeiter sehen nur Büro und Meister.
 Der Zeitraum darf höchstens {0} Tage umfassen.,Der Zeitraum darf höchstens {0} Tage umfassen.
