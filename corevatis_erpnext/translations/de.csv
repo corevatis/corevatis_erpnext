@@ -483,3 +483,5 @@ Debtor numbers are assigned per customer from this number on (account number len
 Invoice PDF in the voucher image ZIP (empty: default print format of the invoice),Rechnungs-PDF im Belegbilder-ZIP (leer: Standard-Druckformat der Rechnung)
 DATEV-Export,DATEV-Export
 Company,Firma
+Payments,Zahlungen
+Voucher Type,Belegart

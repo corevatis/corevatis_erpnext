@@ -182,6 +182,21 @@ def _adresse(customer: str, primary: str | None) -> frappe._dict | None:
 	return adressen[0] if adressen else None
 
 
+def _kundenfelder() -> list[str]:
+	"""Stammdatenfelder des Kunden; ``salutation`` gibt es nicht in jeder ERPNext-Version."""
+	meta = frappe.get_meta("Customer")
+	felder = ["customer_name", "customer_type", "tax_id", "website", "customer_primary_address"]
+	felder += [f for f in ("salutation", "customer_primary_contact") if meta.has_field(f)]
+	return felder
+
+
+def _anrede_kontakt(kontakt: str | None) -> str:
+	"""Anrede aus dem Hauptkontakt, wenn der Kunde selbst keine trägt."""
+	if not kontakt:
+		return ""
+	return frappe.db.get_value("Contact", kontakt, "salutation") or ""
+
+
 def stammdaten_zeilen(kunden: Iterable[str], company: str) -> tuple[list[dict], list[str]]:
 	"""Zeilen für ``EXTF_Debitoren`` der genannten Kunden. Rückgabe ``(zeilen, hinweise)``."""
 	zeilen: list[dict] = []
@@ -192,14 +207,10 @@ def stammdaten_zeilen(kunden: Iterable[str], company: str) -> tuple[list[dict], 
 		if not nr:
 			hinweise.append(_("{0}: keine Debitorennummer - nicht in den Stammdaten").format(kunde))
 			continue
-		k = frappe.db.get_value(
-			"Customer",
-			kunde,
-			["customer_name", "customer_type", "tax_id", "website", "customer_primary_address", "salutation"],
-			as_dict=True,
-		)
+		k = frappe.db.get_value("Customer", kunde, _kundenfelder(), as_dict=True)
 		if not k:
 			continue
+		anrede = k.get("salutation") or _anrede_kontakt(k.get("customer_primary_contact"))
 		adr = _adresse(kunde, k.customer_primary_address)
 		if not adr:
 			hinweise.append(_("{0}: keine Adresse hinterlegt").format(k.customer_name or kunde))
@@ -212,7 +223,7 @@ def stammdaten_zeilen(kunden: Iterable[str], company: str) -> tuple[list[dict], 
 			"Konto": nr,
 			"Adressatentyp": "1" if k.customer_type == "Individual" else "2",
 			"Kurzbezeichnung": text(k.customer_name, 15),
-			"Anrede": text(k.salutation, 30),
+			"Anrede": text(anrede, 30),
 			"Straße": text(adr.address_line1 if adr else "", 36),
 			"Adresszusatz": text(adr.address_line2 if adr else "", 36),
 			"Postleitzahl": text(adr.pincode if adr else "", 10),
