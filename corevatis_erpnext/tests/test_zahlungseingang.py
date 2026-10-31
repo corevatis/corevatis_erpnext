@@ -256,18 +256,31 @@ class TestZahlungseingang(IntegrationTestCase):
 	def test_datei_aus_objektspeicher(self):
 		"""mvp-test legt Uploads per frappe_s3_attachment im Objektspeicher ab: ``file_url`` zeigt auf
 		``generate_file?key=…``, ``get_content`` fände nichts (Build 26: FileNotFoundError). Der Inhalt
-		kommt dann über ``S3Operations.read_file_from_s3``; Schlüssel aus der URL, Größe weiter begrenzt."""
+		kommt dann über ``S3Operations.read_file_from_s3`` mit dem Schlüssel aus ``File.s3_key`` (Feld des
+		Forks, hier als Custom Field nachgestellt); die URL wird nie als Schlüsselquelle benutzt."""
+		from frappe.custom.doctype.custom_field.custom_field import create_custom_field
+
+		if not frappe.get_meta("File").has_field("s3_key"):
+			create_custom_field(
+				"File",
+				{"fieldname": "s3_key", "label": "S3 Key", "fieldtype": "Data", "read_only": 1, "hidden": 1},
+			)
+			frappe.clear_cache(doctype="File")
 		csv = (Path(__file__).parent / "kontoauszug" / "sparkasse.csv").read_bytes()
 		url = self.datei(csv, "s3.csv")
 		file_name = frappe.db.get_value("File", {"file_url": url})
-		s3_url = f"{Z.S3_DOWNLOAD_PRAEFIX}?key=mvp-test/2026/10/31/File/ABC_s3.csv&file_name=s3.csv"
+		s3_url = f"{Z.S3_DOWNLOAD_PRAEFIX}?key=mvp-test/2026/10/31/File/FREMD_x.csv&file_name=s3.csv"
 		frappe.db.set_value("File", file_name, "file_url", s3_url, update_modified=False)
+		f = frappe.get_doc("File", file_name)
+		with self.assertRaises(ZahlungFehler, msg="ohne s3_key keine Ableitung aus der URL"):
+			Z._s3_schluessel(f)
+		frappe.db.set_value(
+			"File", file_name, "s3_key", "mvp-test/2026/10/31/File/ABC_s3.csv", update_modified=False
+		)
 		f = frappe.get_doc("File", file_name)
 		self.assertEqual(Z._s3_schluessel(f), "mvp-test/2026/10/31/File/ABC_s3.csv")
 		f.file_url = "/private/files/s3.csv"
 		self.assertIsNone(Z._s3_schluessel(f), "lokale Datei")
-		f.file_url = s3_url + "&x=1"
-		self.assertIsNone(Z._s3_schluessel(f), "nur die kanonische URL des Forks")
 		gelesen = []
 
 		def lesen(key):
