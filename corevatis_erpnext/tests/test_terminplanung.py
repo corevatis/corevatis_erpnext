@@ -461,10 +461,24 @@ class TestTerminplanung(IntegrationTestCase):
 			crm_termin.termin_anlegen(self.lead.name, f"{self.di} 09:30:00", MEISTER1, 60, bestaetigung=0)
 		for teil in (name1, "09:00\u201310:00", "48155 Münster"):
 			self.assertIn(teil, str(cm.exception))
+		# maschinenlesbare Details für Sync-Handler (App): meister, von, bis, ort, fahrzeit_min
+		self.assertIs(type(cm.exception), crm_termin.TerminKonflikt)
+		self.assertEqual((cm.exception.meister, cm.exception.grund), (MEISTER1, str(cm.exception)))
+		[k] = cm.exception.konflikte
+		self.assertEqual(
+			(k["meister"], k["meister_name"], k["von"], k["bis"], k["ort"], k["fahrzeit_min"], k["art"]),
+			(MEISTER1, name1, f"{self.di} 09:00:00", f"{self.di} 10:00:00", ADRESSE_FREMD, None, "Termin"),
+		)
+		self.assertEqual(frappe.local.response.get("konflikte"), cm.exception.konflikte)
+		# frei aufrufbare Berechnung ohne Rechteprüfung (App)
+		frappe.set_user(MONTEUR)
+		self.assertTrue(terminplanung.berechne_vorschlaege(self.lead.name, meister=MEISTER2)["vorschlaege"])
+		frappe.set_user(BUERO)
 		# zu wenig Zeit für Fahrt (10) und Puffer (10): 10:15 geht nicht, 10:30 geht
 		with self.assertRaises(terminplanung.TerminKonflikt) as cm:
 			crm_termin.termin_anlegen(self.lead.name, f"{self.di} 10:15:00", MEISTER1, 60, bestaetigung=0)
 		self.assertIn("10 min Fahrt", str(cm.exception))
+		self.assertEqual(cm.exception.konflikte[0]["fahrzeit_min"], 10)
 		# Feiertag
 		with self.assertRaises(terminplanung.TerminKonflikt) as cm:
 			crm_termin.termin_anlegen(self.lead.name, f"{self.do} 09:00:00", MEISTER1, 60, bestaetigung=0)

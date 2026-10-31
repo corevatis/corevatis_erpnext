@@ -54,6 +54,25 @@ CONF_GOOGLE_SYNC = "cv_termin_google_sync"
 WOCHENTAGE = ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
 
 
+class TerminKonflikt(frappe.ValidationError):
+	"""Der Termin überschneidet sich mit der Planung des Meisters (HTTP 417, ``exc_type``; D14).
+
+	``grund`` ist der Klartext (eine Zeile je Konflikt), ``konflikte`` die maschinenlesbare Liste -
+	je Eintrag ``meister``, ``meister_name``, ``von``, ``bis``, ``ort``, ``fahrzeit_min``, ``art``,
+	``doctype``, ``name``, ``text`` -, ``meister`` der Benutzer. Sync-Handler (App) können eine Ablehnung
+	damit mit Grund weitergeben; im Desk steht der Grund zusätzlich als Meldung (``frappe.msgprint``).
+	"""
+
+	def __init__(self, grund: str = "", konflikte: list[dict] | None = None, meister: str | None = None):
+		super().__init__(grund)
+		self.grund = grund
+		self.konflikte = konflikte or []
+		self.meister = meister
+
+	def as_dict(self) -> dict:
+		return {"grund": self.grund, "meister": self.meister, "konflikte": self.konflikte}
+
+
 # --- Rechte ---------------------------------------------------------------------------------
 
 
@@ -120,11 +139,7 @@ def termin_anlegen(
 	ende = start + timedelta(minutes=minuten)
 	konflikte = terminplanung.konflikte(doc, meister, start, ende)
 	if konflikte and not cint(trotzdem):
-		frappe.throw(
-			terminplanung.konflikt_meldung(konflikte),
-			terminplanung.TerminKonflikt,
-			title=_("Terminüberschneidung"),
-		)
+		terminplanung.konflikt_werfen(konflikte, meister)
 
 	kunde = kunden_name(doc)
 	adresse = objekt_adresse(doc)

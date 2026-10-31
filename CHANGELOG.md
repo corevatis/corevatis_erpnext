@@ -29,10 +29,14 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   neue Adressen je Aufruf) nachschlagen und dauerhaft merken (auch „Kein Treffer“, neuer Versuch nach
   30 Tagen); nach Netzfehler 10 Minuten Pause; ohne Koordinaten Standardfahrzeit „geschätzt“. Manuell
   korrigierte Einträge („Manuell“) werden nicht überschrieben. Keine API-Schlüssel, keine Kosten.
-- **Doppelbuchungsschutz**: `crm.termin.termin_anlegen` prüft Termin plus Fahrzeiten plus Puffer gegen
-  Termine, Arbeitspakete und Feiertage des Meisters und lehnt mit `TerminKonflikt` (417) und Grund ab
-  („Martin Meister ist 09:00–10:30 bei Mühlenweg 5, 25 min Fahrt.“); `trotzdem=1` übersteuert mit Vermerk
-  am Termin. Der eigene, zu verschiebende Termin derselben Anfrage zählt nicht als Konflikt. Die Dauer
+- **Doppelbuchungsschutz**: `crm.termin.termin_anlegen` (einziger Einstieg, auch für Sync-Handler der
+  App) prüft Termin plus Fahrzeiten plus Puffer gegen Termine, Arbeitspakete und Feiertage des Meisters
+  und lehnt mit `crm.termin.TerminKonflikt` (417) ab: Klartext in `grund`/Meldung („Martin Meister ist
+  09:00–10:30 bei Mühlenweg 5, 25 min Fahrt.“) und maschinenlesbar in `konflikte` (je Eintrag `meister`,
+  `von`, `bis`, `ort`, `fahrzeit_min`, `art`, `text`; auch in der Antwort `konflikte`); `trotzdem=1`
+  (Keyword-Argument) übersteuert mit Vermerk am Termin. `terminplanung.berechne_vorschlaege(lead, dauer,
+  ab, bis, meister)` ist die frei aufrufbare Berechnung ohne Rechteprüfung (Aufrufer prüft), die
+  Whitelist-Methode `vorschlaege` der geprüfte Wrapper. Der eigene, zu verschiebende Termin derselben Anfrage zählt nicht als Konflikt. Die Dauer
   ohne Angabe kommt aus „Dauer Besichtigung“.
 - Dialog „Termin anlegen“ (`public/js/lead_termin.js`): oben die besten fünf Vorschläge (Wunsch des
   Kunden hervorgehoben, Klick übernimmt Datum, Uhrzeit, Dauer und Meister), Live-Konfliktprüfung mit

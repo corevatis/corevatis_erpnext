@@ -70,8 +70,8 @@ TASK_OFFEN = ("Open", "Working", "Pending Review", "Overdue")
 EVENT_STANDARD_MINUTEN = 60
 
 
-class TerminKonflikt(frappe.ValidationError):
-	"""Der Termin überschneidet sich mit der Planung des Meisters (HTTP 417, ``exc_type``)."""
+# Exception beim Anlegen (Definition in crm.termin, damit Sync-Handler sie ohne Umweg importieren)
+TerminKonflikt = crm_termin.TerminKonflikt
 
 
 class Kontext:
@@ -482,12 +482,25 @@ def _ab_zeit(jetzt: dt.datetime) -> dt.datetime:
 
 @frappe.whitelist()
 def vorschlaege(lead: str, dauer=None, ab=None, bis=None, meister=None) -> dict:
-	"""Freie Termine für die Besichtigung der Anfrage: in den Wunschfenstern des Kunden und in den
-	nächsten Arbeitstagen, je Meister, mit Fahrzeiten. Nur Büro/Meister/System Manager mit Leserecht
-	auf die Anfrage; ``meister`` (Benutzer oder JSON-Liste) schränkt die Auswahl ein."""
+	"""Freie Termine für die Besichtigung der Anfrage (Dialog „Termin anlegen“, REST): nur
+	Büro/Meister/System Manager mit Leserecht auf die Anfrage; Berechnung in ``berechne_vorschlaege``."""
 	crm_termin._pruefe_rolle()
 	doc = frappe.get_doc("Lead", lead)
 	doc.check_permission("read")
+	return berechne_vorschlaege(doc, dauer, ab, bis, meister)
+
+
+def berechne_vorschlaege(lead, dauer=None, ab=None, bis=None, meister=None) -> dict:
+	"""Freie Termine für die Besichtigung der Anfrage ``lead`` (Name oder Document): in den
+	Wunschfenstern des Kunden und in den nächsten Arbeitstagen, je Meister, mit Fahrzeiten.
+
+	Frei aufrufbare Python-Funktion ohne Rechteprüfung (für Sync-Handler der App, ``bench execute``):
+	der Aufrufer prüft Rolle und Leserecht. ``dauer`` in Minuten (leer = Einstellung), ``ab``/``bis``
+	Datum, ``meister`` Benutzer, Liste oder JSON-Liste schränkt die Auswahl ein. Rückgabe wie
+	``vorschlaege``: ``dauer``, ``wunsch``, ``vorschlaege`` (Beginn, Ende, Meister, Wunsch, Fahrt hin/weiter,
+	Text), ``hinweise``, ``fahrzeit_geschaetzt``, ``zeitraum``.
+	"""
+	doc = lead if hasattr(lead, "get") and hasattr(lead, "name") else frappe.get_doc("Lead", lead)
 
 	ctx = Kontext()
 	minuten = _dauer(dauer, ctx.e)
@@ -653,12 +666,15 @@ def konflikte(doc, user: str, start: dt.datetime, ende: dt.datetime, e=None) -> 
 		ergebnis.append(
 			{
 				"text": konflikt_text(name, b, fahrt),
+				"meister": user,
+				"meister_name": name,
 				"art": b.art,
 				"doctype": b.doctype,
 				"name": b.name,
 				"von": b.von.strftime("%Y-%m-%d %H:%M:%S"),
 				"bis": b.bis.strftime("%Y-%m-%d %H:%M:%S"),
-				"fahrt": fahrt,
+				"ort": belegung_ort(b),
+				"fahrzeit_min": fahrt,
 				"geschaetzt": bool(
 					(pr.hin and pr.hin.belegung is b and pr.hin.geschaetzt)
 					or (pr.weiter and pr.weiter.belegung is b and pr.weiter.geschaetzt)
@@ -669,12 +685,26 @@ def konflikte(doc, user: str, start: dt.datetime, ende: dt.datetime, e=None) -> 
 
 
 def konflikt_meldung(liste: list[dict]) -> str:
+	"""HTML für den Desk (Werte escaped)."""
 	zeilen = "".join(f"<li>{escape_html(k['text'])}</li>" for k in liste)
 	return (
 		escape_html(_("Der Termin überschneidet sich mit der Planung des Meisters:"))
 		+ f"<ul>{zeilen}</ul>"
 		+ escape_html(_("Anderen Vorschlag wählen oder mit „Trotzdem anlegen“ übersteuern."))
 	)
+
+
+def konflikt_grund(liste: list[dict]) -> str:
+	"""Klartext (eine Zeile je Konflikt) für Exception, Sync-Antwort und Kommentar."""
+	return _("Terminüberschneidung") + ": " + " ".join(k["text"] for k in liste)
+
+
+def konflikt_werfen(liste: list[dict], meister: str) -> None:
+	"""Konflikt melden: Klartext als Desk-Meldung, strukturierte Details in der Antwort
+	(``konflikte``) und ``TerminKonflikt`` mit ``grund``, ``konflikte``, ``meister`` (417)."""
+	frappe.local.response["konflikte"] = liste
+	frappe.msgprint(konflikt_meldung(liste), title=_("Terminüberschneidung"), indicator="orange")
+	raise TerminKonflikt(konflikt_grund(liste), liste, meister)
 
 
 @frappe.whitelist()
