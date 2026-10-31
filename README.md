@@ -336,3 +336,11 @@ corevatis_erpnext/
 Release: Version in `corevatis_erpnext/__init__.py` und `CHANGELOG.md` anheben,
 Tag `vX.Y.Z` pushen – der Workflow `Release` erzeugt das GitHub-Release mit
 Changelog-Auszug und Lizenzliste.
+
+### Desk-Assets
+
+Skripte und Styles für den Desk liegen in `corevatis_erpnext/public/` ausschließlich als Bundles (`name.bundle.js`,
+`name.bundle.css`); `hooks.py` und `frappe.require(...)` verwenden den Bundle-Namen, nie einen festen Pfad unter
+`/assets/`. Frappe hängt beim Build einen Inhalts-Hash an und löst den Namen über `assets.json` auf; feste Pfade
+werden von nginx als unveränderlich (ein Jahr) ausgeliefert und bleiben in Cloudflare und Browsern stehen.
+Formular-Skripte (`doctype_js`), Seiten (`page/*/*.js`) und Berichte (`report/*/*.js`) sind nicht betroffen.

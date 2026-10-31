@@ -1,12 +1,12 @@
 // Zahlungseingang (7.5): Gutschriften des Kontoauszugs mit Zuordnungsvorschlag. Server: zahlungseingang.py;
-// Dialoge in public/js/mahnung_zahlung.js (corevatis_erpnext.abrechnung.kontoauszug_dialog, zuordnen_dialog, ignorieren).
+// Dialoge in public/js/mahnung_zahlung.bundle.js (corevatis_erpnext.abrechnung.kontoauszug_dialog, zuordnen_dialog, ignorieren).
 frappe.query_reports["Zahlungseingang"] = {
 	filters: [
 		{ fieldname: "bankkonto", label: __("Bankkonto"), fieldtype: "Link", options: "Bank Account", get_query: () => ({ filters: { is_company_account: 1 } }) },
 		{ fieldname: "mit_ignorierten", label: __("Ignorierte anzeigen"), fieldtype: "Check", default: 0 },
 	],
 	onload(report) {
-		frappe.require("/assets/corevatis_erpnext/js/mahnung_zahlung.js", () => {
+		frappe.require("mahnung_zahlung.bundle.js", () => {
 			report.page.set_primary_action(__("Kontoauszug einlesen"), () =>
 				corevatis_erpnext.abrechnung.kontoauszug_dialog(() => report.refresh())
 			);
