@@ -1054,6 +1054,7 @@ def auswerten(k: frappe._dict, einst=None, mit_aktionen: bool = True) -> dict:
 		if (lead_lesbar or not lead)
 		else {"farbe": ergebnis_ampel["farbe"], "text": "", "gruende": []},
 		"mappe": _mappe(k, lead_lesbar),
+		"nachrichten": _nachrichten(k, lead_lesbar),
 	}
 
 
@@ -1074,6 +1075,26 @@ def _mappe(k: frappe._dict, lead_lesbar: bool) -> dict | None:
 		return None
 	except Exception:
 		frappe.log_error(title="Prozessleiste: Mappe")
+		return None
+
+
+def _nachrichten(k: frappe._dict, lead_lesbar: bool) -> dict | None:
+	"""Nachrichten am Vorgang (P1.6): Zeile „Nachrichten: n ungelesen“ mit Knopf zur Kern-Page. Aus
+	dem Kern (``corevatis_erpnext.nachrichten.stand``); ``None`` ohne Kern oder ohne lesbaren Anker.
+	Fehler halten die Leiste nicht auf."""
+	try:
+		from corevatis_erpnext import nachrichten
+
+		if not nachrichten.kern_da():
+			return None
+		if k.lead and lead_lesbar:
+			return nachrichten.stand("Lead", k.lead.name)
+		for projekt in k.projekte or []:
+			if lesbar("Project", projekt.name):
+				return nachrichten.stand("Project", projekt.name)
+		return None
+	except Exception:
+		frappe.log_error(title="Prozessleiste: Nachrichten")
 		return None
 
 

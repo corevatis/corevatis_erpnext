@@ -6,6 +6,15 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (Nachrichten am Vorgang, Phase 1 P1.6, Issue Handwerker#80)
+
+- Prozessleiste: Zeile „Nachrichten: n ungelesen“ mit Sprung zur Kern-Page `nachrichten`
+  (`prozess.kette._nachrichten`, Feld `nachrichten` in `prozess.status`; `None` ohne Kern).
+- Leiste „Betrieb“: Eintrag „Nachrichten“ (Kern-Page) und Ungelesen-Zähler als Badge und im
+  Fenstertitel (`betrieb.js`, `corevatis_erpnext.nachrichten.ungelesen_gesamt`, alle 60 s).
+- Modul `corevatis_erpnext.nachrichten`: Kern-Funktionen nur per `frappe.get_attr`
+  (`KERN_STAND`, `KERN_UNGELESEN`, Vertragstest im Kern).
+
 ### Hinzugefügt (Plantafel, Phase 1 P1.4, Issue Handwerker#79)
 
 - **Desk-Seite „Plantafel“** (`page/plantafel`, Leiste „Betrieb“ statt „Wochenplan“, Arbeitsbereich

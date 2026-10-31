@@ -60,6 +60,7 @@ frappe.provide("corevatis_erpnext.prozess");
 .cv-pl-schritt.cv-pl-gesperrt { opacity: 0.55; }
 .cv-pl-schritt .cv-pl-aktion { margin-top: 4px; color: var(--text-on-blue, #1366ae); font-weight: 600; }
 .cv-pl-schritt.cv-pl-hier { outline: 2px dashed var(--gray-400, #c0c6cc); outline-offset: 1px; }
+.cv-pl-nachrichten { margin-top: 8px; font-size: var(--text-sm); }
 @media (max-width: 767px) { .cv-pl-schritt { min-width: 70px; flex-basis: 70px; } .cv-pl-schritt .cv-pl-text { display: none; } }
 `;
 		document.head.appendChild(style);
@@ -232,6 +233,15 @@ frappe.provide("corevatis_erpnext.prozess");
 		const naechste = frm.doctype === "Project" && daten.aktuell === "ausfuehrung" ? null : daten.naechste_aktion;
 		// Dokumentenmappe (Epic D): Ampel-Hinweis „Mappe: …“ und Knopf „Mappe“ (Kern-Page), nur mit Kern
 		const mappe = daten.mappe || null;
+		// Nachrichten am Vorgang (P1.6): „Nachrichten: 2 ungelesen“ mit Sprung zur Kern-Page, nur mit Kern
+		const nachrichten = daten.nachrichten || null;
+		const nachrichten_text = nachrichten
+			? nachrichten.ungelesen
+				? __("Nachrichten: {0} ungelesen", [nachrichten.ungelesen])
+				: nachrichten.gesamt
+				? __("Nachrichten: {0}", [nachrichten.gesamt])
+				: __("Nachrichten")
+			: "";
 		el.html(`
 			<div class="cv-pl-kopf">
 				<span class="cv-pl-titel">${esc(__("Vorgang"))}${vorgang.titel ? ": " + esc(vorgang.titel) : ""}</span>
@@ -255,12 +265,22 @@ frappe.provide("corevatis_erpnext.prozess");
 						: ""
 				}
 			</div>
-			<div class="cv-pl-kette">${kette}</div>`);
+			<div class="cv-pl-kette">${kette}</div>
+			${
+				nachrichten
+					? `<div class="cv-pl-nachrichten"><button class="btn btn-xs ${
+							nachrichten.ungelesen ? "btn-primary" : "btn-default"
+					  } cv-pl-nachrichten-knopf">${esc(nachrichten_text)}</button></div>`
+					: ""
+			}`);
 		el.find(".cv-pl-schritt.cv-pl-klickbar").on("click", function () {
 			schritt_klick(frm, schritte[cint(this.dataset.index)]);
 		});
 		el.find(".cv-pl-naechste").on("click", () => P.aktion_ausfuehren(frm, naechste));
 		el.find(".cv-pl-mappe-knopf").on("click", () => frappe.set_route("mappe", { vorgang: mappe.vorgang }));
+		el.find(".cv-pl-nachrichten-knopf").on("click", () =>
+			frappe.set_route("nachrichten", { vorgang: nachrichten.vorgang })
+		);
 	}
 
 	P.render = function (frm) {
