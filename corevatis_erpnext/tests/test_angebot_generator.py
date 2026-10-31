@@ -298,7 +298,9 @@ class TestAngebotGenerator(IntegrationTestCase):
 		vor dem neuen Buchungsdatum) brachte „Fälligkeitsdatum darf nicht vor dem Buchungsdatum liegen“."""
 		erstes = self.erzeugen()["angebot"]
 		gestern = add_days(nowdate(), -1)
-		frappe.db.set_value("Quotation", erstes, {"transaction_date": gestern, "valid_till": add_days(gestern, 30)})
+		frappe.db.set_value(
+			"Quotation", erstes, {"transaction_date": gestern, "valid_till": add_days(gestern, 30)}
+		)
 		frappe.db.sql(
 			"update `tabPayment Schedule` set due_date=%s where parenttype='Quotation' and parent=%s",
 			(gestern, erstes),
