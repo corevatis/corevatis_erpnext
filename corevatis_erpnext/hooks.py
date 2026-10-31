@@ -110,6 +110,9 @@ override_doctype_dashboards = {
 # Besichtigung in der App bis zum Angebot (Durchstich A1): der Kern ruft Katalog, Generator, Angebote
 # und PDF über diesen Hook (corevatis.api.besichtigung, kein Import über die Lizenzgrenze)
 corevatis_angebot_adapter = "corevatis_erpnext.angebot.mobil"
+# Meine Woche in der App (P1.4b): Einsätze eines Benutzers wie seine Zeile in der Plantafel
+# (Kern-Endpunkt corevatis.api.v1.meine_woche ruft woche(user, von, bis))
+corevatis_woche_adapter = "corevatis_erpnext.planung.woche"
 
 # Termin aus der Anfrage in der App (Durchstich A10): Sync-Entität des Kerns (corevatis.api.sync_schema,
 # Hook corevatis_sync_handlers) - legt den Besichtigungstermin wie „Termin anlegen“ im Desk an
