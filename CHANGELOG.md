@@ -37,7 +37,7 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   Hinweis auf Storni nach einem Export.
 - **Site-Template** `datev` (`_standard.json`): DATEV Settings je Firma mit Platzhalter-Berater-/
   Mandantennummer (0000000/00000, gemeldet), Sachkontenlänge 4, Gegenkonto 9090/9000, Debitoren ab 10000,
-  Druckformat „Rechnung Corevatis“; Prüfpunkte DATEV und Konten Forderungen 1400, Bank 1200, Kasse 1000,
+  Druckformat „Rechnung Corevatis“; Prüfpunkte DATEV und Konten Forderungen 1410 (ERPNext-SKR03), Bank 1200, Kasse 1000,
   Mahngebühren 2650 (SKR04: 1200/1800/1600/7100).
 - CI: erpnext_datev (`version-16`) in der Test-Bench installiert. Tests `test_datev` (Formatprüfung ohne
   Site; Monatsexport mit Abschlag, Schlussrechnung, Gutschrift, Zahlung; Wiederholung, nur neue, Festschreibung,

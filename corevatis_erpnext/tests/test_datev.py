@@ -429,7 +429,7 @@ class TestDatevExport(IntegrationTestCase):
 		if frappe.db.exists("Print Format", "Rechnung Corevatis"):
 			self.assertEqual(e.cv_druckformat, "Rechnung Corevatis")
 		# Konten der Abrechnung im SKR03 der Firma
-		for nummer in ("1400", "1200", "1000", "2650", "8400", "1776"):
+		for nummer in ("1410", "1200", "1000", "2650", "8400", "1776"):
 			self.assertTrue(
 				frappe.db.exists("Account", {"company": self.firma, "account_number": nummer, "is_group": 0}),
 				nummer,
@@ -585,8 +585,8 @@ class TestDatevExport(IntegrationTestCase):
 		self.assertEqual(self.saldo(zg), {"8400": 200.0, "1776": 38.0, debitor: -238.0})
 		self.assertTrue(zg[0]["Buchungstext"].startswith(f"Gutschrift zu {v['re2']} "))
 		self.assertTrue(v["gs"].startswith("GS-"), v["gs"])
-		# keine Zeile ohne Debitor auf dem Sammelkonto 1400
-		self.assertEqual([z for z in zeilen if z["Konto"] == "1400"], [])
+		# keine Zeile ohne Debitor auf dem Forderungskonto 1410 (ERPNext-SKR03; DATEV führt 1400)
+		self.assertEqual([z for z in zeilen if z["Konto"] in ("1400", "1410")], [])
 
 		# Debitoren-Stammdaten des Kunden
 		dkopf, dspalten, dzeilen = self.zeilen(self.datei(doc.datei_debitoren))

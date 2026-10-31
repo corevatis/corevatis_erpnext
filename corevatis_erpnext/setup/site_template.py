@@ -41,14 +41,15 @@ from corevatis_erpnext.setup.naming import RETURN_SERIES_DEFAULT_KEY
 # Kontonummern je Kontenrahmen (ERPNext-Vorlagen „SKR03/SKR04 mit Kontonummern“)
 SKR_ACCOUNTS = {
 	# Steuer- und Erlöskonten (0.4) sowie die Konten, auf denen die Belege der Abrechnung landen und die
-	# der DATEV-Export (7.4) voraussetzt: Forderungen (Debitoren-Sammelkonto), Bank, Kasse, Mahngebühren
+	# der DATEV-Export (7.4) voraussetzt: Forderungen (ERPNext-SKR03: 1410, 1400 ist dort eine Gruppe), Bank,
+	# Kasse, Mahngebühren
 	"SKR03": {
 		"ust19": "1776",
 		"ust7": "1771",
 		"vst19": "1576",
 		"vst7": "1571",
 		"erloese19": "8400",
-		"forderungen": "1400",
+		"forderungen": "1410",
 		"bank": "1200",
 		"kasse": "1000",
 		"mahngebuehren": "2650",
