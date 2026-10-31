@@ -40,3 +40,25 @@ class Abwesenheit(Document):
 			)
 		self.mitarbeiter_name = werte.employee_name
 		self.benutzer = werte.user_id or None
+		self.urlaub_pruefen()
+
+	def urlaub_pruefen(self) -> None:
+		"""Urlaub über den Resturlaub des Jahres: Hinweis, keine Sperre (P2.5; das Büro entscheidet)."""
+		if self.art != "Urlaub" or frappe.flags.in_install or frappe.flags.in_migrate:
+			return
+		from corevatis_erpnext.mitarbeiter import stundenkonto as sk
+
+		jahr = getdate(self.von).year
+		konto = sk.urlaubskonto(self.mitarbeiter, jahr, ausser=self.name if not self.is_new() else None)
+		tage = sk.urlaubstage(
+			self.mitarbeiter, self.von, self.bis, cint(self.ganztags), self.von_uhrzeit, self.bis_uhrzeit
+		)
+		rest = konto["rest"] - tage
+		if rest < 0:
+			frappe.msgprint(
+				_(
+					"Resturlaub {0} überschritten: {1} Tage verfügbar, dieser Eintrag {2} Tage (danach {3})."
+				).format(jahr, f"{konto['rest']:g}", f"{tage:g}", f"{rest:g}"),
+				title=_("Urlaubskonto"),
+				indicator="orange",
+			)

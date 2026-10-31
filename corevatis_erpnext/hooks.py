@@ -130,6 +130,9 @@ corevatis_angebot_adapter = "corevatis_erpnext.angebot.mobil"
 # Meine Woche in der App (P1.4b): Einsätze eines Benutzers wie seine Zeile in der Plantafel
 # (Kern-Endpunkt corevatis.api.v1.meine_woche ruft woche(user, von, bis))
 corevatis_woche_adapter = "corevatis_erpnext.planung.woche"
+# Stundenkonto in der App (Phase 2 P2.5): Monat, Saldo Jahr und Urlaubskonto des Benutzers
+# (Kern-Endpunkt corevatis.api.v1.mein_stundenkonto ruft fuer_benutzer(user, jahr, monat))
+corevatis_stundenkonto_adapter = "corevatis_erpnext.mitarbeiter"
 
 # Termin aus der Anfrage in der App (Durchstich A10): Sync-Entität des Kerns (corevatis.api.sync_schema,
 # Hook corevatis_sync_handlers) - legt den Besichtigungstermin wie „Termin anlegen“ im Desk an

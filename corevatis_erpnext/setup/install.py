@@ -58,6 +58,8 @@ def after_install() -> None:
 
 	ensure_material()
 	ensure_planung_setup()
+	# Mitarbeiter (P2.5): Employee.cv_urlaubsanspruch, cv_urlaub_uebertrag, cv_saldo_uebertrag
+	ensure_mitarbeiter()
 
 	ensure_prozess()
 	ensure_abnahme()
@@ -118,6 +120,8 @@ def after_migrate() -> None:
 	from corevatis_erpnext.material import ensure_setup as ensure_material
 
 	ensure_material()
+	# Mitarbeiter (P2.5): Employee.cv_urlaubsanspruch, cv_urlaub_uebertrag, cv_saldo_uebertrag
+	ensure_mitarbeiter()
 	# Abnahme (6.1/6.2): Task/Project/Sales Invoice-Felder
 	ensure_abnahme()
 	# Dokumentenmappe (Epic D): Ampel am Projekt, Übersteuerung an Angebot und Rechnung
@@ -126,6 +130,13 @@ def after_migrate() -> None:
 	ensure_abrechnung()
 	# DATEV (7.4): Markierung an Rechnung/Zahlung (hängt sich hinter die Abrechnungsfelder), DATEV Settings
 	ensure_datev()
+
+
+def ensure_mitarbeiter() -> None:
+	"""Urlaub und Stundenkonto (P2.5): Felder am Employee hinter dem Fahrzeuglager."""
+	from corevatis_erpnext.mitarbeiter import ensure_setup as ensure_mitarbeiter_setup
+
+	ensure_mitarbeiter_setup()
 
 
 def ensure_abrechnung() -> None:

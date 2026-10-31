@@ -125,7 +125,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-31 18:00:00.000000",
+ "modified": "2026-10-31 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Corevatis ERPNext",
  "name": "Abwesenheit",
@@ -175,7 +175,7 @@
    "export": 0,
    "print": 0,
    "read": 1,
-   "report": 0,
+   "report": 1,
    "role": "Monteur",
    "share": 0,
    "write": 0
