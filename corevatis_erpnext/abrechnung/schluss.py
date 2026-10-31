@@ -495,6 +495,7 @@ def _rechnung_anlegen(auftrag, projekt, ergebnis, gestellt, uebersteuert, grund,
 	if uebersteuert:
 		si.cv_abnahme_uebersteuert = 1
 		si.cv_uebersteuerung_grund = grund
+	si.flags.cv_server = True  # Abrechnungsfelder setzt nur der Server (``auftrag.rechnung_validieren``)
 	si.insert()
 	return si, entfallen
 

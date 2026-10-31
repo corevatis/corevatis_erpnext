@@ -67,10 +67,12 @@ def auftrag_laden(sales_order: str | None, project: str | None, sperren: bool = 
 	"""Eingereichter Auftrag (direkt oder über ``Project.sales_order``) mit Leserecht; ``sperren``:
 	Zeilensperre vor dem Schreiben (Doppelklick, parallele Aufrufe - Muster 5.1).
 
-	Rückgabe ``(auftrag, projekt)``. Ein Projekt ohne Auftrag ist ein Fehler: ohne Auftragssumme kein Abschlag.
+	Rückgabe ``(auftrag, projekt)``. Ein Projekt ohne Auftrag ist ein Fehler: ohne Auftragssumme kein
+	Abschlag. Ein mitgegebenes Projekt braucht Leserecht und muss zum Auftrag gehören (Security-Review).
 	"""
-	if not sales_order and project:
+	if project:
 		frappe.has_permission("Project", "read", project, throw=True)
+	if not sales_order and project:
 		sales_order = frappe.db.get_value("Project", project, "sales_order")
 		if not sales_order:
 			frappe.throw(
@@ -92,16 +94,14 @@ def auftrag_laden(sales_order: str | None, project: str | None, sperren: bool = 
 			),
 			AbrechnungFehler,
 		)
-	projekt = project or projekt_zum_auftrag(auftrag)
-	if (
-		project
-		and projekt != project
-		and frappe.db.get_value("Project", project, "sales_order") != auftrag.name
+	if project and not (
+		auftrag.get("project") == project
+		or frappe.db.get_value("Project", project, "sales_order") == auftrag.name
 	):
 		frappe.throw(
 			_("Projekt {0} gehört nicht zum Auftrag {1}.").format(project, auftrag.name), AbrechnungFehler
 		)
-	return auftrag, projekt
+	return auftrag, project or projekt_zum_auftrag(auftrag)
 
 
 def steuersatz(auftrag) -> float:
@@ -247,6 +247,96 @@ def auftraege_der_rechnung(doc) -> list[str]:
 
 # --- Hooks an Sales Invoice und Payment Entry -------------------------------------------------
 
+# Felder, die nur der Server setzt (``abschlag_stellen``/``schlussrechnung_erstellen`` mit
+# ``doc.flags.cv_server``); ``cv_abschlag`` bleibt wie in 6.2 vom Büro setzbar (Abnahmesperre)
+SERVER_FELDER = (
+	"cv_schlussrechnung",
+	"cv_auftrag",
+	"cv_abschlagsplan",
+	"cv_abschlag_nr",
+	"cv_abschlag_prozent",
+	"cv_abschlag_zeile",
+	"cv_auftragssumme_netto",
+	"cv_kumuliert_prozent",
+	"cv_kumuliert_netto",
+	"cv_leistung_netto",
+	"cv_leistung_steuer",
+	"cv_leistung_brutto",
+	"cv_abschlaege_netto",
+	"cv_abschlaege_steuer",
+	"cv_abschlaege_brutto",
+	"cv_lohnanteil_netto",
+	"cv_lohnanteil_steuer",
+	"cv_lohnanteil_brutto",
+	"cv_lohnanteil_prozent",
+	"cv_abrechnung_json",
+)
+SERVER_FELDER_POSITION = ("cv_positionsart", "cv_menge_auftrag", "cv_lohnanteil", "cv_bezug")
+ABSCHLAEGE_TABELLE = "cv_abschlaege"
+
+
+def rechnung_validieren(doc, method=None) -> None:
+	"""``Sales Invoice.validate``: die Abrechnungsfelder setzt nur der Server (Security-Review) -
+	Werte aus Formular/REST fallen auf den gespeicherten Stand zurück (neu: leer), damit niemand eine
+	Rechnung als Abschlag/Schlussrechnung eines Auftrags ausgibt und so Plan oder ``per_billed`` steuert."""
+	if doc.flags.cv_server or not felder_da():
+		return
+	vorher = None if doc.is_new() else doc.get_doc_before_save()
+	for feld in SERVER_FELDER:
+		if not doc.meta.has_field(feld):
+			continue
+		wert = vorher.get(feld) if vorher else None
+		if feld == "cv_schlussrechnung":
+			wert = cint(wert)
+		doc.set(feld, wert)
+	if doc.meta.has_field(ABSCHLAEGE_TABELLE):
+		alte = vorher.get(ABSCHLAEGE_TABELLE) if vorher else []
+		doc.set(ABSCHLAEGE_TABELLE, [z.as_dict() for z in alte or []])
+	alte_zeilen = {z.name: z for z in (vorher.get("items") if vorher else []) or []}
+	for zeile in doc.get("items") or []:
+		alt = alte_zeilen.get(zeile.name)
+		for feld in SERVER_FELDER_POSITION:
+			if zeile.meta.has_field(feld):
+				zeile.set(feld, alt.get(feld) if alt else None)
+
+
+def _rechnung_passt_zum_auftrag(doc, auftrag) -> None:
+	"""Freigabe einer Abschlags-/Schlussrechnung: Kunde und Positionen gehören zum Auftrag."""
+	if doc.customer != auftrag.customer:
+		frappe.throw(
+			_("Rechnung {0}: Kunde {1} passt nicht zum Auftrag {2} ({3}).").format(
+				doc.name, doc.customer, auftrag.name, auftrag.customer
+			),
+			AbrechnungFehler,
+		)
+	zeilen = {z.name for z in auftrag.items}
+	for zeile in doc.get("items") or []:
+		if zeile.get("sales_order") != auftrag.name or (
+			zeile.get("so_detail") and zeile.so_detail not in zeilen
+		):
+			frappe.throw(
+				_("Rechnung {0}: Position {1} ({2}) gehört nicht zum Auftrag {3}.").format(
+					doc.name, zeile.idx, zeile.item_code, auftrag.name
+				),
+				AbrechnungFehler,
+			)
+
+
+def rechnung_freigabe_pruefen(doc) -> None:
+	"""Vor dem Freigeben einer Abschlags-/Schlussrechnung: Rolle Büro, Leserecht am Auftrag, Kunde und
+	Positionen passen zum Auftrag (Security-Review)."""
+	if not doc.get("cv_auftrag"):
+		return
+	if not darf_abrechnen():
+		frappe.throw(
+			_("Abschlags- und Schlussrechnungen gibt nur das Büro frei (Rolle Büro)."), frappe.PermissionError
+		)
+	frappe.has_permission("Sales Order", "read", doc.cv_auftrag, throw=True)
+	auftrag = frappe.get_doc("Sales Order", doc.cv_auftrag)
+	if auftrag.docstatus != 1:
+		frappe.throw(_("Auftrag {0} ist nicht eingereicht.").format(auftrag.name), AbrechnungFehler)
+	_rechnung_passt_zum_auftrag(doc, auftrag)
+
 
 def _nach_rechnung(doc) -> None:
 	from corevatis_erpnext.abrechnung import plan
@@ -257,7 +347,8 @@ def _nach_rechnung(doc) -> None:
 
 
 def rechnung_eingereicht(doc, method=None) -> None:
-	"""``Sales Invoice.on_submit``: abgerechneter Anteil am Auftrag und Stand des Abschlagsplans."""
+	"""``Sales Invoice.on_submit``: Freigabe prüfen, abgerechneter Anteil am Auftrag, Stand des Abschlagsplans."""
+	rechnung_freigabe_pruefen(doc)
 	_nach_rechnung(doc)
 
 

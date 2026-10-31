@@ -134,6 +134,8 @@ doc_events = {
 		# Dokumentenmappe (D.5) zuerst: Pflichtdokumente ab Schritt Rechnung (Abnahmeprotokoll in der
 		# Mappe), Übersteuern mit Begründung durch das Büro - danach die Abnahmesperre 6.2
 		"validate": [
+			# 7.1/7.2: Abrechnungsfelder (Auftrag, Art, Beträge) setzt nur der Server
+			"corevatis_erpnext.abrechnung.auftrag.rechnung_validieren",
 			"corevatis_erpnext.mappe.rechnung_pruefen",
 			"corevatis_erpnext.abnahme.rechnung_pruefen",
 		],

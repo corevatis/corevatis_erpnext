@@ -29,6 +29,7 @@ from corevatis_erpnext.tests import _angebot as td
 from corevatis_erpnext.tests._helpers import make_user
 
 BUERO = "cv-abrechnung-buero@example.com"
+BUCHHALTER = "cv-abrechnung-buchhalter@example.com"
 MEISTER = "cv-abrechnung-meister@example.com"
 MONTEUR = "cv-abrechnung-monteur@example.com"
 NACHTRAG_ARTIKEL = "_TEST-CV-NACHTRAG"
@@ -348,6 +349,8 @@ class TestAbrechnung(IntegrationTestCase):
 			MEISTER, "Martin", ["Meister", "Sales User", "Projects User", "Projects Manager"], "Meister"
 		)
 		make_user(MONTEUR, "Mona", ["Monteur"], "Monteur")
+		# Buchhaltung ohne Rolle Büro: darf Rechnungen buchen, aber keine Abschläge/Schlussrechnungen freigeben
+		make_user(BUCHHALTER, "Bodo", ["Accounts User", "Sales User"], "Buchhalter")
 		frappe.db.commit()
 
 	def setUp(self):
@@ -674,7 +677,7 @@ class TestAbrechnung(IntegrationTestCase):
 			_als(BUERO, abschlag.abschlag_stellen, project=projekt, prozent=-5)
 		with self.assertRaises(frappe.ValidationError):
 			_als(BUERO, abschlag.abschlag_stellen, project=projekt, prozent=150)
-		# Projekt ohne Auftrag
+		# Projekt ohne Auftrag; fremdes Projekt zum Auftrag (Security-Review: Originalargument prüfen)
 		leer = frappe.get_doc(
 			{
 				"doctype": "Project",
@@ -684,6 +687,15 @@ class TestAbrechnung(IntegrationTestCase):
 		).insert(ignore_permissions=True)
 		with self.assertRaises(AbrechnungFehler):
 			_als(BUERO, abschlag.abschlag_stellen, project=leer.name)
+		with self.assertRaises(AbrechnungFehler):
+			_als(BUERO, abschlag.abschlag_stellen, sales_order=auftrag, project=leer.name)
+		with self.assertRaises(AbrechnungFehler):
+			_als(BUERO, abschlag.abschlag_vorschlag, sales_order=auftrag, project=leer.name)
+		with self.assertRaises(AbrechnungFehler):
+			_als(BUERO, schluss.schlussrechnung_vorschlag, sales_order=auftrag, project=leer.name)
+		self.assertEqual(
+			_als(BUERO, abschlag.abschlag_vorschlag, sales_order=auftrag, project=projekt)["projekt"], projekt
+		)
 		# Betrag statt Prozent: 125 € = 25 %
 		r = _als(
 			BUERO, abschlag.abschlag_stellen, project=projekt, betrag=125, bezeichnung="Anzahlung Material"
@@ -697,6 +709,69 @@ class TestAbrechnung(IntegrationTestCase):
 			(flt(doc.zeilen[0].betrag), flt(doc.zeilen[0].prozent), doc.zeilen[0].bezeichnung),
 			(125.0, 0.0, "Anzahlung Material"),
 		)
+
+	def test_server_felder_und_freigabe_geschuetzt(self):
+		"""Security-Review: Abrechnungsfelder setzt nur der Server; Freigabe prüft Rolle, Kunde, Positionen."""
+		from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
+
+		auftrag, projekt = self.vorgang(kalkulation=False)
+		plan_name = plan.plan_zum_auftrag(auftrag)
+		# 1. Eine gewöhnliche Rechnung lässt sich nicht als Schlussrechnung/Abschlag des Auftrags ausgeben
+		si = make_sales_invoice(auftrag)
+		si.update(
+			{
+				"cv_abschlag": 1,  # 6.2: darf das Büro setzen (Abnahmesperre)
+				"cv_schlussrechnung": 1,
+				"cv_auftrag": auftrag,
+				"cv_abschlagsplan": plan_name,
+				"cv_abschlag_nr": 5,
+				"cv_abschlag_prozent": 50,
+				"cv_lohnanteil_brutto": 999,
+			}
+		)
+		si.items[0].cv_positionsart = "Nachtrag"
+		si.items[0].cv_lohnanteil = 123
+		_als(BUERO, si.insert)
+		si.reload()
+		self.assertEqual(si.cv_abschlag, 1)
+		self.assertEqual(
+			(si.cv_schlussrechnung, si.cv_auftrag, si.cv_abschlagsplan, si.cv_abschlag_nr), (0, None, None, 0)
+		)
+		self.assertEqual((flt(si.cv_abschlag_prozent), flt(si.cv_lohnanteil_brutto)), (0.0, 0.0))
+		self.assertFalse(si.items[0].cv_positionsart)
+		self.assertEqual(flt(si.items[0].cv_lohnanteil), 0.0)
+		self.assertEqual(A.rechnungen_zum_auftrag(auftrag), [])
+		si.delete()
+		# 2. Felder einer echten Abschlagsrechnung bleiben beim Speichern durch den Benutzer, wie sie waren
+		r = _als(BUERO, abschlag.abschlag_stellen, project=projekt)
+		si = frappe.get_doc("Sales Invoice", r["rechnung"])
+		si.cv_auftrag = None
+		si.cv_abschlag_nr = 9
+		si.cv_schlussrechnung = 1
+		si.items[0].cv_positionsart = "Nachtrag"
+		si.remarks = "geprüft"
+		_als(BUERO, si.save)
+		si.reload()
+		self.assertEqual(
+			(si.cv_auftrag, si.cv_abschlag_nr, si.cv_schlussrechnung, si.remarks), (auftrag, 1, 0, "geprüft")
+		)
+		self.assertEqual(si.items[0].cv_positionsart, "Abschlag")
+		# 3. Freigabe nur durch das Büro: Buchhaltung ohne Rolle Büro darf buchen, aber keinen Abschlag freigeben
+		self.assertTrue(frappe.has_permission("Sales Invoice", "submit", si.name, user=BUCHHALTER))
+		with self.assertRaises(frappe.PermissionError):
+			_als(BUCHHALTER, frappe.get_doc("Sales Invoice", si.name).submit)
+		self.assertEqual(frappe.db.get_value("Sales Invoice", si.name, "docstatus"), 0)
+		# 4. Positionen müssen zum Auftrag gehören
+		si = frappe.get_doc("Sales Invoice", si.name)
+		si.append("items", {"item_code": "ABSCHLAG", "qty": 1, "rate": 10})
+		_als(BUERO, si.save)
+		with self.assertRaises(AbrechnungFehler):
+			_als(BUERO, frappe.get_doc("Sales Invoice", si.name).submit)
+		si = frappe.get_doc("Sales Invoice", si.name)
+		si.remove(si.items[1])
+		_als(BUERO, si.save)
+		self.freigeben(si.name)
+		self.assertEqual(flt(frappe.db.get_value("Sales Order", auftrag, "per_billed")), 30.0)
 
 	# --- Schlussrechnung -------------------------------------------------------------------
 

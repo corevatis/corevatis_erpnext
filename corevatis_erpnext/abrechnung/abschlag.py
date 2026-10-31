@@ -189,6 +189,7 @@ def _rechnung_anlegen(auftrag, projekt, doc, z, ergebnis):
 		si.cv_lohnanteil_brutto = flt(ergebnis["lohnanteil"]["brutto"])
 	si.set("cv_abschlaege", abschlaege_uebersicht(auftrag.name))
 	si.cv_abrechnung_json = json.dumps(ergebnis, ensure_ascii=False)
+	si.flags.cv_server = True  # Abrechnungsfelder setzt nur der Server (``auftrag.rechnung_validieren``)
 	si.insert()
 	return si
 
