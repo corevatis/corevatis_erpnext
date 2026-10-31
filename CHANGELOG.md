@@ -66,6 +66,12 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   kein E-Mail-Versand.
 - Übersetzungen: „Terms and Conditions“ heißt im Desk „Textbaustein“. Tests: `tests/test_textbausteine.py`.
 
+### Geändert (Textbausteine, Härtung, Handwerker#89)
+
+- Mahntexte dürfen keine Vorlagen-Syntax (`{{`, `{%`, `{#`) enthalten: ERPNext rendert den Brieftext des Mahntyps als
+  Jinja; Bürotext bleibt reiner Text mit `[[…]]`-Platzhaltern. Der Abgleich in die Mahntypen berücksichtigt nur Firmen,
+  die der Speichernde lesen darf.
+
 ### Behoben (Schlussrechnung, Abnahme Build 30, Handwerker#49)
 
 - Bestätigungsmeldung „Schlussrechnung angelegt“ zeigte alle Beträge hundertfach: die Engine liefert Dezimal-Zeichenketten,
