@@ -530,6 +530,15 @@ def erstellen(doc) -> dict:
 	kunden = sorted(
 		{z[SP_INHALT[3]] for z in zeilen if z.get(SP_ART[3]) == "Customer" and z.get(SP_INHALT[3])}
 	)
+	doppelt = debitoren.doppelte_kontozeilen(kunden, doc.firma)
+	if doppelt:
+		frappe.throw(
+			_(
+				"Kunden mit mehreren Kontozeilen für {0} (jede Buchung erschiene doppelt): {1}. "
+				"Bitte im Kundenstamm unter „Konten“ je Firma nur eine Zeile lassen."
+			).format(doc.firma, ", ".join(doppelt)),
+			DatevFehler,
+		)
 	nummern: dict[str, str] = {}
 	neu_vergeben: list[str] = []
 	for kunde in kunden:
