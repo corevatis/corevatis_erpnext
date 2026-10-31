@@ -586,6 +586,8 @@ def ignorieren(bank_transaction: str, grund: str | None = None, aufheben=0) -> d
 		frappe.throw(_("Buchung {0} ist nicht gebucht.").format(bank_transaction), ZahlungFehler)
 	werte = {"cv_ignoriert": 0 if cint(aufheben) else 1}
 	if not cint(aufheben):
-		werte["cv_notiz"] = (frappe.utils.strip_html(grund or ""))[:500] or None
+		# reiner Text ohne spitze Klammern (kein Tag-Fragment, Security-Review)
+		notiz = frappe.utils.strip_html(grund or "").replace("<", "").replace(">", "").strip()
+		werte["cv_notiz"] = notiz[:500] or None
 	frappe.db.set_value("Bank Transaction", bank_transaction, werte)
 	return {"bank_transaction": bank_transaction, **werte}

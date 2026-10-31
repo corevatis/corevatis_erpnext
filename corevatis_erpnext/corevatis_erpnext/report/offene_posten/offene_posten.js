@@ -27,6 +27,10 @@ frappe.query_reports["Offene Posten"] = {
 		if (column.fieldname === "offen" && data.teilbezahlt) {
 			return `${formatiert} <span class="indicator-pill orange small">${esc(__("teilbezahlt"))}</span>`;
 		}
+		// Kundennamen und Hinweise nur maskiert (Security-Review, wie Zahlungseingang)
+		if (column.fieldtype === "Data" && typeof value === "string") {
+			return esc(value);
+		}
 		return formatiert;
 	},
 };

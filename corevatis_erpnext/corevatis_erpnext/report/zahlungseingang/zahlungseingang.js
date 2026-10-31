@@ -32,6 +32,11 @@ frappe.query_reports["Zahlungseingang"] = {
 			const farbe = { sicher: "green", wahrscheinlich: "blue", "möglich": "orange" }[data.sicherheit] || "gray";
 			return `<span class="indicator-pill ${farbe}">${esc(data.sicherheit)}</span>`;
 		}
+		// Freitext aus dem Kontoauszug (Zahler, Verwendungszweck, Notiz) und Kundennamen nur maskiert -
+		// Frappes Data-Formatter der Berichte maskiert nicht (Security-Review)
+		if (column.fieldtype === "Data" && typeof value === "string") {
+			return esc(value);
+		}
 		return formatiert;
 	},
 };
