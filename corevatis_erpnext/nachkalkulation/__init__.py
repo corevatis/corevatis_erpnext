@@ -565,7 +565,7 @@ def kennzahl(project: str) -> dict | None:
 	elif s["ist_h"]:
 		teile.append(_("{0} h ohne Sollstunden").format(s["ist_h"]))
 	if s["marge_prozent"] is not None:
-		teile.append(_("Marge {0} %").format(flt(s["marge_prozent"], 0)))
+		teile.append(_("Marge {0} %").format(cint(round(s["marge_prozent"]))))
 	return {
 		"projekt": project,
 		"ampel": s["ampel"],
