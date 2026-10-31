@@ -48,6 +48,15 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 - CI: erpnext_datev (`version-16`) in der Test-Bench installiert. Tests `test_datev` (Formatprüfung ohne
   Site; Monatsexport mit Abschlag, Schlussrechnung, Gutschrift, Zahlung; Wiederholung, nur neue, Festschreibung,
   eingefrorener Export, Rechte, Fehlerpfad). Übersetzungen.
+### Hinzugefügt (Meine Woche in der App, Phase 1 P1.4b, Issue Handwerker#84)
+
+- `planung.woche.woche(user, von, bis)` als Datenquelle des Kern-Endpunkts `meine_woche` (Hook
+  `corevatis_woche_adapter`): Termine, Arbeitspakete (mehrtägige je Tag auf die Arbeitszeit
+  beschnitten), Abwesenheiten (Art nur für Betroffene und Büro), Feiertage der Firma, Fahrzeug je
+  Einsatz, Überschneidungen und Fahrzeit-Hinweise wie die eigene Zeile der Plantafel; `geaendert` je
+  Eintrag (`modified` des Belegs). Volle Objektadresse eigener Arbeitspakete mit Leserecht auf das
+  Projekt (Navigation), fremde Vorgänge nur PLZ/Ort; keine Geokodierung aus der App. Nur der Benutzer
+  selbst oder ein Planer darf die Woche eines Benutzers abrufen.
 
 ### Hinzugefügt (Nachrichten am Vorgang, Phase 1 P1.6, Issue Handwerker#80)
 
