@@ -115,9 +115,10 @@ def koordinaten(adresse, budget: Budget | None = None, aktiv: bool | None = None
 		return Ort(text)
 	try:
 		treffer = abfragen(text)
-	except Exception:
+	except Exception as fehler:
 		frappe.cache.set_value(CACHE_SPERRE, 1, expires_in_sec=SPERRE_NACH_FEHLER)
-		frappe.log_error(title="Geokodierung: Nominatim nicht erreichbar", message=frappe.get_traceback())
+		# kein Traceback: requests-Meldungen enthalten die URL samt Adresse (Security-Review, PII im Error Log)
+		frappe.log_error(title="Geokodierung: Nominatim nicht erreichbar", message=fehler_kurz(fehler))
 		if budget is not None:
 			budget.fehlgeschlagen.append(text)
 		return Ort(text)
@@ -151,6 +152,15 @@ def speichern(text: str, treffer: tuple[float, float, str] | None, eintrag=None)
 			frappe.db.set_value(DOCTYPE, adresse_hash(text), werte)
 	# auch bei einem lesenden Aufruf (GET) behalten
 	frappe.flags.commit = True
+
+
+def fehler_kurz(fehler: Exception) -> str:
+	"""Fehlertyp und HTTP-Status ohne URL/Adresse - mehr braucht das Error Log nicht."""
+	status = getattr(getattr(fehler, "response", None), "status_code", None)
+	text = type(fehler).__name__
+	if status:
+		text += f": HTTP {status}"
+	return text + " (Adresse nicht protokolliert)"
 
 
 def _warten() -> None:

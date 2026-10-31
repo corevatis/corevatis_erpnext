@@ -412,9 +412,22 @@ class TestTerminplanung(IntegrationTestCase):
 		self.assertFalse(geokodierung.koordinaten(ADRESSE_HAMM, budget, aktiv=True).bekannt)
 		self.assertEqual((budget.rest, budget.verbraucht, self.nominatim.call_count), (0, 1, 3))
 		# Netzfehler: keine Ausnahme, danach Sperre
-		self.nominatim.side_effect = OSError("kein Netz")
+		self.nominatim.side_effect = OSError(
+			"kein Netz: https://nominatim.openstreetmap.org/search?q=Hafenweg"
+		)
 		self.assertFalse(geokodierung.koordinaten(ADRESSE_HAMM, aktiv=True).bekannt)
 		self.assertTrue(frappe.cache.get_value(geokodierung.CACHE_SPERRE))
+		# Error Log ohne Adresse/URL (Security-Review)
+		protokoll = frappe.get_all(
+			"Error Log",
+			filters={"method": "Geokodierung: Nominatim nicht erreichbar"},
+			fields=["error"],
+			order_by="creation desc",
+			limit=1,
+		)
+		self.assertTrue(protokoll)
+		self.assertIn("OSError", protokoll[0].error)
+		self.assertNotIn("Hafenweg", protokoll[0].error)
 		self.nominatim.side_effect = _nominatim
 		self.assertFalse(geokodierung.koordinaten(ADRESSE_HAMM, aktiv=True).bekannt)
 		self.assertEqual(self.nominatim.call_count, 4)
