@@ -14,6 +14,11 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   eigenen Einträge, auch ohne Art; die eigene Art steht im Stundenkonto (Ansicht „Tage“) und in der App.
   Der Link `mitarbeiter` ignoriert Benutzerberechtigungen, weil ERPNexts automatische User Permission auf den
   eigenen Employee die Liste sonst auf die eigene Zeile filtert (`planung/abwesenheit.py`: `sieht_team`).
+- Nachtrag (Review): Der Rahmen des Meisters ist seine Firma (`firma_des_benutzers`, Unterabfrage auf Employee),
+  nicht „alle“. Filtern, Sortieren und Gruppieren nach Art oder Notiz sind ohne Stufe-1-Recht gesperrt
+  (`geschuetzte_felder_pruefen` prüft die Listenanfrage; Frappe streicht geschützte Felder nur aus der Ausgabe und
+  prüft Filter bloß auf Existenz). Änderungsverfolgung des Doctypes aus - Versionen zeigten die Art jedem Leser;
+  Patch `v0_4.abwesenheit_versionen` löscht vorhandene Versionen.
 
 ### Hinzugefügt (Mitarbeiter: Urlaub, Krank, Stundenkonto, Phase 2 P2.5, Handwerker#88)
 

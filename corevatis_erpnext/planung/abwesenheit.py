@@ -10,17 +10,35 @@ der Monteur liest nur die eigenen (``permission_query_conditions``/``has_permiss
 from __future__ import annotations
 
 import datetime as dt
+import json
+import re
 
 import frappe
 from frappe import _
 from frappe.utils import cint, getdate, to_timedelta
 
 from corevatis_erpnext.planung.slotrechner import ART_ABWESENHEIT, EIN_TAG, UNBEKANNT, Belegung
+from corevatis_erpnext.zeiterfassung import employee_fuer_user
 
 DOCTYPE = "Abwesenheit"
 ROLLEN_ALLE = ("Büro", "System Manager")
-# sehen alle Abwesenheiten des Betriebs, aber ohne Art und Notiz (Feldrecht Stufe 1 im Doctype)
+# sehen alle Abwesenheiten ihrer Firma, aber ohne Art und Notiz (Feldrecht Stufe 1 im Doctype)
 ROLLEN_TEAM = ("Meister",)
+# Felder auf Feldrechtstufe 1: Frappe streicht sie aus der Ausgabe, prüft Filter aber nur auf Existenz
+GESCHUETZTE_FELDER = ("art", "notiz")
+_MUSTER_GESCHUETZT = re.compile(r"\b(" + "|".join(GESCHUETZTE_FELDER) + r")\b")
+# Parameter einer Listenanfrage, in denen Feldnamen stehen (reportview.get/get_count/export_query,
+# frappe.client.get_list/get_count, get_group_by_count, get_sidebar_stats)
+_ANFRAGE_PARAMETER = (
+	"filters",
+	"or_filters",
+	"current_filters",
+	"field",
+	"aggregate_on_field",
+	"order_by",
+	"group_by",
+	"stats",
+)
 
 
 def hrms_installiert() -> bool:
@@ -134,28 +152,109 @@ def darf_alle(user: str | None = None) -> bool:
 
 
 def sieht_team(user: str | None = None) -> bool:
-	"""Büro, System Manager und Meister sehen alle Abwesenheiten des Betriebs. Art und Notiz liegen auf
-	Feldrechtstufe 1 (nur Büro und System Manager); der Meister sieht fremde Einträge als „Abwesend“.
-	Der Link ``mitarbeiter`` ignoriert Benutzerberechtigungen, sonst filtert ERPNexts automatische
-	User Permission auf den eigenen Employee die Liste wieder auf die eigene Zeile."""
+	"""Büro und System Manager sehen alle Abwesenheiten, der Meister die seiner Firma (``firma_des_benutzers``).
+	Art und Notiz liegen auf Feldrechtstufe 1 (nur Büro und System Manager); der Meister sieht fremde Einträge
+	als „Abwesend“. Der Link ``mitarbeiter`` ignoriert Benutzerberechtigungen, sonst filtert ERPNexts
+	automatische User Permission auf den eigenen Employee die Liste wieder auf die eigene Zeile."""
 	user = user or frappe.session.user
 	return darf_alle(user) or bool(set(ROLLEN_TEAM) & set(frappe.get_roles(user)))
 
 
+def firma_des_benutzers(user: str) -> str | None:
+	"""Firma des aktiven Employee des Benutzers - der Rahmen, in dem ein Meister Abwesenheiten sieht."""
+	eigener = employee_fuer_user(user)
+	return (eigener or {}).get("company") or None
+
+
+def _feldnamen(filters) -> set[str]:
+	"""Feldnamen aus Frappe-Filtern: Dict, Liste von ``[feld, op, wert]`` oder ``[doctype, feld, op, wert]``, JSON."""
+	if isinstance(filters, str):
+		try:
+			filters = json.loads(filters)
+		except ValueError:
+			return set(_MUSTER_GESCHUETZT.findall(filters.lower()))
+	namen: set[str] = set()
+	if isinstance(filters, dict):
+		namen.update(str(k) for k in filters)
+	elif isinstance(filters, (list, tuple)):
+		for bedingung in filters:
+			if isinstance(bedingung, dict):
+				namen.update(str(k) for k in bedingung)
+			elif isinstance(bedingung, (list, tuple)) and bedingung:
+				namen.add(str(bedingung[1] if len(bedingung) == 4 else bedingung[0]))
+	return {n.rsplit(".", 1)[-1].strip("`").lower() for n in namen}
+
+
+def _feldnamen_in_text(wert) -> set[str]:
+	"""Geschützte Feldnamen in Sortierung, Gruppierung oder Feldlisten (String, Liste, Dict, JSON)."""
+	if wert is None:
+		return set()
+	if isinstance(wert, str):
+		try:
+			wert = json.loads(wert)
+		except ValueError:
+			return set(_MUSTER_GESCHUETZT.findall(wert.lower()))
+	if isinstance(wert, dict):
+		texte = [str(v) for v in wert.values()]
+	elif isinstance(wert, (list, tuple)):
+		texte = [str(v) for e in wert for v in (e.values() if isinstance(e, dict) else [e])]
+	else:
+		texte = [str(wert)]
+	return {t for text in texte for t in _MUSTER_GESCHUETZT.findall(text.lower())}
+
+
+def geschuetzte_felder_pruefen(user: str) -> None:
+	"""Wer Art und Notiz nicht lesen darf, darf auch nicht danach filtern, sortieren oder gruppieren.
+
+	Frappe entfernt Felder der Stufe 1 nur aus der Ausgabe (``apply_fieldlevel_read_permissions``); Filter
+	prüft ``reportview.validate_filters`` nur auf Existenz. Ein Meister könnte sonst mit ``art = Krank``
+	erfragen, wer krank ist. Geprüft wird die laufende Web-Anfrage (``frappe.local.form_dict``); eigene
+	Serverfunktionen lesen Abwesenheiten mit ``frappe.get_all`` und laufen hier nicht durch."""
+	form = getattr(frappe.local, "form_dict", None)
+	if not form or darf_alle(user):
+		return
+	gefunden: set[str] = set()
+	for schluessel in _ANFRAGE_PARAMETER:
+		wert = form.get(schluessel)
+		if wert is None or wert == "":
+			continue
+		if schluessel in ("filters", "or_filters", "current_filters"):
+			gefunden |= _feldnamen(wert) & set(GESCHUETZTE_FELDER)
+		else:
+			gefunden |= _feldnamen_in_text(wert)
+	if gefunden:
+		frappe.throw(
+			_(
+				"Nach Art oder Notiz der Abwesenheit dürfen nur Büro und System Manager filtern oder sortieren."
+			),
+			frappe.PermissionError,
+		)
+
+
 def permission_query_conditions(user: str | None = None) -> str:
-	"""Liste/Report: Monteure sehen nur ihre eigenen Abwesenheiten, Meister und Büro alle."""
+	"""Liste/Report: Büro alle, Meister die Mitarbeiter seiner Firma, Monteure nur die eigenen Abwesenheiten."""
 	user = user or frappe.session.user
-	if sieht_team(user):
+	if darf_alle(user):
 		return ""
+	geschuetzte_felder_pruefen(user)
+	if sieht_team(user):
+		firma = firma_des_benutzers(user)
+		if firma:
+			return (
+				"`tabAbwesenheit`.`mitarbeiter` in (select `name` from `tabEmployee` "
+				f"where `company` = {frappe.db.escape(firma)})"
+			)
 	return f"`tabAbwesenheit`.`benutzer` = {frappe.db.escape(user)}"
 
 
 def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
-	"""Formular/API: Meister lesen jede Abwesenheit (ohne Art), Monteure nur die eigene; schreiben darf
-	laut Doctype nur Büro/System Manager."""
+	"""Formular/API: Meister lesen die Abwesenheiten der Mitarbeiter ihrer Firma (ohne Art), Monteure nur die
+	eigene; schreiben darf laut Doctype nur Büro/System Manager."""
 	user = user or frappe.session.user
 	if darf_alle(user):
 		return True
-	if ptype == "read" and sieht_team(user):
-		return True
+	if ptype == "read" and sieht_team(user) and doc.get("mitarbeiter"):
+		firma = firma_des_benutzers(user)
+		if firma and frappe.db.get_value("Employee", doc.get("mitarbeiter"), "company") == firma:
+			return True
 	return bool(doc.get("benutzer")) and doc.get("benutzer") == user
