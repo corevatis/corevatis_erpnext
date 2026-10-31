@@ -7,8 +7,13 @@ Regeln (Nominatim Usage Policy, Security-Review):
   im Cache, Wartezeit vor der nächsten Anfrage), Timeout 5 s, keine Weiterleitungen, höchstens
   ``MAX_ABFRAGEN_JE_AUFRUF`` neue Adressen je Desk-Aufruf (der Rest gilt als „Fahrzeit geschätzt“
   und wird beim nächsten Aufruf nachgeholt);
-- jedes Ergebnis wird dauerhaft gespeichert, auch „Kein Treffer“ (erneuter Versuch nach 30 Tagen);
-- nach einem Netzfehler bleibt die Geokodierung 10 Minuten aus (Cache-Sperre), kein 500 im Desk;
+- jedes Ergebnis wird dauerhaft gespeichert, auch „Kein Treffer“ (``gefunden`` 0, lat/lon 0 - die
+  Spalten sind NOT NULL; erneuter Versuch nach 30 Tagen); ein Netzfehler wird nicht gespeichert;
+- Duplikate (parallele Aufrufe - Vorschläge und Konfliktprüfung des Dialogs - sehen im eigenen
+  Snapshot den Eintrag des anderen nicht) werden per Update statt Insert behandelt;
+- nach einem Netzfehler bleibt die Geokodierung 10 Minuten aus (Cache-Sperre); **kein Fehler der
+  Geokodierung (Netz, HTTP, Datenbank) bricht die Vorschläge ab** - es gilt dann die Standardfahrzeit
+  mit Hinweis „geschätzt“ (Befund mvp-test bench-39: IntegrityError riss den Dialog mit);
 - Schalter „Geokodierung aus“ in „Corevatis Planung Einstellungen“: keine Anfragen, alle Fahrzeiten
   mit der Standardfahrzeit.
 
@@ -83,25 +88,38 @@ def gespeichert(adresse: str) -> frappe._dict | None:
 	if not frappe.db.exists("DocType", DOCTYPE):
 		return None
 	return frappe.db.get_value(
-		DOCTYPE, adresse_hash(adresse), ["name", "lat", "lon", "quelle", "stand"], as_dict=True
+		DOCTYPE, adresse_hash(adresse), ["name", "lat", "lon", "quelle", "stand", "gefunden"], as_dict=True
 	)
+
+
+def _gefunden(eintrag) -> bool:
+	"""Eintrag mit Koordinaten: ``gefunden`` oder (Bestand vor dem Feld) Quelle nicht „Kein Treffer“."""
+	hat_koordinaten = bool(flt(eintrag.lat) or flt(eintrag.lon))
+	return hat_koordinaten and bool(cint(eintrag.get("gefunden")) or eintrag.quelle != QUELLE_KEIN_TREFFER)
 
 
 def koordinaten(adresse, budget: Budget | None = None, aktiv: bool | None = None) -> Ort:
 	"""Ort zur Adresse: aus dem Zwischenspeicher, sonst (Budget, Schalter, Sperre erlaubend) von
-	Nominatim. Ohne Ergebnis ein Ort ohne Koordinaten - nie eine Ausnahme."""
+	Nominatim. **Nie eine Ausnahme**: jeder Fehler (Netz, HTTP, Datenbank) ergibt einen Ort ohne
+	Koordinaten - die Vorschläge rechnen dann mit der Standardfahrzeit („geschätzt“)."""
 	text = normalisieren(adresse)
 	if not text:
 		return UNBEKANNT
+	try:
+		return _koordinaten(text, budget, aktiv)
+	except Exception as fehler:
+		# z. B. Datenbankfehler beim Speichern (Befund mvp-test bench-39)
+		frappe.log_error(title="Geokodierung: Fehler", message=fehler_kurz(fehler))
+		if budget is not None:
+			budget.fehlgeschlagen.append(text)
+		return Ort(text)
+
+
+def _koordinaten(text: str, budget: Budget | None, aktiv: bool | None) -> Ort:
 	eintrag = gespeichert(text)
-	if (
-		eintrag
-		and eintrag.quelle != QUELLE_KEIN_TREFFER
-		and eintrag.lat is not None
-		and eintrag.lon is not None
-	):
-		return Ort(text, flt(eintrag.lat), flt(eintrag.lon))
-	if eintrag and eintrag.quelle == QUELLE_KEIN_TREFFER:
+	if eintrag:
+		if _gefunden(eintrag):
+			return Ort(text, flt(eintrag.lat), flt(eintrag.lon))
 		stand = getdate(eintrag.stand) if eintrag.stand else None
 		if stand and stand > getdate(add_days(today(), -OHNE_TREFFER_TAGE)):
 			if budget is not None:
@@ -116,13 +134,14 @@ def koordinaten(adresse, budget: Budget | None = None, aktiv: bool | None = None
 	try:
 		treffer = abfragen(text)
 	except Exception as fehler:
+		# Netzfehler: nichts speichern, nur die Sperre. Kein Traceback: requests-Meldungen enthalten
+		# die URL samt Adresse (Security-Review, PII im Error Log)
 		frappe.cache.set_value(CACHE_SPERRE, 1, expires_in_sec=SPERRE_NACH_FEHLER)
-		# kein Traceback: requests-Meldungen enthalten die URL samt Adresse (Security-Review, PII im Error Log)
 		frappe.log_error(title="Geokodierung: Nominatim nicht erreichbar", message=fehler_kurz(fehler))
 		if budget is not None:
 			budget.fehlgeschlagen.append(text)
 		return Ort(text)
-	speichern(text, treffer, eintrag)
+	speichern(text, treffer)
 	if not treffer:
 		if budget is not None:
 			budget.ohne_treffer.append(text)
@@ -130,26 +149,51 @@ def koordinaten(adresse, budget: Budget | None = None, aktiv: bool | None = None
 	return Ort(text, treffer[0], treffer[1])
 
 
-def speichern(text: str, treffer: tuple[float, float, str] | None, eintrag=None) -> None:
+def _vorhanden(name: str) -> bool:
+	return bool(frappe.db.exists(DOCTYPE, name))
+
+
+def _aktualisieren(name: str, werte: dict) -> None:
+	# ein von Hand gesetzter Eintrag bleibt
+	if frappe.db.get_value(DOCTYPE, name, "quelle") == QUELLE_MANUELL:
+		return
+	frappe.db.set_value(DOCTYPE, name, werte)
+
+
+def speichern(text: str, treffer: tuple[float, float, str] | None) -> None:
+	"""Ergebnis dauerhaft merken - nie NULL in lat/lon (Spalten NOT NULL), „Kein Treffer“ mit
+	``gefunden`` 0; Duplikate per Update (ein paralleler Aufruf hat den Eintrag schon angelegt, der
+	eigene Snapshot sieht ihn nicht). Fehler hier fängt ``koordinaten`` ab."""
 	if not frappe.db.exists("DocType", DOCTYPE):
 		return
+	name = adresse_hash(text)
 	werte = {
 		"adresse": text,
 		"stand": now_datetime(),
+		"gefunden": 1 if treffer else 0,
 		"quelle": QUELLE_NOMINATIM if treffer else QUELLE_KEIN_TREFFER,
-		"lat": treffer[0] if treffer else None,
-		"lon": treffer[1] if treffer else None,
+		"lat": flt(treffer[0]) if treffer else 0.0,
+		"lon": flt(treffer[1]) if treffer else 0.0,
 		"anzeige": (treffer[2] if treffer else "")[:140],
 	}
-	if eintrag:
-		frappe.db.set_value(DOCTYPE, eintrag.name, werte)
-	else:
-		doc = frappe.get_doc({"doctype": DOCTYPE, "adresse_hash": adresse_hash(text), **werte})
-		doc.flags.ignore_permissions = True
-		try:
-			doc.insert()
-		except frappe.DuplicateEntryError:
-			frappe.db.set_value(DOCTYPE, adresse_hash(text), werte)
+	frappe.db.savepoint("cv_geo_speichern")
+	try:
+		if _vorhanden(name):
+			_aktualisieren(name, werte)
+		else:
+			doc = frappe.get_doc({"doctype": DOCTYPE, "adresse_hash": name, **werte})
+			doc.flags.ignore_permissions = True
+			meldungen = len(frappe.local.message_log)
+			try:
+				doc.insert()
+			except frappe.DuplicateEntryError:
+				# „existiert bereits“ gehört nicht in den Desk; der Eintrag kam aus einem parallelen Aufruf
+				del frappe.local.message_log[meldungen:]
+				frappe.db.rollback(save_point="cv_geo_speichern")
+				_aktualisieren(name, werte)
+	except Exception:
+		frappe.db.rollback(save_point="cv_geo_speichern")
+		raise
 	# auch bei einem lesenden Aufruf (GET) behalten
 	frappe.flags.commit = True
 

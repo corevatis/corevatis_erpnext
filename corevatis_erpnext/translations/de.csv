@@ -251,3 +251,5 @@ Nominatim: found on OpenStreetMap. Manuell: entered by the office. Kein Treffer:
 Geocoded At,Stand
 Match on the Map,Treffer auf der Karte
 Geocoded address (OpenStreetMap / Nominatim) for travel times of inspection appointments (Corevatis),Geokodierte Adresse (OpenStreetMap / Nominatim) für die Fahrzeiten der Besichtigungstermine (Corevatis)
+Found,Gefunden
+"Coordinates found (0 = no match, latitude and longitude 0)",Koordinaten gefunden (0 = kein Treffer; Breiten- und Längengrad 0)

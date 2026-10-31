@@ -402,9 +402,16 @@ class TestTerminplanung(IntegrationTestCase):
 		self.assertFalse(geokodierung.koordinaten("Nirgendwo 1", aktiv=True).bekannt)
 		self.assertFalse(geokodierung.koordinaten("Nirgendwo 1", aktiv=True).bekannt)
 		self.assertEqual(self.nominatim.call_count, 2)
+		zeile = frappe.db.get_value(
+			"Geokoordinate",
+			geokodierung.adresse_hash("Nirgendwo 1"),
+			["quelle", "gefunden", "lat", "lon"],
+			as_dict=True,
+		)
+		# nie NULL (Spalten NOT NULL, Befund mvp-test bench-39)
 		self.assertEqual(
-			frappe.db.get_value("Geokoordinate", geokodierung.adresse_hash("Nirgendwo 1"), "quelle"),
-			geokodierung.QUELLE_KEIN_TREFFER,
+			(zeile.quelle, zeile.gefunden, zeile.lat, zeile.lon),
+			(geokodierung.QUELLE_KEIN_TREFFER, 0, 0.0, 0.0),
 		)
 		# Budget je Aufruf
 		budget = geokodierung.Budget(abfragen=1)
@@ -417,6 +424,8 @@ class TestTerminplanung(IntegrationTestCase):
 		)
 		self.assertFalse(geokodierung.koordinaten(ADRESSE_HAMM, aktiv=True).bekannt)
 		self.assertTrue(frappe.cache.get_value(geokodierung.CACHE_SPERRE))
+		# ein Netzfehler wird nicht gespeichert
+		self.assertFalse(frappe.db.exists("Geokoordinate", geokodierung.adresse_hash(ADRESSE_HAMM)))
 		# Error Log ohne Adresse/URL (Security-Review)
 		protokoll = frappe.get_all(
 			"Error Log",
@@ -457,11 +466,52 @@ class TestTerminplanung(IntegrationTestCase):
 			(doc.name, doc.adresse, doc.quelle),
 			(geokodierung.adresse_hash("Handweg 1, 48143 Münster"), "Handweg 1, 48143 Münster", "Manuell"),
 		)
+		self.assertEqual(doc.gefunden, 1)
 		ort = geokodierung.koordinaten("Handweg 1, 48143 Münster", aktiv=True)
 		self.assertEqual((ort.lat, ort.lon), (51.96, 7.62))
 		self.assertEqual(self.nominatim.call_count, 0)
 		with self.assertRaises(frappe.ValidationError):
 			frappe.get_doc({"doctype": "Geokoordinate", "adresse": "Falsch 1", "lat": 123, "lon": 7}).insert()
+
+	def test_geokodierung_fehler_brechen_vorschlaege_nicht_ab(self):
+		# Befund mvp-test (bench-39): ein Datenbankfehler beim Speichern riss die Vorschläge mit
+		self.addCleanup(frappe.db.rollback)
+		with patch.object(geokodierung, "speichern", side_effect=Exception("Column 'lat' cannot be null")):
+			budget = geokodierung.Budget()
+			ort = geokodierung.koordinaten(ADRESSE_OBJEKT, budget, aktiv=True)
+			self.assertEqual((ort.text, ort.bekannt), (ADRESSE_OBJEKT, False))
+			self.assertEqual(budget.fehlgeschlagen, [ADRESSE_OBJEKT])
+			r = self._vorschlaege()
+		self.assertTrue(r["vorschlaege"], r["hinweise"])
+		self.assertTrue(r["fahrzeit_geschaetzt"])
+		self.assertTrue(any("Fahrzeit geschätzt" in h for h in r["hinweise"]), r["hinweise"])
+		self.assertTrue(frappe.db.exists("Error Log", {"method": "Geokodierung: Fehler"}))
+		# Duplikat: ein paralleler Aufruf hat den Eintrag schon angelegt, der eigene Snapshot sieht ihn nicht
+		self.assertTrue(geokodierung.koordinaten(ADRESSE_FREMD, aktiv=True).bekannt)
+		name = geokodierung.adresse_hash(ADRESSE_FREMD)
+		stand_vorher = frappe.db.get_value("Geokoordinate", name, "stand")
+		meldungen = len(frappe.local.message_log)
+		with (
+			patch.object(geokodierung, "gespeichert", return_value=None),
+			patch.object(geokodierung, "_vorhanden", return_value=False),
+		):
+			ort = geokodierung.koordinaten(ADRESSE_FREMD, aktiv=True)
+		self.assertTrue(ort.bekannt)
+		self.assertEqual(len(frappe.local.message_log), meldungen)  # keine Meldung „existiert bereits“
+		self.assertEqual(frappe.db.count("Geokoordinate", {"adresse": ADRESSE_FREMD}), 1)
+		self.assertGreaterEqual(frappe.db.get_value("Geokoordinate", name, "stand"), stand_vorher)
+		# kein Treffer, zweiter Aufruf derselben Adresse: gemerkt, keine zweite Anfrage, nie NULL
+		anzahl = self.nominatim.call_count
+		self.assertFalse(geokodierung.koordinaten("Irgendwo 7, 00000 Nirgends", aktiv=True).bekannt)
+		self.assertFalse(geokodierung.koordinaten("Irgendwo 7, 00000 Nirgends", aktiv=True).bekannt)
+		self.assertEqual(self.nominatim.call_count, anzahl + 1)
+		zeile = frappe.db.get_value(
+			"Geokoordinate",
+			geokodierung.adresse_hash("Irgendwo 7, 00000 Nirgends"),
+			["gefunden", "lat", "lon", "quelle"],
+			as_dict=True,
+		)
+		self.assertEqual((zeile.gefunden, zeile.lat, zeile.lon, zeile.quelle), (0, 0.0, 0.0, "Kein Treffer"))
 
 	# --- Doppelbuchungsschutz -------------------------------------------------------------
 

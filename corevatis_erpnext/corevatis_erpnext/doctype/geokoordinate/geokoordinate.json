@@ -13,6 +13,7 @@
   "column_break_koordinaten",
   "lat",
   "lon",
+  "gefunden",
   "section_quelle",
   "quelle",
   "stand",
@@ -55,6 +56,15 @@
    "precision": "7"
   },
   {
+   "default": "0",
+   "description": "Coordinates found (0 = no match, latitude and longitude 0)",
+   "fieldname": "gefunden",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Found",
+   "read_only": 1
+  },
+  {
    "fieldname": "section_quelle",
    "fieldtype": "Section Break",
    "label": "Source"
@@ -83,7 +93,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-31 12:00:00.000000",
+ "modified": "2026-10-31 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Corevatis ERPNext",
  "name": "Geokoordinate",
