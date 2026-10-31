@@ -57,6 +57,8 @@ def after_install() -> None:
 
 	ensure_prozess()
 	ensure_abnahme()
+	# Dokumentenmappe (Epic D): Ampel am Projekt, Übersteuerung an Angebot und Rechnung
+	ensure_mappe()
 
 
 def after_migrate() -> None:
@@ -108,12 +110,21 @@ def after_migrate() -> None:
 	ensure_material()
 	# Abnahme (6.1/6.2): Task/Project/Sales Invoice-Felder
 	ensure_abnahme()
+	# Dokumentenmappe (Epic D): Ampel am Projekt, Übersteuerung an Angebot und Rechnung
+	ensure_mappe()
 
 
 def ensure_abnahme() -> None:
 	from corevatis_erpnext.abnahme.felder import ensure_abnahme_felder
 
 	ensure_abnahme_felder()
+
+
+def ensure_mappe() -> None:
+	"""Felder der Dokumentenmappe - nach den Abnahmefeldern (sie hängen sich dahinter)."""
+	from corevatis_erpnext.mappe.felder import ensure_mappe_felder
+
+	ensure_mappe_felder()
 
 
 def ensure_planung_setup() -> None:

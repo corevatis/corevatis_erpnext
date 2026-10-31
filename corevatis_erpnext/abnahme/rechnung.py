@@ -100,13 +100,19 @@ def rechnung_pruefen(doc, method=None) -> None:
 	offen = [p for p in rechnung_projekte(doc) if not abgenommen(p)]
 	if not offen:
 		return
-	if cint(doc.get("cv_abschlag")) or cint(doc.get("cv_abnahme_uebersteuert")):
+	# Dokumentenmappe (D.5): eine vom Büro begründete Übersteuerung der Mappenprüfung
+	# (``cv_mappe_uebersteuert``, gesichert und protokolliert im Kern) gilt auch hier
+	if (
+		cint(doc.get("cv_abschlag"))
+		or cint(doc.get("cv_abnahme_uebersteuert"))
+		or cint(doc.get("cv_mappe_uebersteuert"))
+	):
 		return
 	frappe.throw(
 		_(
 			"Rechnung zu Projekt {0} ist noch nicht möglich: Das Projekt ist nicht abgenommen. "
 			"Bitte zuerst das Abnahmeprotokoll abschließen. Eine Abschlagsrechnung bitte als "
-			"„Abschlagsrechnung“ markieren; nur ein System Manager kann mit Begründung übersteuern."
+			"„Abschlagsrechnung“ markieren; das Büro kann die Mappenprüfung mit Begründung übersteuern."
 		).format(", ".join(offen)),
 		RechnungOhneAbnahme,
 		title=_("Rechnung ohne Abnahme"),

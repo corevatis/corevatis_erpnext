@@ -1034,7 +1034,28 @@ def auswerten(k: frappe._dict, einst=None, mit_aktionen: bool = True) -> dict:
 		"ampel": ergebnis_ampel
 		if (lead_lesbar or not lead)
 		else {"farbe": ergebnis_ampel["farbe"], "text": "", "gruende": []},
+		"mappe": _mappe(k, lead_lesbar),
 	}
+
+
+def _mappe(k: frappe._dict, lead_lesbar: bool) -> dict | None:
+	"""Dokumentenmappe (Epic D): Ampel-Hinweis und Knopf „Mappe“ in der Leiste. Aus dem Kern
+	(``corevatis_erpnext.mappe.stand``); ``None`` ohne Kern oder ohne lesbaren Anker (Anfrage bzw.
+	ein lesbares Projekt). Fehler der Mappe halten die Leiste nicht auf."""
+	try:
+		from corevatis_erpnext import mappe
+
+		if not mappe.kern_da():
+			return None
+		if k.lead and lead_lesbar:
+			return mappe.stand("Lead", k.lead.name)
+		for projekt in k.projekte or []:
+			if lesbar("Project", projekt.name):
+				return mappe.stand("Project", projekt.name)
+		return None
+	except Exception:
+		frappe.log_error(title="Prozessleiste: Mappe")
+		return None
 
 
 @frappe.whitelist()

@@ -230,12 +230,21 @@ frappe.provide("corevatis_erpnext.prozess");
 		const vorgang = daten.vorgang || {};
 		// Am Projekt hat die Ausführung ihren eigenen Hauptknopf (planung.js) - kein zweiter hier
 		const naechste = frm.doctype === "Project" && daten.aktuell === "ausfuehrung" ? null : daten.naechste_aktion;
+		// Dokumentenmappe (Epic D): Ampel-Hinweis „Mappe: …“ und Knopf „Mappe“ (Kern-Page), nur mit Kern
+		const mappe = daten.mappe || null;
 		el.html(`
 			<div class="cv-pl-kopf">
 				<span class="cv-pl-titel">${esc(__("Vorgang"))}${vorgang.titel ? ": " + esc(vorgang.titel) : ""}</span>
 				${
 					ampel.farbe
 						? `<span class="indicator-pill ${AMPEL[ampel.farbe] || "gray"}">${esc(ampel.text || ampel.farbe)}</span>`
+						: ""
+				}
+				${
+					mappe
+						? `<span class="indicator-pill ${AMPEL[mappe.ampel] || "gray"} cv-pl-mappe" title="${esc(mappe.text || "")}">${esc(
+								mappe.text || __("Mappe")
+						  )}</span><button class="btn btn-xs btn-default cv-pl-mappe-knopf">${esc(__("Mappe"))}</button>`
 						: ""
 				}
 				${
@@ -251,6 +260,7 @@ frappe.provide("corevatis_erpnext.prozess");
 			schritt_klick(frm, schritte[cint(this.dataset.index)]);
 		});
 		el.find(".cv-pl-naechste").on("click", () => P.aktion_ausfuehren(frm, naechste));
+		el.find(".cv-pl-mappe-knopf").on("click", () => frappe.set_route("mappe", { vorgang: mappe.vorgang }));
 	}
 
 	P.render = function (frm) {

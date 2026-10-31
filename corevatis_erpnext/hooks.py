@@ -69,8 +69,8 @@ doctype_js = {
 		_PROZESSLEISTE,
 		"public/js/prozess_lead.js",
 	],
-	# Angebot annehmen/ablehnen (4.4), Nachfassen (4.5)
-	"Quotation": ["public/js/quotation_annahme.js", _PROZESSLEISTE],
+	# Angebot annehmen/ablehnen (4.4), Nachfassen (4.5); Mappenprüfung übersteuern (Epic D)
+	"Quotation": ["public/js/quotation_annahme.js", _PROZESSLEISTE, "public/js/mappe_uebersteuern.js"],
 	# Angebot aus dem Aufmaß (4.1): Doctype Aufmass aus corevatis, ohne Kern lädt es nie
 	"Aufmass": ["public/js/aufmass_angebot.js", _PROZESSLEISTE],
 	# Foto-Galerie am Befund (3.7): Fotos der App; Doctype aus corevatis, ohne Kern lädt es nie
@@ -83,7 +83,8 @@ doctype_js = {
 	# Bibliothek (auch vom Wochenplan per frappe.require geladen)
 	"Task": ["public/js/zuweisung.js", "public/js/task_zuweisung.js"],
 	"Objekt": [_PROZESSLEISTE],
-	"Sales Invoice": [_PROZESSLEISTE],
+	# Rechnung: Mappenprüfung übersteuern (Epic D, D.5)
+	"Sales Invoice": [_PROZESSLEISTE, "public/js/mappe_uebersteuern.js"],
 	# Abnahme (6.1): Doctype aus corevatis, ohne Kern lädt es nie; „Mangel-Aufgaben erzeugen“
 	"Abnahmeprotokoll": ["public/js/abnahme.js", _PROZESSLEISTE],
 }
@@ -127,10 +128,18 @@ doc_events = {
 	},
 	"Sales Invoice": {
 		"before_insert": "corevatis_erpnext.setup.naming.set_return_naming_series",
-		# 6.2: Rechnung zu einem Projekt ohne Abnahme ablehnen (außer Abschlag/Übersteuerung)
-		"validate": "corevatis_erpnext.abnahme.rechnung_pruefen",
+		# Dokumentenmappe (D.5) zuerst: Pflichtdokumente ab Schritt Rechnung (Abnahmeprotokoll in der
+		# Mappe), Übersteuern mit Begründung durch das Büro - danach die Abnahmesperre 6.2
+		"validate": [
+			"corevatis_erpnext.mappe.rechnung_pruefen",
+			"corevatis_erpnext.abnahme.rechnung_pruefen",
+		],
 		"on_update": "corevatis_erpnext.abnahme.rechnung.rechnung_kommentar",
-		"on_submit": "corevatis_erpnext.abnahme.rechnung.rechnung_kommentar",
+		"on_submit": [
+			"corevatis_erpnext.abnahme.rechnung.rechnung_kommentar",
+			# Dokumentenmappe (D.2): Rechnungs-PDF in Ordner 07 Rechnung
+			"corevatis_erpnext.mappe.rechnung_freigegeben",
+		],
 	},
 	# Befunde mvp-test: Hinweis auf Positionen ohne Preis (falsche Preisliste)
 	# Angebotsdruck (4.3): Textbausteine in leere Felder, Eventual-/Alternativpositionen
@@ -138,13 +147,21 @@ doc_events = {
 	"Quotation": {
 		"before_insert": "corevatis_erpnext.angebot.textbausteine.standard_texte",
 		"before_validate": "corevatis_erpnext.angebot.textbausteine.kennzeichen_ausserhalb_summe",
-		# Review Epic 4 A-2: Eventual-/Alternativpositionen sind kein Ersatz für die Zeile davor
-		"before_submit": "corevatis_erpnext.angebot.textbausteine.alternativ_sets_aufloesen",
+		# Review Epic 4 A-2: Eventual-/Alternativpositionen sind kein Ersatz für die Zeile davor;
+		# Dokumentenmappe (D.5): Pflichtdokumente ab Schritt Angebot
+		"before_submit": [
+			"corevatis_erpnext.angebot.textbausteine.alternativ_sets_aufloesen",
+			"corevatis_erpnext.mappe.angebot_pruefen",
+		],
 		"validate": [
 			"corevatis_erpnext.angebot.pruefung.positionen_ohne_preis",
 			# Security-Review: cv_lead setzt nur der Server
 			"corevatis_erpnext.angebot.annahme.cv_lead_schuetzen",
+			# Dokumentenmappe (D.5): Übersteuerung nur Büro/System Manager, bei jedem Speichern gesichert
+			"corevatis_erpnext.mappe.angebot_validieren",
 		],
+		# Dokumentenmappe (D.2): „PDF bei Freigabe“ - Angebot Corevatis in Ordner 03 Angebot
+		"on_submit": "corevatis_erpnext.mappe.angebot_freigegeben",
 		# 4.4: über ERPNext „Als verloren festlegen“ verloren -> Lead „Verloren“
 		"on_update_after_submit": "corevatis_erpnext.angebot.annahme.angebot_aktualisiert",
 	},
@@ -154,6 +171,8 @@ doc_events = {
 		"on_submit": [
 			"corevatis_erpnext.angebot.annahme.auftrag_eingereicht",
 			"corevatis_erpnext.planung.auftrag_eingereicht",
+			# Dokumentenmappe (D.2): Auftragsbestätigung als PDF in Ordner 04 Auftrag
+			"corevatis_erpnext.mappe.auftrag_freigegeben",
 		],
 	},
 	# Befunde mvp-test: Objekt eines Leads am Lead eintragen (Lead.cv_objekt, 2.1);

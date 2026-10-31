@@ -277,3 +277,12 @@ Vehicle,Fahrzeug
 Planning Board,Plantafel
 Row Order of Employees,Reihenfolge der Mitarbeiter-Zeilen
 One employee ID per line; set via “Reihenfolge” on the planning board. Employees not listed follow alphabetically.,"Eine Mitarbeiter-Nummer je Zeile; wird über „Reihenfolge“ in der Plantafel gesetzt. Nicht aufgeführte Mitarbeiter folgen alphabetisch."
+Document Folder,Dokumentenmappe
+Document Folder Status,Mappe (Ampel)
+Document Folder Note,Mappe (Hinweis)
+Set by the document folder: red = a mandatory document is missing for the next step,"Von der Dokumentenmappe gesetzt: rot = für den nächsten Schritt fehlt ein Pflichtdokument"
+Document Folder Check,Mappenprüfung
+Folder Check Overridden,Mappenprüfung übersteuert
+Reason for Folder Override,Begründung der Übersteuerung
+Folder Override By,Übersteuert von
+Office or System Manager only, with a reason; logged in Mappenpruefung,"Nur Büro oder System Manager, mit Begründung; protokolliert in der Mappenprüfung"
