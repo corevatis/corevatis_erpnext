@@ -1055,6 +1055,7 @@ def auswerten(k: frappe._dict, einst=None, mit_aktionen: bool = True) -> dict:
 		else {"farbe": ergebnis_ampel["farbe"], "text": "", "gruende": []},
 		"mappe": _mappe(k, lead_lesbar),
 		"nachrichten": _nachrichten(k, lead_lesbar),
+		"nachkalkulation": _nachkalkulation(k),
 	}
 
 
@@ -1095,6 +1096,22 @@ def _nachrichten(k: frappe._dict, lead_lesbar: bool) -> dict | None:
 		return None
 	except Exception:
 		frappe.log_error(title="Prozessleiste: Nachrichten")
+		return None
+
+
+def _nachkalkulation(k: frappe._dict) -> dict | None:
+	"""Nachkalkulation (P2.1): Pille „Nachkalkulation: 92 % der Sollstunden, Marge 31 %“ mit Ampel und
+	Knopf zum Bericht - nur wenn die Leiste am Projekt steht (Rechenaufwand je Aufruf), nur für Büro und
+	Meister, ``None`` ohne Soll- und Ist-Daten. Fehler halten die Leiste nicht auf."""
+	try:
+		start_doctype, start_name = k.get("start") or (None, None)
+		if start_doctype != "Project" or not start_name:
+			return None
+		from corevatis_erpnext import nachkalkulation
+
+		return nachkalkulation.kennzahl(start_name)
+	except Exception:
+		frappe.log_error(title="Prozessleiste: Nachkalkulation")
 		return None
 
 
