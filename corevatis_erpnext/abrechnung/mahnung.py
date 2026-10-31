@@ -45,6 +45,10 @@ RECHTE_BUERO = {
 	"Dunning": ("read", "write", "create", "submit", "cancel", "amend", "print", "email", "report"),
 	"Dunning Type": ("read",),
 }
+# Der Meister liest Rechnungen (Offene Posten sind ein Bericht über Sales Invoice, Rechnungsdruck 7.3);
+# ohne diese Rechte sah er auf mvp-test weder die Liste noch das Rechnungsformular (Abnahme Build 27)
+RECHTE_MEISTER = {"Sales Invoice": ("read", "print", "report")}
+RECHTE = {"Büro": RECHTE_BUERO, "Meister": RECHTE_MEISTER}
 
 
 class MahnungFehler(AbrechnungFehler):
@@ -167,20 +171,22 @@ def mahntyp(stufe: int, company: str) -> str:
 
 
 def ensure_rechte() -> None:
-	"""Rolle Büro: Mahnungen buchen (ERPNext gibt Accounts User kein Submit an Dunning) und Mahntypen lesen."""
+	"""Rolle Büro: Mahnungen buchen (ERPNext gibt Accounts User kein Submit an Dunning) und Mahntypen lesen.
+	Rolle Meister: Rechnungen lesen, drucken und als Bericht (Offene Posten) sehen."""
 	from frappe.permissions import add_permission, update_permission_property
 
-	if not frappe.db.exists("Role", "Büro"):
-		return
-	for doctype, rechte in RECHTE_BUERO.items():
-		if not frappe.db.exists("DocType", doctype):
+	for rolle, je_doctype in RECHTE.items():
+		if not frappe.db.exists("Role", rolle):
 			continue
-		add_permission(doctype, "Büro", 0)
-		for recht in rechte:
-			if not frappe.db.get_value(
-				"Custom DocPerm", {"parent": doctype, "role": "Büro", "permlevel": 0}, recht
-			):
-				update_permission_property(doctype, "Büro", 0, recht, 1, validate=False)
+		for doctype, rechte in je_doctype.items():
+			if not frappe.db.exists("DocType", doctype):
+				continue
+			add_permission(doctype, rolle, 0)
+			for recht in rechte:
+				if not frappe.db.get_value(
+					"Custom DocPerm", {"parent": doctype, "role": rolle, "permlevel": 0}, recht
+				):
+					update_permission_property(doctype, rolle, 0, recht, 1, validate=False)
 	frappe.clear_cache()
 
 
