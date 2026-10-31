@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <BkToCstmrStmt>
+    <GrpHdr><MsgId>STMT-2026-11-07</MsgId><CreDtTm>2026-11-07T06:00:00</CreDtTm></GrpHdr>
+    <Stmt>
+      <Id>2026-11-07-1</Id>
+      <Acct><Id><IBAN>DE02100100100006820101</IBAN></Id><Ccy>EUR</Ccy></Acct>
+      <Ntry>
+        <Amt Ccy="EUR">1431.26</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-11-03</Dt></BookgDt>
+        <ValDt><Dt>2026-11-03</Dt></ValDt>
+        <AcctSvcrRef>2026110312345678</AcctSvcrRef>
+        <BkTxCd><Prtry><Cd>NTRF+166</Cd></Prtry></BkTxCd>
+        <NtryDtls><TxDtls>
+          <Refs><EndToEndId>NOTPROVIDED</EndToEndId></Refs>
+          <RltdPties><Dbtr><Nm>Erika Müller</Nm></Dbtr><DbtrAcct><Id><IBAN>DE02120300000000202051</IBAN></Id></DbtrAcct></RltdPties>
+          <RmtInf><Ustrd>Rechnung RE-2026-00042</Ustrd><Ustrd>Kellerabdichtung</Ustrd></RmtInf>
+        </TxDtls></NtryDtls>
+        <AddtlNtryInf>GUTSCHR. UEBERWEISUNG</AddtlNtryInf>
+      </Ntry>
+      <Ntry>
+        <Amt Ccy="EUR">89.90</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-11-04</Dt></BookgDt>
+        <ValDt><Dt>2026-11-04</Dt></ValDt>
+        <AcctSvcrRef>2026110412345679</AcctSvcrRef>
+        <NtryDtls><TxDtls>
+          <RltdPties><Cdtr><Nm>Aral Willich</Nm></Cdtr></RltdPties>
+          <RmtInf><Ustrd>Tankstelle Kartenzahlung</Ustrd></RmtInf>
+        </TxDtls></NtryDtls>
+        <AddtlNtryInf>FOLGELASTSCHRIFT</AddtlNtryInf>
+      </Ntry>
+      <Ntry>
+        <Amt Ccy="EUR">1908.34</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-11-05</Dt></BookgDt>
+        <ValDt><Dt>2026-11-05</Dt></ValDt>
+        <AcctSvcrRef>2026110512345680</AcctSvcrRef>
+        <NtryDtls><TxDtls>
+          <Refs><EndToEndId>E2E-77</EndToEndId></Refs>
+          <RltdPties><Dbtr><Nm>Familie Feucht</Nm></Dbtr><DbtrAcct><Id><IBAN>DE02500105170137075030</IBAN></Id></DbtrAcct></RltdPties>
+          <RmtInf><Ustrd>Abschlag Keller</Ustrd></RmtInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>

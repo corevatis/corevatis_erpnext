@@ -387,3 +387,50 @@ Vollständig gestellt,Vollständig gestellt
 Schlussrechnung,Schlussrechnung
 Nachrichten: {0} ungelesen,Nachrichten: {0} ungelesen
 Nachrichten: {0},Nachrichten: {0}
+"Settings for down payment schedules, down payment invoices, final invoices, the labour share (§ 35a EStG), dunning and incoming payments (Corevatis)","Einstellungen für Abschlagspläne, Abschlagsrechnungen, Schlussrechnungen, den Lohnanteil (§ 35a EStG), Mahnwesen und Zahlungseingang (Corevatis)"
+Dunning,Mahnung
+Dunnings,Mahnungen
+Dunning Type,Mahntyp
+Payment Reminder (Days after Due Date),Zahlungserinnerung (Tage nach Fälligkeit)
+Proposed payment reminder this many days after the due date,So viele Tage nach Fälligkeit wird die Zahlungserinnerung vorgeschlagen
+1st Dunning Notice (Days after Reminder),1. Mahnung (Tage nach der Erinnerung)
+2nd Dunning Notice (Days after 1st Notice),2. Mahnung (Tage nach der 1. Mahnung)
+Payment Deadline in the Notice (Days),Zahlungsfrist in der Mahnung (Tage)
+Pay-by date printed on the notice: posting date plus these days,„Zahlbar bis“ auf der Mahnung: Datum der Mahnung plus diese Tage
+Fee 1st Dunning Notice,Mahngebühr 1. Mahnung
+Payment reminders never carry a fee,Zahlungserinnerungen haben nie eine Gebühr
+Fee 2nd Dunning Notice,Mahngebühr 2. Mahnung
+Income Account for Dunning Fees,Ertragskonto für Mahngebühren
+"Empty: account 2650 (SKR03) / 7100 (SKR04), otherwise the company's default income account","Leer: Konto 2650 (SKR03) / 7100 (SKR04), sonst das Standard-Erlöskonto der Firma"
+Incoming Payments (Bank Statement Import),Zahlungseingang (Kontoauszug einlesen)
+Bank Account,Bankkonto
+"Company bank account the statements belong to (empty: default company bank account, created on the first import)","Firmenkonto, zu dem die Auszüge gehören (leer: Standard-Firmenkonto, wird beim ersten Einlesen angelegt)"
+Import Credits Only,Nur Gutschriften einlesen
+Skip outgoing payments (debits) when importing a statement,"Abgänge (Lastschriften, Überweisungen) beim Einlesen überspringen"
+CSV Delimiter,CSV-Trennzeichen
+CSV Column: Date,CSV-Spalte: Datum
+Column headings of the bank's CSV export; empty = detect Sparkasse/VR-Bank headings automatically,Spaltenüberschriften des CSV-Exports der Bank; leer = Sparkasse/VR-Bank automatisch erkennen
+CSV Column: Amount,CSV-Spalte: Betrag
+CSV Column: Purpose,CSV-Spalte: Verwendungszweck
+CSV Column: Payer Name,CSV-Spalte: Name des Zahlers
+CSV Column: Payer IBAN,CSV-Spalte: IBAN des Zahlers
+Dunning Level (Corevatis),Mahnstufe (Corevatis)
+"0 = payment reminder, 1 = 1st dunning notice, 2 = 2nd dunning notice","0 = Zahlungserinnerung, 1 = 1. Mahnung, 2 = 2. Mahnung"
+"0 = payment reminder, 1 = 1st dunning notice, 2 = 2nd dunning notice; used by the dunning proposal","0 = Zahlungserinnerung, 1 = 1. Mahnung, 2 = 2. Mahnung; Grundlage des Mahnvorschlags"
+Pay By,Zahlbar bis
+Printed on the notice: posting date plus the deadline from the settings,Steht auf der Mahnung: Datum der Mahnung plus Zahlungsfrist aus den Einstellungen
+Incoming Payment (Corevatis),Zahlungseingang (Corevatis)
+Ignored,Ignoriert
+No invoice behind this entry (set via “Ignore” in the incoming payments list),Hinter dieser Buchung steht keine Rechnung (über „Ignorieren“ in der Liste Zahlungseingang gesetzt)
+Imported From,Eingelesen aus
+Statement file and line the entry was imported from,"Datei und Zeile des Kontoauszugs, aus der die Buchung stammt"
+Offene Posten,Offene Posten
+Zahlungseingang,Zahlungseingang
+Mahnungen,Mahnungen
+Bank Transaction,Bankbuchung
+Bank Transactions,Bankbuchungen
+Payment Entry,Zahlung
+Payment Entries,Zahlungen
+sicher,sicher
+wahrscheinlich,wahrscheinlich
+möglich,möglich

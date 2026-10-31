@@ -2,7 +2,8 @@
 
 Wird von ``prozess.kette`` aufgerufen (dort nur je ein Aufruf in ``sammeln``, ``schritte`` und
 ``aktionen``). Texte: „Abschlag 1 von 3 gestellt (30 %, 1.431,26 € brutto), 2 offen“,
-„Schlussrechnung im Entwurf“, „Schlussrechnung RE-… vom …, bezahlt“. Aktionen: „Rechnung freigeben“
+„Schlussrechnung im Entwurf“, „Schlussrechnung RE-… vom …, bezahlt am …“ bzw. „… offen 1.654,68 €, fällig
+seit 5 Tagen, 1. Mahnung vom …“ (7.5: Zahlungs- und Mahnstand aus ``offene_posten``). Aktionen: „Rechnung freigeben“
 (Entwurf), „Schlussrechnung erstellen“ (nach der Abnahme), „Abschlag stellen“; der ERPNext-Weg
 „Erstellen → Rechnung“ bleibt am Auftrag erreichbar, die Leiste führt über die neuen Knöpfe.
 """
@@ -15,6 +16,7 @@ from frappe.utils import cint, flt, fmt_money, format_date
 
 from corevatis_erpnext.abrechnung import plan
 from corevatis_erpnext.abrechnung.auftrag import darf_abrechnen, felder_da, ist_bezahlt
+from corevatis_erpnext.abrechnung.offene_posten import bezahlt_am, ist_teilbezahlt, mahnstand, zahlungsinfo
 
 BASIS_FELDER = (
 	"name",
@@ -23,6 +25,7 @@ BASIS_FELDER = (
 	"is_return",
 	"creation",
 	"posting_date",
+	"due_date",
 	"grand_total",
 	"outstanding_amount",
 	"currency",
@@ -79,7 +82,17 @@ def schritt(
 			info = (info + " · " if info else "") + _("Entwurf")
 		elif r.docstatus == 1 and ist_bezahlt(r):
 			info = (info + " · " if info else "") + _("bezahlt")
+		elif r.docstatus == 1 and ist_teilbezahlt(r):
+			info = (info + " · " if info else "") + _("teilbezahlt")
 		belege.append(("Sales Invoice", r.name, info))
+	# 7.5: Zahlungs- und Mahnstand der gebuchten Rechnungen („bezahlt am …“, „fällig seit …“, Mahnstufe)
+	gebuchte_namen = [r.name for r in rechnungen if r.docstatus == 1]
+	zahlungen = bezahlt_am(gebuchte_namen) if gebuchte_namen else {}
+	mahnungen = mahnstand(gebuchte_namen) if gebuchte_namen else {}
+
+	def zahlung(r) -> str:
+		return zahlungsinfo(r, currency, mahnungen.get(r.name), zahlungen.get(r.name))
+
 	plan_info = k.get("abschlagsplan")
 	gebucht = [r for r in rechnungen if r.docstatus == 1]
 	abgerechnet = flt(auftrag.per_billed) if auftrag and auftrag.docstatus == 1 else 0
@@ -91,11 +104,7 @@ def schritt(
 		text = _("Schlussrechnung {0} vom {1}").format(
 			schluss_gebucht.name, format_date(schluss_gebucht.posting_date)
 		)
-		text += ", " + (
-			_("bezahlt")
-			if ist_bezahlt(schluss_gebucht)
-			else _("offen {0}").format(_geld(schluss_gebucht.outstanding_amount, currency))
-		)
+		text += ", " + zahlung(schluss_gebucht)
 		return {
 			"status": erledigt,
 			"text": text,
@@ -140,6 +149,7 @@ def schritt(
 		)
 		if offen_plan:
 			text += ", " + _("{0} offen").format(offen_plan)
+		text += "; " + zahlung(letzter)
 		if abgenommen:
 			text += " " + _("- jetzt Schlussrechnung")
 		return {

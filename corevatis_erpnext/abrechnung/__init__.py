@@ -14,6 +14,9 @@ Prozessleiste heraus, in Handwerkersprache.
 | Rechnungsformular: Zustandstext, „Rechnung freigeben“ | ``rechnung`` |
 | Prozessleiste, Schritt „Rechnung“ | ``prozess`` |
 | Felder an Sales Invoice (Druck #50), Einstellungen, Kern-Aufruf | ``felder``, ``einstellungen``, ``kern`` |
+| Offene Posten, Zahlungs- und Mahnstand (7.5) | ``offene_posten`` |
+| Mahnwesen auf ERPNext Dunning: Mahntypen, Vorschlag nach Fristen, „Mahnen“ (7.5) | ``mahnung`` |
+| Zahlungseingang: Kontoauszug (CSV, CAMT) einlesen, Vorschlag, Zuordnung als Payment Entry (7.5) | ``kontoauszug``, ``zahlungseingang`` |
 
 Rechenlogik ausschließlich im Kern ``corevatis.engine.invoice`` (per Name, Lizenzgrenze); Rechte:
 nur Büro (und System Manager) stellt Rechnungen, Beträge kommen aus Auftragsdaten, über die
@@ -26,15 +29,30 @@ from __future__ import annotations
 import frappe
 
 from corevatis_erpnext.abrechnung.abschlag import abschlag_stellen, abschlag_vorschlag
+from corevatis_erpnext.abrechnung.mahnung import mahnung_erstellen, mahnvorschlag
+from corevatis_erpnext.abrechnung.offene_posten import offene_posten
 from corevatis_erpnext.abrechnung.rechnung import zustand
 from corevatis_erpnext.abrechnung.schluss import schlussrechnung_erstellen, schlussrechnung_vorschlag
+from corevatis_erpnext.abrechnung.zahlungseingang import (
+	ignorieren,
+	kontoauszug_importieren,
+	vorschlaege,
+	zuordnen,
+)
 
 __all__ = [
 	"abschlag_stellen",
 	"abschlag_vorschlag",
 	"ensure_abrechnung_setup",
+	"ignorieren",
+	"kontoauszug_importieren",
+	"mahnung_erstellen",
+	"mahnvorschlag",
+	"offene_posten",
 	"schlussrechnung_erstellen",
 	"schlussrechnung_vorschlag",
+	"vorschlaege",
+	"zuordnen",
 	"zustand",
 ]
 
@@ -51,11 +69,16 @@ def ensure_negative_preise() -> bool:
 
 
 def ensure_abrechnung_setup() -> None:
-	"""``after_install``/``after_migrate`` (nach den Abnahme-Feldern 6.2): Felder, Artikel, Einstellung."""
+	"""``after_install``/``after_migrate`` (nach den Abnahme-Feldern 6.2): Felder, Artikel, Einstellung;
+	7.5: Felder an Dunning/Dunning Type/Bank Transaction, Mahntypen je Firma, Rechte der Rolle Büro."""
 	from corevatis_erpnext.abrechnung.abschlag import ensure_abschlag_artikel
-	from corevatis_erpnext.abrechnung.felder import ensure_abrechnung_felder
+	from corevatis_erpnext.abrechnung.felder import ensure_abrechnung_felder, ensure_mahnwesen_felder
+	from corevatis_erpnext.abrechnung.mahnung import ensure_mahntypen, ensure_rechte
 
 	ensure_abrechnung_felder()
+	ensure_mahnwesen_felder()
 	ensure_negative_preise()
 	if frappe.db.exists("DocType", "Item") and frappe.db.get_value("Item Group", {"is_group": 0}):
 		ensure_abschlag_artikel()
+	ensure_rechte()
+	ensure_mahntypen()

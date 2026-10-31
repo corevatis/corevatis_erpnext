@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 0,
  "creation": "2026-10-31 18:00:00.000000",
- "description": "Settings for down payment schedules, down payment invoices, final invoices and the labour share (§ 35a EStG) (Corevatis)",
+ "description": "Settings for down payment schedules, down payment invoices, final invoices, the labour share (§ 35a EStG), dunning and incoming payments (Corevatis)",
  "doctype": "DocType",
  "editable_grid": 0,
  "engine": "InnoDB",
@@ -17,7 +17,26 @@
   "abschlag_artikel",
   "column_rechnung",
   "lohnanteil_prozent_standard",
-  "lohnanteil_mit_zuschlaegen"
+  "lohnanteil_mit_zuschlaegen",
+  "section_mahnwesen",
+  "mahnfrist_erinnerung",
+  "mahnfrist_mahnung1",
+  "mahnfrist_mahnung2",
+  "mahnung_zahlungsfrist",
+  "column_mahnwesen",
+  "mahngebuehr_mahnung1",
+  "mahngebuehr_mahnung2",
+  "mahngebuehr_konto",
+  "section_zahlungseingang",
+  "bankkonto",
+  "nur_gutschriften",
+  "column_zahlungseingang",
+  "csv_trennzeichen",
+  "csv_spalte_datum",
+  "csv_spalte_betrag",
+  "csv_spalte_verwendungszweck",
+  "csv_spalte_name",
+  "csv_spalte_iban"
  ],
  "fields": [
   {
@@ -87,12 +106,127 @@
    "label": "Labour Share Including Surcharges",
    "default": "0",
    "description": "On: labour share = minutes × hourly rate × (unit price ÷ unit cost), i.e. overheads and profit allocated to labour. Off: minutes × hourly rate only."
+  },
+  {
+   "fieldname": "section_mahnwesen",
+   "fieldtype": "Section Break",
+   "label": "Dunning"
+  },
+  {
+   "fieldname": "mahnfrist_erinnerung",
+   "fieldtype": "Int",
+   "label": "Payment Reminder (Days after Due Date)",
+   "default": "7",
+   "non_negative": 1,
+   "description": "Proposed payment reminder this many days after the due date"
+  },
+  {
+   "fieldname": "mahnfrist_mahnung1",
+   "fieldtype": "Int",
+   "label": "1st Dunning Notice (Days after Reminder)",
+   "default": "14",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "mahnfrist_mahnung2",
+   "fieldtype": "Int",
+   "label": "2nd Dunning Notice (Days after 1st Notice)",
+   "default": "14",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "mahnung_zahlungsfrist",
+   "fieldtype": "Int",
+   "label": "Payment Deadline in the Notice (Days)",
+   "default": "7",
+   "non_negative": 1,
+   "description": "Pay-by date printed on the notice: posting date plus these days"
+  },
+  {
+   "fieldname": "column_mahnwesen",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "mahngebuehr_mahnung1",
+   "fieldtype": "Currency",
+   "label": "Fee 1st Dunning Notice",
+   "default": "0",
+   "description": "Payment reminders never carry a fee"
+  },
+  {
+   "fieldname": "mahngebuehr_mahnung2",
+   "fieldtype": "Currency",
+   "label": "Fee 2nd Dunning Notice",
+   "default": "5"
+  },
+  {
+   "fieldname": "mahngebuehr_konto",
+   "fieldtype": "Link",
+   "options": "Account",
+   "label": "Income Account for Dunning Fees",
+   "description": "Empty: account 2650 (SKR03) / 7100 (SKR04), otherwise the company's default income account"
+  },
+  {
+   "fieldname": "section_zahlungseingang",
+   "fieldtype": "Section Break",
+   "label": "Incoming Payments (Bank Statement Import)"
+  },
+  {
+   "fieldname": "bankkonto",
+   "fieldtype": "Link",
+   "options": "Bank Account",
+   "label": "Bank Account",
+   "description": "Company bank account the statements belong to (empty: default company bank account, created on the first import)"
+  },
+  {
+   "fieldname": "nur_gutschriften",
+   "fieldtype": "Check",
+   "label": "Import Credits Only",
+   "default": "1",
+   "description": "Skip outgoing payments (debits) when importing a statement"
+  },
+  {
+   "fieldname": "column_zahlungseingang",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "csv_trennzeichen",
+   "fieldtype": "Select",
+   "label": "CSV Delimiter",
+   "options": "Automatisch\n;\n,\nTab",
+   "default": "Automatisch"
+  },
+  {
+   "fieldname": "csv_spalte_datum",
+   "fieldtype": "Data",
+   "label": "CSV Column: Date",
+   "description": "Column headings of the bank's CSV export; empty = detect Sparkasse/VR-Bank headings automatically"
+  },
+  {
+   "fieldname": "csv_spalte_betrag",
+   "fieldtype": "Data",
+   "label": "CSV Column: Amount"
+  },
+  {
+   "fieldname": "csv_spalte_verwendungszweck",
+   "fieldtype": "Data",
+   "label": "CSV Column: Purpose"
+  },
+  {
+   "fieldname": "csv_spalte_name",
+   "fieldtype": "Data",
+   "label": "CSV Column: Payer Name"
+  },
+  {
+   "fieldname": "csv_spalte_iban",
+   "fieldtype": "Data",
+   "label": "CSV Column: Payer IBAN"
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-31 18:00:00.000000",
+ "modified": "2026-11-01 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Corevatis ERPNext",
  "name": "Corevatis Abrechnung Einstellungen",
