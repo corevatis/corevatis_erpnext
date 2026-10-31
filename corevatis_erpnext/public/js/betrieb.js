@@ -23,8 +23,9 @@ corevatis_erpnext.beleg_link = function (doctype, name, text) {
 };
 
 // Nachrichten am Vorgang (P1.6): Ungelesen-Zähler am Eintrag „Nachrichten“ der Leiste „Betrieb“ und im
-// Fenstertitel. Server: corevatis_erpnext.nachrichten.ungelesen_gesamt (0 ohne Kern). Alle 60 s und bei
-// jedem Seitenwechsel; der Eintrag wird über seinen Link auf die Kern-Page gefunden.
+// Fenstertitel. Server: corevatis_erpnext.nachrichten.ungelesen_gesamt (0 ohne Kern). Sofort beim
+// socket.io-Ereignis „corevatis_nachricht“ des Kerns (Handwerker#85), sonst alle 60 s, bei jedem
+// Seitenwechsel und wenn der Tab wieder sichtbar wird; der Eintrag wird über seinen Link auf die Kern-Page gefunden.
 corevatis_erpnext.nachrichten_badge = (function () {
 	let gestartet = false;
 	let letzter = null;
@@ -63,6 +64,12 @@ corevatis_erpnext.nachrichten_badge = (function () {
 			if (gestartet) return;
 			gestartet = true;
 			$(document).on("page-change", () => setTimeout(() => (letzter === null ? laden() : setzen(letzter)), 300));
+			$(document).on("visibilitychange", () => {
+				if (!document.hidden) laden();
+			});
+			if (frappe.realtime && frappe.realtime.on) {
+				frappe.realtime.on("corevatis_nachricht", frappe.utils.debounce(laden, 500));
+			}
 			setInterval(laden, 60000);
 			setTimeout(laden, 1500);
 		},
