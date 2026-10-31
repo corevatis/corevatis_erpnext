@@ -41,6 +41,8 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   `nachkalkulation`).
 - Seitenleiste „Betrieb“: Einträge „Nachkalkulation“ und „Regeln nachjustieren“ unter Abrechnung (Zeitstempel
   angehoben, damit `migrate` sie nachzieht).
+- Lernschleife: je Schlussrechnung wird das Leserecht an Auftrag und Projekt geprüft (Zeilen ohne Recht fehlen,
+  Zeitfaktor ohne lesbares Projekt leer) - wie die Kennzahl der Prozessleiste.
 
 ### Hinzugefügt (Textbausteine im Desk, Phase 2 P2.6, Handwerker#89)
 

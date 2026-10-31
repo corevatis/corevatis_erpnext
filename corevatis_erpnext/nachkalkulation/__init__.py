@@ -31,8 +31,9 @@ Lernschleife (``regeln``): über freigegebene Schlussrechnungen je Artikel und M
 Auftragsmenge gegen die Ist-Menge (Mengenfaktor) und je Verfahren Soll- gegen Ist-Minuten je Einheit
 (Zeitfaktor) - nur Anzeige mit Vorschlag, keine Änderung an Regeln oder Stücklisten.
 
-Rechte: Büro, Meister und System Manager (``planung.auftrag.darf_planen``); Projekte nur, soweit der
-Benutzer sie lesen darf. Lizenzgrenze: Kern-Doctypes werden nur per Name gelesen, kein Import.
+Rechte: Büro, Meister und System Manager (``planung.auftrag.darf_planen``); Projekte, Aufträge und
+Schlussrechnungen nur, soweit der Benutzer sie lesen darf. Lizenzgrenze: Kern-Doctypes werden nur per Name
+gelesen, kein Import.
 """
 
 from __future__ import annotations
@@ -606,6 +607,8 @@ def regeln(filters: dict | None = None) -> dict:
 	for r in rechnungen:
 		if not r.cv_auftrag or not frappe.db.exists("Sales Order", r.cv_auftrag):
 			continue
+		if not _lesbar("Sales Order", r.cv_auftrag):
+			continue
 		try:
 			roh = r.cv_abrechnung_json
 			ergebnis = (json.loads(roh) if isinstance(roh, str) else roh) or {}
@@ -620,6 +623,8 @@ def regeln(filters: dict | None = None) -> dict:
 		}
 		auftrag = frappe.get_doc("Sales Order", r.cv_auftrag)
 		projekt = r.project or frappe.db.get_value("Project", {"sales_order": auftrag.name}, "name")
+		if projekt and not _lesbar("Project", projekt):
+			projekt = None
 		kalk, _satz, _schema, _h = kalkulation_laden(auftrag)
 		_soll, pos, _h2 = soll_je_verfahren(auftrag, kalk)
 		zeitfaktor: dict[str, float | None] = {}
