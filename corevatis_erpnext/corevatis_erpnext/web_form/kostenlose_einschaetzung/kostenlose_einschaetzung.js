@@ -3,8 +3,9 @@
 // Klammern und keine Klammer-Prozent-/Klammer-Raute-Folgen verwenden.
 //
 // Ergänzt das Standardformular um Fotos (Base64 im accept-Aufruf,
-// kein upload_file für Gäste), Datenschutz-Zustimmung und Honeypot. Die Prüfung erfolgt
-// zusätzlich serverseitig (corevatis_erpnext.webform.einschaetzung).
+// kein upload_file für Gäste), Datenschutz-Zustimmung, Honeypot und den Wunschtermin für die
+// Besichtigung (Durchstich D14: heute bis 90 Tage voraus, Datum ohne Zeitfenster gilt ganztags).
+// Die Prüfung erfolgt zusätzlich serverseitig (corevatis_erpnext.webform.einschaetzung).
 // Im iframe meldet die Seite ihre Höhe per postMessage an die einbettende Seite.
 
 frappe.ready(function () {
@@ -145,9 +146,69 @@ frappe.ready(function () {
 		}
 	});
 
+	// Wunschtermin (D14): nicht in der Vergangenheit, höchstens WUNSCH_TAGE voraus; der Server prüft ebenfalls.
+	const WUNSCH_TAGE = 90;
+	const WUNSCH = [
+		["cv_wunsch1_datum", "cv_wunsch1_fenster"],
+		["cv_wunsch2_datum", "cv_wunsch2_fenster"],
+	];
+
+	function wunsch_feld(name) {
+		return wf.fields_dict[name];
+	}
+
+	function datepicker_grenzen() {
+		const heute = new Date();
+		heute.setHours(0, 0, 0, 0);
+		const spaetestens = new Date(heute.getTime() + WUNSCH_TAGE * 24 * 60 * 60 * 1000);
+		WUNSCH.forEach(function (paar) {
+			const feld = wunsch_feld(paar[0]);
+			if (feld && feld.datepicker && feld.datepicker.update) {
+				try {
+					feld.datepicker.update({ minDate: heute, maxDate: spaetestens });
+				} catch (e) {
+					// ohne Grenzen im Kalender - der Server prüft
+				}
+			}
+		});
+	}
+	setTimeout(datepicker_grenzen, 0);
+
+	function wunsch_pruefen() {
+		const fehler = [];
+		const heute = frappe.datetime.get_today();
+		WUNSCH.forEach(function (paar) {
+			const datumFeld = wunsch_feld(paar[0]);
+			const fensterFeld = wunsch_feld(paar[1]);
+			if (!datumFeld) return;
+			const datum = datumFeld.get_value();
+			const fenster = fensterFeld ? fensterFeld.get_value() : "";
+			if (!datum) {
+				if (fenster && fensterFeld) fensterFeld.set_value("");
+				return;
+			}
+			const tage = frappe.datetime.get_diff(datum, heute);
+			if (tage < 0) {
+				fehler.push(__("Der Wunschtermin {0} liegt in der Vergangenheit.", [frappe.datetime.str_to_user(datum)]));
+			} else if (tage > WUNSCH_TAGE) {
+				fehler.push(
+					__("Der Wunschtermin {0} liegt mehr als {1} Tage voraus.", [frappe.datetime.str_to_user(datum), WUNSCH_TAGE])
+				);
+			}
+			if (!fenster && fensterFeld) fensterFeld.set_value("ganztags");
+		});
+		return fehler;
+	}
+
 	wf.validate = function () {
 		let ok = true;
 		$(".cv-datenschutz-fehler").text("");
+
+		const wunschFehler = wunsch_pruefen();
+		if (wunschFehler.length) {
+			ok = false;
+			frappe.msgprint(wunschFehler.join("<br>"));
+		}
 
 		const datenschutz = $("#cv_datenschutz").is(":checked");
 		if (!datenschutz) {

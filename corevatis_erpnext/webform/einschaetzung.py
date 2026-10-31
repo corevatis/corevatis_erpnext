@@ -40,6 +40,7 @@ site_config-Schlüssel (alle optional):
 
 import base64
 import binascii
+import datetime
 import hashlib
 import io
 import ipaddress
@@ -48,7 +49,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import cint, cstr, escape_html
+from frappe.utils import add_days, cint, cstr, escape_html, formatdate, getdate, today
 
 WEB_FORM = "kostenlose-einschaetzung"
 ROUTE = "kostenlose-einschaetzung"
@@ -120,6 +121,7 @@ def accept_einschaetzung(data: str | dict):
 	check_global_limit()
 	fotos = parse_fotos(payload.get(KEY_FOTOS))
 	check_text_lengths(payload)
+	check_wunschtermin(payload)
 	for key in (KEY_HONEYPOT, KEY_DATENSCHUTZ, KEY_FOTOS, *FOTO_FELDER, "image"):
 		payload.pop(key, None)
 
@@ -223,9 +225,15 @@ def anfrage_kommentar(web_form, neu, anzahl_fotos: int) -> str:
 		label = row.label or _(meta.get_label(fieldname))
 		wert = neu.get(fieldname)
 		if row.fieldtype == "Check":
-			if cint(wert):
+			if not cint(wert):
+				continue
+			if fieldname.startswith("cv_symptom_"):
 				symptome.append(label)
+			else:
+				zeilen.append((label, _("ja")))
 			continue
+		if row.fieldtype == "Date" and wert:
+			wert = formatdate(wert)
 		wert = cstr(wert).strip()
 		if wert:
 			zeilen.append((label, wert))
@@ -486,6 +494,67 @@ def check_text_lengths(payload):
 	for fieldname, limit in MAX_LAENGE.items():
 		if len(cstr(payload.get(fieldname))) > limit:
 			frappe.throw(_("Eine Eingabe ist zu lang (höchstens {0} Zeichen).").format(limit))
+
+
+# Wunschtermin für die Besichtigung (Durchstich D14): nicht in der Vergangenheit, höchstens 90 Tage
+# voraus, Datum als Datum (ISO oder TT.MM.JJJJ - keine Freitexte). Ein Zeitfenster ohne Datum zählt
+# nicht, ein Datum ohne Zeitfenster gilt ganztags.
+WUNSCH_TAGE_VORAUS = 90
+WUNSCH_FELDER = (("cv_wunsch1_datum", "cv_wunsch1_fenster"), ("cv_wunsch2_datum", "cv_wunsch2_fenster"))
+FELD_WUNSCH_SCHNELL = "cv_wunsch_schnell"
+_DATUM_ISO = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_DATUM_DE = re.compile(r"^(\d{1,2})\.(\d{1,2})\.(\d{4})$")
+
+
+def wunsch_datum(wert) -> datetime.date | None:
+	"""Datum aus ``YYYY-MM-DD`` oder ``TT.MM.JJJJ``; leer → ``None``; alles andere → ``ValueError``."""
+	text = cstr(wert).strip()
+	if not text:
+		return None
+	if _DATUM_ISO.match(text):
+		return datetime.date.fromisoformat(text)
+	treffer = _DATUM_DE.match(text)
+	if treffer:
+		return datetime.date(int(treffer.group(3)), int(treffer.group(2)), int(treffer.group(1)))
+	raise ValueError(text)
+
+
+def check_wunschtermin(payload) -> None:
+	from corevatis_erpnext.anfrage.custom_fields import WUNSCH_FENSTER
+
+	meta = frappe.get_meta("Lead")
+	heute = getdate(today())
+	spaetestens = getdate(add_days(heute, WUNSCH_TAGE_VORAUS))
+	for datum_feld, fenster_feld in WUNSCH_FELDER:
+		if not meta.has_field(datum_feld):
+			payload.pop(datum_feld, None)
+			payload.pop(fenster_feld, None)
+			continue
+		try:
+			datum = wunsch_datum(payload.get(datum_feld))
+		except ValueError:
+			frappe.throw(_("Bitte den Wunschtermin als Datum angeben (z. B. 04.11.2026)."))
+		fenster = cstr(payload.get(fenster_feld)).strip()
+		if datum is None:
+			payload[datum_feld] = None
+			payload[fenster_feld] = ""
+			continue
+		if datum < heute:
+			frappe.throw(_("Der Wunschtermin {0} liegt in der Vergangenheit.").format(formatdate(datum)))
+		if datum > spaetestens:
+			frappe.throw(
+				_(
+					"Der Wunschtermin {0} liegt mehr als {1} Tage voraus - bitte ein näheres Datum wählen."
+				).format(formatdate(datum), WUNSCH_TAGE_VORAUS)
+			)
+		if fenster and fenster not in WUNSCH_FENSTER:
+			frappe.throw(_("Bitte ein gültiges Zeitfenster wählen (vormittags, nachmittags oder ganztags)."))
+		payload[datum_feld] = str(datum)
+		payload[fenster_feld] = fenster or "ganztags"
+	if meta.has_field(FELD_WUNSCH_SCHNELL):
+		payload[FELD_WUNSCH_SCHNELL] = 1 if cint(payload.get(FELD_WUNSCH_SCHNELL)) else 0
+	else:
+		payload.pop(FELD_WUNSCH_SCHNELL, None)
 
 
 def ensure_utm_source() -> str:

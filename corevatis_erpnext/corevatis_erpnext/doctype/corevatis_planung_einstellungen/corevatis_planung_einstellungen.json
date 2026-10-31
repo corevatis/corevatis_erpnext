@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 0,
  "creation": "2026-10-29 18:00:00.000000",
- "description": "Settings for work packages and material requirements from sales orders (Corevatis)",
+ "description": "Settings for work packages, material requirements and inspection appointments (Corevatis)",
  "doctype": "DocType",
  "editable_grid": 0,
  "engine": "InnoDB",
@@ -19,7 +19,16 @@
   "bestand_beruecksichtigen",
   "column_break_lager",
   "lager_haupt",
-  "lager_fahrzeug"
+  "lager_fahrzeug",
+  "besichtigung_section",
+  "besichtigung_dauer",
+  "fahrzeit_puffer",
+  "fahrzeit_standard",
+  "geokodierung_aus",
+  "column_break_fahrzeit",
+  "fahrzeit_umwegfaktor",
+  "fahrzeit_kmh",
+  "fahrzeit_minimum"
  ],
  "fields": [
   {
@@ -107,12 +116,76 @@
    "fieldtype": "Link",
    "label": "Vehicle Warehouse",
    "options": "Warehouse"
+  },
+  {
+   "fieldname": "besichtigung_section",
+   "fieldtype": "Section Break",
+   "label": "Inspection Appointments"
+  },
+  {
+   "default": "60",
+   "description": "Default time on site for an inspection; adjustable in the dialog “Schedule Appointment”",
+   "fieldname": "besichtigung_dauer",
+   "fieldtype": "Int",
+   "label": "Inspection Duration (Minutes)",
+   "non_negative": 1
+  },
+  {
+   "default": "10",
+   "description": "Kept free between the end of one appointment plus travel and the start of the next",
+   "fieldname": "fahrzeit_puffer",
+   "fieldtype": "Int",
+   "label": "Buffer Between Appointments (Minutes)",
+   "non_negative": 1
+  },
+  {
+   "default": "30",
+   "description": "Used whenever an address has no coordinates (not found, no network, geocoding disabled); shown as “estimated”",
+   "fieldname": "fahrzeit_standard",
+   "fieldtype": "Int",
+   "label": "Travel Time Without Geocoding (Minutes)",
+   "non_negative": 1
+  },
+  {
+   "default": "0",
+   "description": "No requests to OpenStreetMap (Nominatim); all travel times use the default travel time",
+   "fieldname": "geokodierung_aus",
+   "fieldtype": "Check",
+   "label": "Disable Geocoding"
+  },
+  {
+   "fieldname": "column_break_fahrzeit",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1.3",
+   "description": "Travel distance = straight-line distance × detour factor",
+   "fieldname": "fahrzeit_umwegfaktor",
+   "fieldtype": "Float",
+   "label": "Detour Factor",
+   "non_negative": 1
+  },
+  {
+   "default": "45",
+   "description": "Travel time = travel distance ÷ average speed, rounded up to 5 minutes",
+   "fieldname": "fahrzeit_kmh",
+   "fieldtype": "Float",
+   "label": "Average Speed (km/h)",
+   "non_negative": 1
+  },
+  {
+   "default": "10",
+   "description": "Travel time between two places is never shorter than this",
+   "fieldname": "fahrzeit_minimum",
+   "fieldtype": "Int",
+   "label": "Minimum Travel Time (Minutes)",
+   "non_negative": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-29 18:00:00.000000",
+ "modified": "2026-10-31 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Corevatis ERPNext",
  "name": "Corevatis Planung Einstellungen",

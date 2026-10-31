@@ -36,6 +36,17 @@ SYMPTOME = (
 SYMPTOM_FIELDS = tuple(fieldname for fieldname, _label, _value in SYMPTOME)
 FOTO_FIELDS = ("cv_foto_1", "cv_foto_2", "cv_foto_3")
 
+# Durchstich D14: Wunschtermin des Kunden (Webform 1.2, Terminplanung ``planung.terminplanung``);
+# die Zeitfenster sind deutsche Daten wie die Select-Werte oben (vormittags 8-12, nachmittags 12-16)
+WUNSCH_FENSTER = ("vormittags", "nachmittags", "ganztags")
+WUNSCH_FIELDS = (
+	"cv_wunsch1_datum",
+	"cv_wunsch1_fenster",
+	"cv_wunsch2_datum",
+	"cv_wunsch2_fenster",
+	"cv_wunsch_schnell",
+)
+
 # im Desk Pflicht (Formular) ab Anfragestatus „Termin“, serverseitig nie
 STATUS_MIT_PFLICHT = ("Termin", "Besichtigt", "Angebot", "Gewonnen")
 DESK_MANDATORY = "eval:{}.includes(doc.cv_status)".format(
@@ -118,12 +129,63 @@ def lead_fields() -> list[dict]:
 			"in_standard_filter": 1,
 			"insert_after": "cv_dringlichkeit",
 		},
+		# Abschnitt „Wunschtermin“ (D14): zwei Wünsche mit Zeitfenster und „schnellstmöglich“ aus der
+		# Webform; das Büro sieht sie hier und in der Prozessleiste, der Dialog „Termin anlegen“ nutzt sie
+		{
+			"fieldname": "cv_section_wunschtermin",
+			"fieldtype": "Section Break",
+			"label": "Preferred Inspection Date",
+			"insert_after": "cv_quelle",
+		},
+		{
+			"fieldname": "cv_wunsch1_datum",
+			"fieldtype": "Date",
+			"label": "Preferred Date 1",
+			"insert_after": "cv_section_wunschtermin",
+		},
+		{
+			"fieldname": "cv_wunsch1_fenster",
+			"fieldtype": "Select",
+			"label": "Time Window 1",
+			"options": _select(*WUNSCH_FENSTER),
+			"insert_after": "cv_wunsch1_datum",
+		},
+		{
+			"fieldname": "cv_column_wunsch2",
+			"fieldtype": "Column Break",
+			"insert_after": "cv_wunsch1_fenster",
+		},
+		{
+			"fieldname": "cv_wunsch2_datum",
+			"fieldtype": "Date",
+			"label": "Preferred Date 2",
+			"insert_after": "cv_column_wunsch2",
+		},
+		{
+			"fieldname": "cv_wunsch2_fenster",
+			"fieldtype": "Select",
+			"label": "Time Window 2",
+			"options": _select(*WUNSCH_FENSTER),
+			"insert_after": "cv_wunsch2_datum",
+		},
+		{
+			"fieldname": "cv_column_wunsch_schnell",
+			"fieldtype": "Column Break",
+			"insert_after": "cv_wunsch2_fenster",
+		},
+		{
+			"fieldname": "cv_wunsch_schnell",
+			"fieldtype": "Check",
+			"label": "As Soon as Possible",
+			"description": "The customer takes the first free appointment",
+			"insert_after": "cv_column_wunsch_schnell",
+		},
 		# Abschnitt „Gewerke-Checkliste“: Vorqualifizierung
 		{
 			"fieldname": "cv_section_gewerke",
 			"fieldtype": "Section Break",
 			"label": "Trade Checklist",
-			"insert_after": "cv_quelle",
+			"insert_after": "cv_wunsch_schnell",
 		},
 		{
 			"fieldname": "cv_objekttyp",
