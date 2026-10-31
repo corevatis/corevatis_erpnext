@@ -30,6 +30,8 @@ frappe.ui.form.on("Abwesenheit", {
 			frm.set_intro("");
 			return;
 		}
+		// Antworten können sich überholen (von, dann bis): nur die letzte Anfrage darf den Hinweis setzen
+		const lauf = (frm.cv_hinweis_lauf = (frm.cv_hinweis_lauf || 0) + 1);
 		frappe
 			.xcall("corevatis_erpnext.mitarbeiter.urlaub_hinweis", {
 				mitarbeiter: d.mitarbeiter,
@@ -41,6 +43,7 @@ frappe.ui.form.on("Abwesenheit", {
 				name: d.__islocal ? null : d.name,
 			})
 			.then((k) => {
+				if (lauf !== frm.cv_hinweis_lauf) return;
 				if (!k || k.anspruch === undefined) return;
 				const z = (n) => frappe.format(n, { fieldtype: "Float", precision: 1 });
 				const text = __("Urlaub {0}: Anspruch {1} Tage, genommen {2}, geplant {3}, Rest {4}; dieser Eintrag {5} Tage, danach {6}.", [

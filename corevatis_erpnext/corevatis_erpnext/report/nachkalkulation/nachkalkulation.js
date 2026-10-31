@@ -33,7 +33,8 @@ frappe.query_reports["Nachkalkulation"] = {
 		}
 		if (column.fieldname === "verbrauch" && data.verbrauch != null) {
 			const klasse = data.verbrauch > 115 ? "text-danger" : data.verbrauch > 100 ? "text-warning" : "";
-			return `<span class="${klasse}">${esc(frappe.format(value, column, {}, data))}</span>`;
+			// Percent-Spalten formatiert Frappe als HTML-Balken; maskiert stand „<div style…“ in der Zelle (Build 31)
+			return `<span class="${klasse}">${esc(String(Math.round(data.verbrauch)))} %</span>`;
 		}
 		if (column.fieldname === "marge_ist" && data.marge_ist < 0) {
 			return `<span class="text-danger">${esc(frappe.format(value, column, {}, data))}</span>`;

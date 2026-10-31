@@ -76,9 +76,31 @@ def custom_fields() -> dict[str, list[dict]]:
 	}
 
 
+RECHTE = {"Büro": {"Employee": ("read", "write", "create", "report")}}
+
+
 def ensure_setup() -> None:
-	"""Felder am Employee anlegen (idempotent)."""
+	"""Felder am Employee anlegen (idempotent), Büro darf Mitarbeiter pflegen."""
 	create_custom_fields(custom_fields(), update=True)
+	ensure_rechte()
+
+
+def ensure_rechte() -> None:
+	"""Büro pflegt Urlaubsanspruch, Resturlaub und Übertrag am Employee (ERPNext gibt das nur HR-Rollen);
+	idempotent wie ``textbausteine.ensure_rechte``."""
+	from frappe.permissions import add_permission, update_permission_property
+
+	for rolle, je_doctype in RECHTE.items():
+		if not frappe.db.exists("Role", rolle):
+			continue
+		for doctype, rechte in je_doctype.items():
+			add_permission(doctype, rolle, 0)
+			for recht in rechte:
+				if not frappe.db.get_value(
+					"Custom DocPerm", {"parent": doctype, "role": rolle, "permlevel": 0}, recht
+				):
+					update_permission_property(doctype, rolle, 0, recht, 1, validate=False)
+	frappe.clear_cache()
 
 
 # --- Desk ----------------------------------------------------------------------------------------

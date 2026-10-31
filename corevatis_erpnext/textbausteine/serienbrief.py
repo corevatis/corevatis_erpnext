@@ -54,12 +54,19 @@ def _briefkopf(firma: str) -> tuple[str, str]:
 	if not name or not frappe.db.exists("Letter Head", name):
 		return "", ""
 	lh = frappe.get_cached_doc("Letter Head", name)
+	# Der Briefkopf des Site-Templates ist eine Jinja-Vorlage (``doc.company``); der Druck rendert sie in
+	# printview.get_letter_head. Ohne Rendern stünde der Vorlagentext im Brief (Abnahme Build 31).
+	kontext = {"doc": {"doctype": "Customer", "company": firma}}
 	kopf = (
-		cstr(lh.content)
+		frappe.render_template(cstr(lh.content), kontext)
 		if lh.source == "HTML"
 		else (f'<img src="{escape_html(lh.image)}">' if lh.image else "")
 	)
-	fuss = cstr(lh.footer) if getattr(lh, "footer_source", "HTML") == "HTML" else ""
+	fuss = (
+		frappe.render_template(cstr(lh.footer), kontext)
+		if getattr(lh, "footer_source", "HTML") == "HTML"
+		else ""
+	)
 	return kopf, fuss
 
 

@@ -40,13 +40,9 @@ def execute(filters=None):
 
 def columns_mitarbeiter(daten: dict) -> list[dict]:
 	return [
-		{
-			"fieldname": "mitarbeiter",
-			"label": _("Mitarbeiter"),
-			"fieldtype": "Link",
-			"options": "Employee",
-			"width": 120,
-		},
+		# Bewusst kein Link: Frappe streicht Berichtszeilen, deren Link-Spalte gegen eine Benutzerberechtigung
+		# verstößt (ERPNext legt je Employee eine User Permission an); der Meister sähe nur sich selbst.
+		{"fieldname": "mitarbeiter", "label": _("Mitarbeiter"), "fieldtype": "Data", "width": 120},
 		{"fieldname": "mitarbeiter_name", "label": _("Name"), "fieldtype": "Data", "width": 160},
 		{"fieldname": "solltage", "label": _("Solltage"), "fieldtype": "Int", "width": 75},
 		{"fieldname": "soll_brutto", "label": _("Soll h"), "fieldtype": "Float", "precision": 1, "width": 70},

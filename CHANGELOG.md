@@ -70,6 +70,17 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   kein E-Mail-Versand.
 - Übersetzungen: „Terms and Conditions“ heißt im Desk „Textbaustein“. Tests: `tests/test_textbausteine.py`.
 
+### Behoben (Phase 2, Abnahme Build 31 auf mvp-test)
+
+- Stundenkonto: der Meister sah im Bericht nur die eigene Zeile, weil Frappe Berichtszeilen mit Link-Spalte
+  gegen die Benutzerberechtigung auf Employee filtert (ERPNext legt sie je Mitarbeiter an); Spalte jetzt ohne Link.
+- Mitarbeiter: Büro darf Employee lesen und schreiben (Urlaubsanspruch, Resturlaub, Übertrag) - ERPNext gab das
+  nur HR-Rollen. Hinweis im Formular Abwesenheit verwirft überholte Antworten (von, dann bis).
+- Serienbrief: Briefkopf und Fußzeile des Site-Templates werden wie im Druck mit Jinja gerendert; vorher stand der
+  Vorlagentext im Brief und jeder Brief hatte zwei Seiten.
+- Nachkalkulation: Marge in der Prozessleiste ganzzahlig („Marge 93 %“ statt „93.0 %“).
+- Nachkalkulation: Spalte „Verbrauch %“ zeigte den maskierten HTML-Balken („<div style…“); jetzt Zahl mit Prozent.
+
 ### Geändert (Textbausteine, Härtung, Handwerker#89)
 
 - Mahntexte dürfen keine Vorlagen-Syntax (`{{`, `{%`, `{#`) enthalten: ERPNext rendert den Brieftext des Mahntyps als
