@@ -6,6 +6,11 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Geändert (Nachrichten in Echtzeit, Handwerker#85)
+
+- Ungelesen-Pille der Leiste „Betrieb“ (`betrieb.js`) aktualisiert sofort beim socket.io-Ereignis
+  `corevatis_nachricht` des Kerns und beim Sichtbarwerden des Tabs; der 60-s-Takt bleibt Rückfall.
+
 ### Hinzugefügt (DATEV-Monatsexport, Phase 1 P1.2 / Aufgabe 7.4, Issue Handwerker#51)
 
 - **Doctype „DATEV Export“** (Leiste „Betrieb“ → DATEV-Export; Rolle Büro und System Manager, kein
