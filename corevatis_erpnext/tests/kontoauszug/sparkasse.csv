@@ -1,0 +1,4 @@
+Auftragskonto;Buchungstag;Valutadatum;Buchungstext;Verwendungszweck;Glaeubiger ID;Mandatsreferenz;Kundenreferenz (End-to-End);Sammlerreferenz;Lastschrift Ursprungsbetrag;Auslagenersatz Ruecklastschrift;Beguenstigter/Zahlungspflichtiger;Kontonummer/IBAN;BIC (SWIFT-Code);Betrag;Waehrung;Info
+"DE02100100100006820101";"03.11.26";"03.11.26";"GUTSCHR. UEBERWEISUNG";"Rechnung RE-2026-00042 Kellerabdichtung";"";"";"NOTPROVIDED";"";"";"";"Erika Müller";"DE02120300000000202051";"BYLADEM1001";"1.431,26";"EUR";"Umsatz gebucht"
+"DE02100100100006820101";"04.11.26";"04.11.26";"FOLGELASTSCHRIFT";"Tankstelle Willich Kartenzahlung";"DE98ZZZ09999999999";"M-4711";"";"";"";"";"Aral Willich";"DE02300209000106531065";"CMCIDEDD";"-89,90";"EUR";"Umsatz gebucht"
+"DE02100100100006820101";"05.11.26";"05.11.26";"GUTSCHR. UEBERWEISUNG";"Abschlag Keller Fam. Feucht";"";"";"NOTPROVIDED";"";"";"";"Familie Feucht";"DE02500105170137075030";"INGDDEFF";"1.908,34";"EUR";"Umsatz gebucht"

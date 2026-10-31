@@ -85,9 +85,17 @@ doctype_js = {
 	"Task": ["public/js/zuweisung.js", "public/js/task_zuweisung.js"],
 	"Objekt": [_PROZESSLEISTE],
 	# Rechnung: Mappenprüfung übersteuern (Epic D, D.5); Abrechnung (7.1/7.2): Zustandstext,
-	# „Rechnung freigeben“, ERPNext-Ballast ausblenden
-	"Sales Invoice": ["public/js/abrechnung.js", _PROZESSLEISTE, "public/js/mappe_uebersteuern.js"],
+	# „Rechnung freigeben“, ERPNext-Ballast ausblenden; 7.5: „Mahnen“
+	"Sales Invoice": [
+		"public/js/abrechnung.js",
+		"public/js/mahnung_zahlung.js",
+		_PROZESSLEISTE,
+		"public/js/mappe_uebersteuern.js",
+	],
 	"Abschlagsplan": ["public/js/abrechnung.js"],
+	# Mahnwesen und Zahlungseingang (7.5): Dialoge „Mahnen“, „Rechnung zuordnen“, Zustandstext der Mahnung
+	"Bank Transaction": ["public/js/mahnung_zahlung.js"],
+	"Dunning": ["public/js/mahnung_zahlung.js"],
 	# Abnahme (6.1): Doctype aus corevatis, ohne Kern lädt es nie; „Mangel-Aufgaben erzeugen“
 	"Abnahmeprotokoll": ["public/js/abnahme.js", _PROZESSLEISTE],
 }

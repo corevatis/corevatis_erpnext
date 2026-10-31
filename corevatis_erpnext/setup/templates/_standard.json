@@ -131,8 +131,10 @@
 		"Dunning": "Mahnung"
 	},
 	"print_formats_replace": {
-		"_beschreibung": "Eigene Formate, die ein Kundentemplate über print_formats als Standard ablösen darf (sonst bleibt ein eigener Standard stehen). „Angebot“ (erpnext_druckformate) → z. B. „Angebot Corevatis“ (4.3).",
-		"Quotation": ["Angebot"]
+		"_beschreibung": "Eigene Formate, die ein Kundentemplate über print_formats als Standard ablösen darf (sonst bleibt ein eigener Standard stehen). „Angebot“ (erpnext_druckformate) → z. B. „Angebot Corevatis“ (4.3); „Ausgangsrechnung“ → „Rechnung Corevatis“ (7.3); „Mahnung“ → „Mahnung Corevatis“ (7.5).",
+		"Quotation": ["Angebot"],
+		"Sales Invoice": ["Ausgangsrechnung"],
+		"Dunning": ["Mahnung"]
 	},
 	"angebot": {
 		"_beschreibung": "Angebotsdruck (4.3): Textbausteine „Angebot Standard“ (Zahlungsbedingungen, Gültigkeit), „Abdichtung Standard“ (Vorbemerkung), „Gewährleistung Abdichtung“ (Garantiehinweis) anlegen, wenn sie fehlen (corevatis_erpnext/angebot/texte). default_selling_terms: Zahlungsbedingungen der Firma, nur wenn dort noch keine stehen.",

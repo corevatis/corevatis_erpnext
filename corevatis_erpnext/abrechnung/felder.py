@@ -7,6 +7,10 @@ Schlussrechnung, die Abschlagsübersicht (Tabelle ``cv_abschlaege``) und der Loh
 EStG (netto, Steuer, brutto; je Position ``cv_lohnanteil``). Die Felder setzt nur der Server
 (``read_only``); der Rechenweg steht in ``cv_abrechnung_json``.
 
+Mahnwesen und Zahlungseingang (7.5): ``Dunning.cv_mahnstufe`` (0 Zahlungserinnerung, 1/2 Mahnung),
+``cv_zahlungsfrist`` (zahlbar bis, Druck), ``cv_projekt`` (Vorgang); ``Dunning Type.cv_mahnstufe``;
+``Bank Transaction.cv_ignoriert``/``cv_notiz`` (Buchung ohne Rechnungsbezug) und ``cv_import`` (Datei).
+
 Labels sind englische Quelltexte, die deutsche Oberfläche kommt aus ``translations/de.csv``.
 """
 
@@ -252,6 +256,99 @@ def rechnung_position_felder() -> list[dict]:
 			}
 		),
 	]
+
+
+def mahnwesen_felder() -> dict[str, list[dict]]:
+	"""Felder an Dunning, Dunning Type und Bank Transaction (7.5)."""
+	return {
+		"Dunning": [
+			_nur_server(
+				{
+					"fieldname": "cv_mahnstufe",
+					"fieldtype": "Int",
+					"label": "Dunning Level (Corevatis)",
+					"description": "0 = payment reminder, 1 = 1st dunning notice, 2 = 2nd dunning notice",
+					"insert_after": "dunning_type",
+				}
+			),
+			_nur_server(
+				{
+					"fieldname": "cv_zahlungsfrist",
+					"fieldtype": "Date",
+					"label": "Pay By",
+					"description": "Printed on the notice: posting date plus the deadline from the settings",
+					"insert_after": "cv_mahnstufe",
+				}
+			),
+			_nur_server(
+				{
+					"fieldname": "cv_projekt",
+					"fieldtype": "Link",
+					"options": "Project",
+					"label": "Project",
+					"insert_after": "cv_zahlungsfrist",
+				}
+			),
+		],
+		"Dunning Type": [
+			{
+				"fieldname": "cv_mahnstufe",
+				"fieldtype": "Int",
+				"label": "Dunning Level (Corevatis)",
+				"description": "0 = payment reminder, 1 = 1st dunning notice, 2 = 2nd dunning notice; used by the dunning proposal",
+				"insert_after": "is_default",
+			},
+		],
+		"Bank Transaction": [
+			{
+				"fieldname": "cv_section_zuordnung",
+				"fieldtype": "Section Break",
+				"label": "Incoming Payment (Corevatis)",
+				"insert_after": "party",
+			},
+			{
+				"fieldname": "cv_ignoriert",
+				"fieldtype": "Check",
+				"label": "Ignored",
+				"default": "0",
+				"allow_on_submit": 1,
+				"read_only": 1,
+				"description": "No invoice behind this entry (set via “Ignore” in the incoming payments list)",
+				"insert_after": "cv_section_zuordnung",
+			},
+			{
+				"fieldname": "cv_notiz",
+				"fieldtype": "Small Text",
+				"label": "Note",
+				"allow_on_submit": 1,
+				"read_only": 1,
+				"insert_after": "cv_ignoriert",
+			},
+			{
+				"fieldname": "cv_import",
+				"fieldtype": "Data",
+				"label": "Imported From",
+				"read_only": 1,
+				"description": "Statement file and line the entry was imported from",
+				"insert_after": "cv_notiz",
+			},
+		],
+	}
+
+
+def ensure_mahnwesen_felder() -> None:
+	felder = {
+		doctype: liste
+		for doctype, liste in mahnwesen_felder().items()
+		if frappe.db.exists("DocType", doctype)
+	}
+	for liste in felder.values():
+		for feld in liste:
+			feld.setdefault("module", MODULE)
+	if felder:
+		create_custom_fields(felder, update=True)
+	for doctype in felder:
+		frappe.clear_cache(doctype=doctype)
 
 
 def ensure_abrechnung_felder() -> None:

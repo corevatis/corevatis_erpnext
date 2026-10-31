@@ -19,8 +19,10 @@
 		"country": "Germany"
 	},
 	"print_formats": {
-		"_beschreibung": "Angebotsdruck (4.3): „Angebot Corevatis“ (erpnext_druckformate) statt „Angebot“ als Standard für Angebote.",
-		"Quotation": "Angebot Corevatis"
+		"_beschreibung": "Angebotsdruck (4.3): „Angebot Corevatis“ (erpnext_druckformate) statt „Angebot“ als Standard für Angebote; Rechnungsdruck (7.3) „Rechnung Corevatis“ statt „Ausgangsrechnung“, Mahnwesen (7.5) „Mahnung Corevatis“ statt „Mahnung“.",
+		"Quotation": "Angebot Corevatis",
+		"Sales Invoice": "Rechnung Corevatis",
+		"Dunning": "Mahnung Corevatis"
 	},
 	"letter_head": {
 		"letter_head_name": "Hülshoff Sanierungstechnik",

@@ -14,6 +14,35 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   Fenstertitel (`betrieb.js`, `corevatis_erpnext.nachrichten.ungelesen_gesamt`, alle 60 s).
 - Modul `corevatis_erpnext.nachrichten`: Kern-Funktionen nur per `frappe.get_attr`
   (`KERN_STAND`, `KERN_UNGELESEN`, Vertragstest im Kern).
+### Hinzugefügt (Abrechnung Teil 2: Rechnungsdruck, Mahnwesen, Zahlungseingang - 7.3/7.5, Issues Handwerker#50, #77)
+
+- **Rechnungsdruck**: Standard-Druckformat „Rechnung Corevatis“ (erpnext_druckformate, DIN 5008 wie das
+  Angebot) für Rechnungen, „Mahnung Corevatis“ für Mahnungen (Site-Template `huelshoff`, ablösbar
+  gegenüber „Ausgangsrechnung“/„Mahnung“). Die Dokumentenmappe legt das Rechnungs-PDF damit ab.
+  Tests `test_rechnungsdruck` rendern Abschlags-, Schlussrechnung (kurz, lang) und Mahnung als PDF
+  (Muster über `CV_MUSTER_DIR`).
+- **Offene Posten** (`abrechnung.offene_posten`, Script Report „Offene Posten“ in der Leiste „Betrieb“):
+  offene Rechnungen mit Rest, Fälligkeit, Tagen überfällig, Mahnstufe, Mahnvorschlag und Vorgang; Knopf
+  „Mahnen“ je Zeile. Prozessleiste Schritt Rechnung und Rechnungsformular zeigen „bezahlt am …“,
+  „teilbezahlt“, „offen …, fällig seit 5 Tagen, 1. Mahnung vom …“.
+- **Mahnwesen** (`abrechnung.mahnung`) auf ERPNext Dunning: Mahntypen Zahlungserinnerung, 1. Mahnung,
+  2. Mahnung je Firma mit Brieftexten (`abrechnung/texte`, angelegt wenn fehlend, nie überschrieben),
+  Vorschlag nach Fristen (7 Tage nach Fälligkeit, dann 14 und 14 Tage), Mahngebühr aus den Einstellungen
+  (1. Mahnung 0 €, 2. Mahnung 5 €, Ertragskonto 2650/7100 oder Einstellung), Zahlungsfrist (7 Tage),
+  `mahnung_erstellen` (gebucht, Kommentar am Vorgang, kein Versand). Felder `Dunning.cv_mahnstufe`,
+  `cv_zahlungsfrist`, `cv_projekt`, `Dunning Type.cv_mahnstufe`; Rolle Büro bucht Mahnungen (Custom DocPerm).
+- **Zahlungseingang** (`abrechnung.kontoauszug` ohne Frappe, `abrechnung.zahlungseingang`, Script Report
+  „Zahlungseingang“): Kontoauszug als CSV (Sparkasse, VR-Bank; Trennzeichen/Spalten erkannt, eigenes
+  Mapping in den Einstellungen) oder CAMT.053 hochladen (privat, höchstens 5 MB, nach dem Einlesen
+  gelöscht) → ERPNext Bank Transactions zum Firmenkonto (wird beim ersten Import als „Geschäftskonto“
+  mit dem Sachkonto Bank angelegt), Dubletten über `transaction_id`; Zuordnungsvorschlag nach
+  Rechnungs-/Auftragsnummer im Verwendungszweck, Betrag und Kundenname; „Zuordnen“ bucht einen Payment
+  Entry (Teilzahlung erlaubt) und gleicht die Buchung ab, Kommentar am Vorgang, Abschlagszeile „bezahlt“;
+  „Ignorieren“ (`Bank Transaction.cv_ignoriert`, `cv_notiz`, `cv_import`). Dialoge in
+  `public/js/mahnung_zahlung.js` (Rechnung „Mahnen“, Bank Transaction „Rechnung zuordnen“).
+- Einstellungen „Corevatis Abrechnung Einstellungen“: Abschnitte Mahnwesen und Zahlungseingang.
+- Tests `test_mahnwesen`, `test_zahlungseingang` (Parser ohne Site, Import, Vorschlag, Teilzahlung,
+  Dublette, Rechte, Dateiprüfung), `test_rechnungsdruck`; Übersetzungen.
 
 ### Hinzugefügt (Plantafel, Phase 1 P1.4, Issue Handwerker#79)
 

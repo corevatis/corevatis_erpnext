@@ -244,6 +244,23 @@ per `frappe.get_attr`, kein Import):
 
 Doku: `docs/3.11-materialentnahme.md` im Repo Handwerker.
 
+## Abrechnung: Rechnungsdruck, Mahnwesen, Zahlungseingang (Epic 7, Aufgaben 7.3/7.5)
+
+Modul `corevatis_erpnext/abrechnung/` (Teil 1 - Abschlagsplan, Abschlag, Schlussrechnung - siehe
+`docs/7.1-abschlagsplan.md`/`7.2-schlussrechnung.md` im Repo Handwerker). Teil 2:
+
+- Druck: Standardformate „Rechnung Corevatis“ (Sales Invoice) und „Mahnung Corevatis“ (Dunning) aus
+  `erpnext_druckformate` (Branch `version-16-corevatis`); alle Daten liegen als `cv_*`-Felder am Beleg.
+- `offene_posten.offene_posten(filters)` - Liste „Offene Posten“ (Büro, Meister); `mahnstand`,
+  `bezahlt_am`, `zahlungsinfo` für Prozessleiste und Rechnungsformular.
+- `mahnung.mahnvorschlag(sales_invoice)`, `mahnung.mahnung_erstellen(sales_invoice, stufe, bestaetigen)`
+  (Rolle Büro) auf ERPNext Dunning mit den Mahntypen Zahlungserinnerung / 1. Mahnung / 2. Mahnung je Firma.
+- `zahlungseingang.kontoauszug_importieren(datei, bankkonto_name, nur_gutschriften)` (CSV Sparkasse/
+  VR-Bank oder CAMT.053 → Bank Transactions, Dubletten), `vorschlaege(...)`, `zuordnen(bank_transaction,
+  sales_invoice, betrag)` (Payment Entry, Teilzahlung), `ignorieren(bank_transaction, grund, aufheben)`.
+- Einstellungen: Single „Corevatis Abrechnung Einstellungen“ (Fristen, Gebühren, Ertragskonto, Bankkonto,
+  CSV-Mapping). Doku: `docs/7.3-rechnungsdruck.md`, `docs/7.5-mahnwesen-zahlungseingang.md` (Repo Handwerker).
+
 ## Lizenz
 
 Copyright (C) 2026 Corevatis

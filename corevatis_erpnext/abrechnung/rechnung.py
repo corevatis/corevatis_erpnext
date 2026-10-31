@@ -10,6 +10,7 @@ from frappe.utils import cint, flt, fmt_money, format_date
 
 from corevatis_erpnext.abrechnung import plan
 from corevatis_erpnext.abrechnung.auftrag import RECHNUNG_FELDER, darf_abrechnen, felder_da, ist_bezahlt
+from corevatis_erpnext.abrechnung.offene_posten import bezahlt_am, mahnstand, zahlungsinfo
 
 ART_ABSCHLAG, ART_SCHLUSS, ART_RECHNUNG = "abschlag", "schlussrechnung", "rechnung"
 
@@ -49,13 +50,14 @@ def zustand(sales_invoice: str) -> dict:
 	"""Zustandstext und Hauptknopf für das Rechnungsformular (Leserecht Rechnung)."""
 	frappe.has_permission("Sales Invoice", "read", sales_invoice, throw=True)
 	felder = (
-		[*RECHNUNG_FELDER, "currency", "customer_name", "project"]
+		[*RECHNUNG_FELDER, "due_date", "currency", "customer_name", "project"]
 		if felder_da()
 		else [
 			"name",
 			"docstatus",
 			"status",
 			"posting_date",
+			"due_date",
 			"grand_total",
 			"outstanding_amount",
 			"currency",
@@ -102,15 +104,22 @@ def zustand(sales_invoice: str) -> dict:
 			ergebnis["aktion"] = {"key": "freigeben", "label": _("Rechnung freigeben")}
 	elif r.docstatus == 1 and ist_bezahlt(r):
 		ergebnis["text"] = (
-			herkunft + " " + _("- freigegeben am {0}, bezahlt.").format(format_date(r.posting_date))
+			herkunft
+			+ " "
+			+ _("- freigegeben am {0}, {1}.").format(
+				format_date(r.posting_date),
+				zahlungsinfo(r, r.currency, None, bezahlt_am([r.name]).get(r.name)),
+			)
 		)
 		ergebnis["farbe"] = "green"
 	elif r.docstatus == 1:
+		# 7.5: offen, fällig seit, Mahnstufe
 		ergebnis["text"] = (
 			herkunft
 			+ " "
-			+ _("- freigegeben am {0}, offen {1}.").format(
-				format_date(r.posting_date), geld(r.outstanding_amount, r.currency)
+			+ _("- freigegeben am {0}, {1}.").format(
+				format_date(r.posting_date),
+				zahlungsinfo(r, r.currency, mahnstand([r.name]).get(r.name), None),
 			)
 		)
 		if art == ART_ABSCHLAG:

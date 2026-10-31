@@ -6,6 +6,11 @@
 - Rechnungen: Service-Artikel für Abschlagszeilen und Abzüge (Standard ``ABSCHLAG``, wird angelegt).
 - Lohnanteil § 35a EStG: Rückfall-Prozentsatz für Positionen ohne Kalkulation (Standard 0 = kein
   Ausweis), optional Zuschläge anteilig auf den Lohn (Standard aus: Minuten x Stundensatz).
+- Mahnwesen (7.5): Fristen Zahlungserinnerung 7 Tage nach Fälligkeit, 1. Mahnung 14 Tage danach,
+  2. Mahnung 14 Tage danach; Zahlungsfrist in der Mahnung 7 Tage; Mahngebühr 1. Mahnung 0 €,
+  2. Mahnung 5 €; Ertragskonto der Gebühr (leer = SKR-Konto 2650/7100, sonst Standard-Erlöskonto).
+- Zahlungseingang (7.5): Bankkonto des Betriebs (leer = Standard-Firmenkonto, beim ersten Import
+  angelegt), nur Gutschriften einlesen (Standard an), CSV-Trennzeichen und Spalten (leer = automatisch).
 """
 
 from __future__ import annotations
@@ -32,6 +37,7 @@ VORLAGEN = {
 		("Abschlag bei Abnahme", 50.0, ABNAHME),
 	),
 }
+CSV_AUTOMATISCH = "Automatisch"
 STANDARD = {
 	"abschlagsplan_automatisch": 1,
 	"abschlagsplan_vorlage": VORLAGE_30_40_30,
@@ -39,7 +45,26 @@ STANDARD = {
 	"abschlag_artikel": None,
 	"lohnanteil_prozent_standard": 0.0,
 	"lohnanteil_mit_zuschlaegen": 0,
+	# Mahnwesen (7.5)
+	"mahnfrist_erinnerung": 7,
+	"mahnfrist_mahnung1": 14,
+	"mahnfrist_mahnung2": 14,
+	"mahnung_zahlungsfrist": 7,
+	"mahngebuehr_mahnung1": 0.0,
+	"mahngebuehr_mahnung2": 5.0,
+	"mahngebuehr_konto": None,
+	# Zahlungseingang (7.5)
+	"bankkonto": None,
+	"nur_gutschriften": 1,
+	"csv_trennzeichen": CSV_AUTOMATISCH,
+	"csv_spalte_datum": None,
+	"csv_spalte_betrag": None,
+	"csv_spalte_verwendungszweck": None,
+	"csv_spalte_name": None,
+	"csv_spalte_iban": None,
 }
+GANZZAHLEN = ("mahnfrist_erinnerung", "mahnfrist_mahnung1", "mahnfrist_mahnung2", "mahnung_zahlungsfrist")
+GEBUEHREN = ("mahngebuehr_mahnung1", "mahngebuehr_mahnung2")
 
 
 def einstellungen() -> frappe._dict:
@@ -49,8 +74,14 @@ def einstellungen() -> frappe._dict:
 		for key in STANDARD:
 			if gespeichert.get(key) not in (None, ""):
 				werte[key] = gespeichert[key]
-	for key in ("abschlagsplan_automatisch", "lohnanteil_mit_zuschlaegen"):
+	for key in ("abschlagsplan_automatisch", "lohnanteil_mit_zuschlaegen", "nur_gutschriften"):
 		werte[key] = cint(werte[key])
+	for key in GANZZAHLEN:
+		werte[key] = max(cint(werte[key]), 0)
+	for key in GEBUEHREN:
+		werte[key] = max(flt(werte[key], 2), 0.0)
+	if werte.csv_trennzeichen not in (CSV_AUTOMATISCH, ";", ",", "Tab"):
+		werte.csv_trennzeichen = CSV_AUTOMATISCH
 	if werte.abschlagsplan_vorlage not in (*VORLAGEN, VORLAGE_EIGENE):
 		werte.abschlagsplan_vorlage = VORLAGE_30_40_30
 	werte.abschlag_mindestsumme = max(flt(werte.abschlag_mindestsumme), 0.0)
