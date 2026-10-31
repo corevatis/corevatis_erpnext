@@ -27,5 +27,6 @@
 	"letter_head": {
 		"letter_head_name": "Hülshoff Sanierungstechnik",
 		"owner_line": "PLATZHALTER Inhaber/Geschäftsführung"
-	}
+	},
+	"_datev": "DATEV (7.4) aus _standard: SKR03, Sachkontenlänge 4, Debitoren ab 10000, Gegenkonto 9090, Erlöse 8400 (19 %), USt 1776, Forderungen 1400, Bank 1200, Kasse 1000, Mahngebühren 2650. Beraternummer und Mandantennummer trägt Mike nach Rücksprache mit Hülshoffs Steuerberater hier ein (dann Template erneut ausführen) oder direkt im Desk unter „DATEV Settings“."
 }

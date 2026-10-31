@@ -19,6 +19,8 @@ env:
   ERPNEXT_BRANCH: version-16
   ERPNEXT_GERMANY_BRANCH: version-16
   DRUCKFORMATE_BRANCH: version-16-corevatis
+  # DATEV-Export (7.4) baut auf erpnext_datev auf (Bench-Gruppe corevatis-v16, docs/0.3-installationsprotokoll.md)
+  DATEV_BRANCH: version-16
   PYTHON_VERSION: "3.14"
   NODE_VERSION: "24"
   RUFF_VERSION: "0.14.10"
@@ -122,11 +124,12 @@ jobs:
           # wie in der Bench-Gruppe corevatis-v16 (docs/0.3-installationsprotokoll.md im Repo Handwerker)
           bench get-app --skip-assets --branch "${ERPNEXT_GERMANY_BRANCH}" https://github.com/alyf-de/erpnext_germany
           bench get-app --skip-assets --branch "${DRUCKFORMATE_BRANCH}" https://github.com/corevatis/erpnext_druckformate
+          bench get-app --skip-assets --branch "${DATEV_BRANCH}" https://github.com/alyf-de/erpnext_datev
           bench get-app --skip-assets corevatis_erpnext "$GITHUB_WORKSPACE"
           bench setup requirements --dev
           bench new-site --db-host 127.0.0.1 --db-root-password root --admin-password admin \
             --mariadb-user-host-login-scope='%' test_site
-          bench --site test_site install-app erpnext_germany erpnext_druckformate corevatis_erpnext
+          bench --site test_site install-app erpnext_germany erpnext_datev erpnext_druckformate corevatis_erpnext
           bench --site test_site execute frappe.get_installed_apps
         env:
           CI: "Yes"

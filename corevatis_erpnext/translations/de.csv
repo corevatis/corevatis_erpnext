@@ -434,3 +434,52 @@ Payment Entries,Zahlungen
 sicher,sicher
 wahrscheinlich,wahrscheinlich
 möglich,möglich
+DATEV Export,DATEV-Export
+DATEV Exports,DATEV-Exporte
+DATEV Export Beleg,DATEV-Export Beleg
+"Monthly DATEV export: posting batch (EXTF CSV), debtor master data and voucher images for the tax consultant (Corevatis)","Monatlicher DATEV-Export: Buchungsstapel (EXTF-CSV), Debitoren-Stammdaten und Belegbilder für den Steuerberater (Corevatis)"
+Period From,Zeitraum von
+Period To,Zeitraum bis
+Voucher Types,Belegarten
+"Invoices and payments: sales invoices, credit notes and payment entries. All postings: every general ledger entry of the period (journal entries, purchase invoices)","Rechnungen und Zahlungen: Ausgangsrechnungen, Gutschriften und Zahlungseingänge. Alle Buchungen: jeder Hauptbucheintrag des Zeitraums (Buchungssätze, Eingangsrechnungen)"
+Lock Postings (Festschreibung),Festschreibung (Buchungen beim Steuerberater nicht mehr änderbar)
+Header field of the batch: 1 = the tax consultant cannot change the imported postings any more. Only for final monthly exports,Kopffeld des Stapels: 1 = der Steuerberater kann die importierten Buchungen nicht mehr ändern. Nur für den endgültigen Monatsexport
+Only Vouchers Not Exported Yet,Nur noch nicht exportierte Belege
+Skip vouchers that an earlier export already contained (otherwise they are exported again and listed as repeated),"Belege auslassen, die ein früherer Export schon enthielt (sonst werden sie erneut exportiert und als Wiederholung aufgeführt)"
+Include Voucher Images (Invoice PDFs),Belegbilder (Rechnungs-PDFs) beilegen
+Print Format for Voucher Images,Druckformat der Belegbilder
+"Empty: print format from the DATEV settings of the company, otherwise the default invoice print format","Leer: Druckformat aus den DATEV-Einstellungen der Firma, sonst das Standard-Druckformat der Rechnung"
+Created On,Erstellt am
+Created By,Erstellt von
+Format Check,Formatprüfung
+Already Exported Vouchers,Bereits exportierte Belege
+Vouchers that an earlier export already contained (repeated export),"Belege, die ein früherer Export schon enthielt (Wiederholung)"
+Posting Lines,Buchungszeilen
+Credit Notes,Gutschriften
+Other Vouchers,Sonstige Belege
+Total Debit,Summe Soll
+Total Credit,Summe Haben
+Invoices (Gross),Rechnungen brutto
+Invoices minus credit notes,Rechnungen abzüglich Gutschriften
+Payments (Gross),Zahlungen brutto
+Debtors in Master Data,Debitoren in den Stammdaten
+Voucher Images,Belegbilder
+Posting Batch (EXTF CSV),Buchungsstapel (EXTF-CSV)
+Debtor Master Data (EXTF CSV),Debitoren-Stammdaten (EXTF-CSV)
+Voucher Images (ZIP),Belegbilder (ZIP)
+Log,Protokoll
+Vouchers,Belege
+Voucher,Beleg
+Gross Amount,Bruttobetrag
+Lines,Zeilen
+Previously Exported In,Zuvor exportiert in
+Voucher Image,Belegbild
+DATEV (Corevatis),DATEV (Corevatis)
+Last DATEV export that contained this voucher (set by the export),"Letzter DATEV-Export, der diesen Beleg enthielt (setzt der Export)"
+Exported to DATEV On,An DATEV exportiert am
+Monthly Export (Corevatis),Monatsexport (Corevatis)
+First Debtor Number,Erste Debitorennummer
+Debtor numbers are assigned per customer from this number on (account number length plus one digit; DATEV: 10000 to 69999),Debitorennummern werden je Kunde ab dieser Nummer vergeben (Sachkontenlänge plus eine Stelle; DATEV: 10000 bis 69999)
+Invoice PDF in the voucher image ZIP (empty: default print format of the invoice),Rechnungs-PDF im Belegbilder-ZIP (leer: Standard-Druckformat der Rechnung)
+DATEV-Export,DATEV-Export
+Company,Firma

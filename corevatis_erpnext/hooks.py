@@ -165,6 +165,10 @@ doc_events = {
 		"on_submit": "corevatis_erpnext.abrechnung.auftrag.zahlung_gebucht",
 		"on_cancel": "corevatis_erpnext.abrechnung.auftrag.zahlung_gebucht",
 	},
+	# 7.4 DATEV: neuer Kunde bekommt je Firma mit DATEV-Einstellungen eine Debitorennummer (ab 10000)
+	"Customer": {
+		"validate": "corevatis_erpnext.datev.debitoren.kunde_validate",
+	},
 	# Befunde mvp-test: Hinweis auf Positionen ohne Preis (falsche Preisliste)
 	# Angebotsdruck (4.3): Textbausteine in leere Felder, Eventual-/Alternativpositionen
 	# als is_alternative (nicht in der Summe) - vor der Summenberechnung
