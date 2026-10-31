@@ -212,20 +212,20 @@ S3_OPERATIONS = "frappe_s3_attachment.controller.S3Operations"
 
 
 def _s3_schluessel(f) -> str | None:
-	"""Objektschlüssel eines ``File`` im Objektspeicher: das Feld ``s3_key`` des Forks (schreibgeschützt),
-	für Altbestand ohne Feld die kanonische Download-URL ``?key=…&file_name=…`` (genau diese Parameter in
-	dieser Reihenfolge, wie ``corevatis.mappe``); sonst ``None`` (lokale Datei)."""
-	from urllib.parse import parse_qsl, urlsplit
-
+	"""Objektschlüssel eines ``File`` im Objektspeicher, ausschließlich aus dem Feld ``s3_key`` des Forks
+	(serverseitig beim Upload gesetzt, schreibgeschützt). Die URL wird nicht ausgewertet, damit kein
+	Schlüssel aus Benutzereingaben stammt. ``None`` für lokale Dateien; zeigt die URL in den Objektspeicher,
+	fehlt aber der Schlüssel, wird die Datei abgelehnt."""
 	url = f.file_url or ""
 	if not url.startswith(S3_DOWNLOAD_PRAEFIX + "?"):
 		return None
-	if f.meta.has_field("s3_key") and f.get("s3_key"):
-		return f.get("s3_key")
-	params = parse_qsl(urlsplit(url).query, keep_blank_values=True)
-	if len(params) != 2 or params[0][0] != "key" or params[1][0] != "file_name":
-		return None
-	return params[0][1] or None
+	key = f.get("s3_key") if f.meta.has_field("s3_key") else None
+	if not key:
+		frappe.throw(
+			_("Die Datei liegt im Objektspeicher, hat aber keinen Objektschlüssel. Bitte erneut hochladen."),
+			ZahlungFehler,
+		)
+	return key
 
 
 def _s3_lesen(key: str) -> bytes:
