@@ -25,6 +25,8 @@ STANDARD = {
 	"fahrzeit_standard": 30,
 	"fahrzeit_puffer": 10,
 	"geokodierung_aus": 0,
+	# Plantafel (P1.4): Reihenfolge der Mitarbeiter-Zeilen (Employee-Namen, einer je Zeile)
+	"plantafel_reihenfolge": "",
 }
 
 
@@ -58,4 +60,5 @@ def einstellungen() -> frappe._dict:
 	for key in ("fahrzeit_minimum", "fahrzeit_standard", "fahrzeit_puffer"):
 		minuten = cint(werte[key])
 		werte[key] = minuten if 0 <= minuten <= 240 else STANDARD[key]
+	werte.plantafel_reihenfolge = str(werte.plantafel_reihenfolge or "")
 	return werte

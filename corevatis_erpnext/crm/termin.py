@@ -213,6 +213,165 @@ def termin_anlegen(
 	return result
 
 
+@frappe.whitelist(methods=["POST"])
+def termin_verschieben(
+	termin: str,
+	beginn: str,
+	meister: str | None = None,
+	trotzdem: int | str | bool | None = 0,
+) -> dict:
+	"""Besichtigungstermin verschieben (Plantafel P1.4): neuer Beginn, die Dauer bleibt; optional ein
+	anderer Meister. Dieselbe Konfliktprüfung wie ``termin_anlegen`` (``TerminKonflikt``, 417; der
+	eigene Termin zählt nicht), ``trotzdem=1`` übersteuert mit Vermerk. Zuweisung (ToDo) und Freigabe
+	(DocShare) ziehen nach; die Kundenbestätigung wird neu gerendert und zurückgegeben, **nicht**
+	versendet. Jede Verschiebung schreibt einen Kommentar an den Termin.
+
+	:param termin: Name des Events
+	:param beginn: neuer Beginn (``YYYY-MM-DD HH:MM[:SS]``)
+	:param meister: Benutzer mit Rolle Meister (leer = der bisherige)
+	:param trotzdem: 1 = Überschneidung bewusst übersteuern
+	"""
+	_pruefe_rolle()
+	event = frappe.get_doc("Event", termin)
+	event.check_permission("write")
+	if event.status != "Open":
+		frappe.throw(
+			_("Termin {0} ist {1} - nur offene Termine lassen sich verschieben.").format(
+				event.name, _(event.status)
+			)
+		)
+	lead = lead_des_termins(event)
+	if not lead:
+		frappe.throw(_("Termin {0} gehört zu keiner Anfrage.").format(event.name))
+	doc = frappe.get_doc("Lead", lead)
+	doc.check_permission("read")
+
+	start = _beginn(beginn)
+	alt_start = get_datetime(event.starts_on)
+	alt_ende = (
+		get_datetime(event.ends_on) if event.ends_on else alt_start + timedelta(minutes=standard_dauer())
+	)
+	dauer = alt_ende - alt_start
+	if dauer.total_seconds() <= 0:
+		dauer = timedelta(minutes=standard_dauer())
+	ende = start + dauer
+	alter_meister = meister_des_termins(event)
+	meister = (meister or "").strip() or alter_meister
+	if not meister:
+		frappe.throw(_("Bitte einen Meister angeben."), frappe.MandatoryError)
+	if meister not in {m["name"] for m in _meister()}:
+		frappe.throw(
+			_("{0} ist kein aktiver Benutzer mit der Rolle Meister.").format(
+				frappe.utils.strip_html_tags(str(meister))[:140]
+			)
+		)
+
+	from corevatis_erpnext.planung import terminplanung
+
+	konflikte = terminplanung.konflikte(doc, meister, start, ende)
+	if konflikte and not cint(trotzdem):
+		terminplanung.konflikt_werfen(konflikte, meister)
+
+	wer = escape_html(get_fullname(frappe.session.user) or frappe.session.user)
+	hinweise: list[str] = []
+	geaendert = (start, ende) != (alt_start, alt_ende)
+	if geaendert:
+		event.starts_on = start
+		event.ends_on = ende
+		event.save()
+	if meister != alter_meister:
+		_meister_wechseln(event, alter_meister, meister, start)
+	elif geaendert:
+		for todo in frappe.get_all(
+			"ToDo",
+			filters={"reference_type": "Event", "reference_name": event.name, "status": "Open"},
+			pluck="name",
+		):
+			frappe.db.set_value("ToDo", todo, "date", start.date(), update_modified=False)
+	if not geaendert and meister == alter_meister:
+		hinweise.append(_("Keine Änderung: Der Termin lag schon dort."))
+	else:
+		text = _("Verschoben von {0}: {1} → {2}").format(
+			wer, f"{alt_start:%d.%m.%Y %H:%M}", f"{start:%d.%m.%Y %H:%M}"
+		)
+		if meister != alter_meister:
+			text += " · " + _("Meister: {0} → {1}").format(
+				escape_html(get_fullname(alter_meister) if alter_meister else "-"),
+				escape_html(get_fullname(meister) or meister),
+			)
+		event.add_comment("Info", text)
+		if konflikte:
+			event.add_comment(
+				"Info",
+				_("Trotz Überschneidung verschoben von {0}: {1}").format(
+					wer, " ".join(escape_html(k["text"]) for k in konflikte)
+				),
+			)
+		hinweise.append(
+			_("Bitte die Terminbestätigung neu an den Kunden geben (wird nicht automatisch gesendet).")
+		)
+
+	inhalt = bestaetigung_rendern(doc, event)
+	return {
+		"event": event.name,
+		"lead": doc.name,
+		"beginn": start.strftime("%Y-%m-%d %H:%M:%S"),
+		"ende": ende.strftime("%Y-%m-%d %H:%M:%S"),
+		"meister": meister,
+		"meister_name": get_fullname(meister) or meister,
+		"alter_meister": alter_meister,
+		"konflikte": konflikte,
+		"bestaetigung": inhalt,
+		"empfaenger": doc.get("email_id") or None,
+		"hinweise": hinweise,
+	}
+
+
+def lead_des_termins(event) -> str | None:
+	"""Anfrage (Lead) des Termins: erster Teilnehmer vom Typ Lead."""
+	for p in event.get("event_participants") or []:
+		if p.reference_doctype == "Lead" and p.reference_docname:
+			return p.reference_docname
+	return None
+
+
+def _meister_wechseln(event, alt: str | None, neu: str, start) -> None:
+	"""Zuweisung (ToDo mit der internen Notiz) und Freigabe (DocShare) auf den neuen Meister übertragen."""
+	from frappe.desk.form.assign_to import add as assign
+	from frappe.desk.form.assign_to import clear
+
+	beschreibung = frappe.db.get_value(
+		"ToDo",
+		{"reference_type": "Event", "reference_name": event.name, "status": "Open"},
+		"description",
+		order_by="creation asc",
+	)
+	clear("Event", event.name, ignore_permissions=True)
+	assign(
+		{
+			"assign_to": [neu],
+			"doctype": "Event",
+			"name": event.name,
+			"description": beschreibung or _todo_text(event.subject, None),
+			"date": start.date(),
+		}
+	)
+	_freigeben(event, neu)
+	if alt and alt != neu:
+		_freigabe_entziehen(event, alt)
+
+
+def _freigabe_entziehen(event, user: str) -> None:
+	"""Freigabe des bisherigen Meisters aufheben - außer er ist Ersteller oder Büro (bleibt freigegeben)."""
+	if user == event.owner or ROLLE_BUERO in frappe.get_roles(user):
+		return
+	if frappe.db.exists("DocShare", {"share_doctype": "Event", "share_name": event.name, "user": user}):
+		# wie _freigeben ohne Freigaberecht; Büro/Meister haben kein Löschrecht auf DocShare
+		frappe.share.remove(
+			"Event", event.name, user, flags={"ignore_share_permission": True, "ignore_permissions": True}
+		)
+
+
 @frappe.whitelist()
 def bestaetigung_anzeigen(lead: str) -> dict:
 	"""Gerenderte Terminbestätigung zum aktuellen Termin (Betreff, HTML, Text)."""

@@ -1,0 +1,189 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:ABW-{YYYY}-{#####}",
+ "creation": "2026-10-31 18:00:00.000000",
+ "description": "Absence of an employee (holiday, sick leave, training) for the planning board (Corevatis)",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "mitarbeiter",
+  "mitarbeiter_name",
+  "benutzer",
+  "column_break_art",
+  "art",
+  "section_zeit",
+  "von",
+  "bis",
+  "column_break_zeit",
+  "ganztags",
+  "von_uhrzeit",
+  "bis_uhrzeit",
+  "section_notiz",
+  "notiz"
+ ],
+ "fields": [
+  {
+   "fieldname": "mitarbeiter",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "mitarbeiter.employee_name",
+   "fieldname": "mitarbeiter_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "description": "User of the employee; set automatically",
+   "fieldname": "benutzer",
+   "fieldtype": "Link",
+   "label": "User",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_art",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Urlaub",
+   "fieldname": "art",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Absence Type",
+   "options": "Urlaub\nKrank\nSchulung\nSonstiges",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_zeit",
+   "fieldtype": "Section Break",
+   "label": "Period"
+  },
+  {
+   "fieldname": "von",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "From",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "bis",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "To",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_zeit",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "Unchecked: only the hours below count (single day)",
+   "fieldname": "ganztags",
+   "fieldtype": "Check",
+   "label": "All Day"
+  },
+  {
+   "depends_on": "eval:!doc.ganztags",
+   "fieldname": "von_uhrzeit",
+   "fieldtype": "Time",
+   "label": "From Time",
+   "mandatory_depends_on": "eval:!doc.ganztags"
+  },
+  {
+   "depends_on": "eval:!doc.ganztags",
+   "fieldname": "bis_uhrzeit",
+   "fieldtype": "Time",
+   "label": "To Time",
+   "mandatory_depends_on": "eval:!doc.ganztags"
+  },
+  {
+   "fieldname": "section_notiz",
+   "fieldtype": "Section Break",
+   "label": "Note"
+  },
+  {
+   "fieldname": "notiz",
+   "fieldtype": "Small Text",
+   "label": "Note"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-31 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Abwesenheit",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Büro",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 1,
+   "role": "Meister",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 0,
+   "role": "Monteur",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "sort_field": "von",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "mitarbeiter_name",
+ "track_changes": 1
+}

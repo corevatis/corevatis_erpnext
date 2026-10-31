@@ -570,6 +570,58 @@ class TestTerminplanung(IntegrationTestCase):
 			any("Trotz Überschneidung" in v and "09:00\u201310:00" in v for v in vermerke), vermerke
 		)
 
+	def test_abwesenheit_sperrt_meister(self):
+		"""Plantafel P1.4: eine Abwesenheit (Urlaub, Krank, …) zählt wie ein belegter Tag - keine
+		Vorschläge, Konflikt beim Anlegen mit Klartext; mit Uhrzeiten nur dieser Teil des Tages."""
+		self.addCleanup(frappe.db.rollback)
+		from corevatis_erpnext.tests.test_wochenplan import employee
+
+		employee(MEISTER1, "Martin")
+		frappe.get_doc(
+			{
+				"doctype": "Abwesenheit",
+				"mitarbeiter": frappe.db.get_value("Employee", {"user_id": MEISTER1}),
+				"art": "Urlaub",
+				"von": self.di,
+				"bis": self.di,
+				"ganztags": 1,
+			}
+		).insert(ignore_permissions=True)
+		r = self._vorschlaege()
+		self.assertFalse(
+			[v for v in r["vorschlaege"] if v["meister"] == MEISTER1 and v["datum"] == str(self.di)]
+		)
+		self.assertTrue(
+			[v for v in r["vorschlaege"] if v["meister"] == MEISTER2 and v["datum"] == str(self.di)]
+		)
+		frappe.set_user(BUERO)
+		with self.assertRaises(terminplanung.TerminKonflikt) as cm:
+			crm_termin.termin_anlegen(self.lead.name, f"{self.di} 09:30:00", MEISTER1, 60, bestaetigung=0)
+		self.assertIn(f"ist Di {self.di:%d.%m.} abwesend (Urlaub)", str(cm.exception))
+		self.assertEqual(cm.exception.konflikte[0]["art"], "Abwesenheit")
+		# Abwesenheit mit Uhrzeiten: nur der Nachmittag ist gesperrt
+		frappe.set_user("Administrator")
+		frappe.get_doc(
+			{
+				"doctype": "Abwesenheit",
+				"mitarbeiter": frappe.db.get_value("Employee", {"user_id": MEISTER2})
+				or employee(MEISTER2, "Moritz"),
+				"art": "Schulung",
+				"von": self.mi,
+				"bis": self.mi,
+				"ganztags": 0,
+				"von_uhrzeit": "12:00:00",
+				"bis_uhrzeit": "15:00:00",
+			}
+		).insert(ignore_permissions=True)
+		frappe.set_user(BUERO)
+		frei = terminplanung.pruefen(self.lead.name, f"{self.mi} 09:00:00", MEISTER2, 60)
+		self.assertTrue(frei["frei"], frei)
+		belegt = terminplanung.pruefen(self.lead.name, f"{self.mi} 13:00:00", MEISTER2, 60)
+		self.assertFalse(belegt["frei"])
+		self.assertIn("12:00\u201315:00", belegt["konflikte"][0]["text"])
+		self.assertIn("Schulung", belegt["konflikte"][0]["text"])
+
 	def test_pruefen_und_rechte(self):
 		self.addCleanup(frappe.db.rollback)
 		self._termin_fremd("09:00")

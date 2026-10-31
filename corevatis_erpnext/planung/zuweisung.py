@@ -199,6 +199,17 @@ def _hinweis_ueberlast(task: frappe._dict, user: str) -> list[str]:
 	]
 
 
+def _hinweis_abwesenheit(task: frappe._dict, user: str, name: str) -> list[str]:
+	"""Plantafel P1.4: der Mitarbeiter ist an Tagen des Arbeitspakets abwesend (Urlaub, Krank, …)."""
+	from corevatis_erpnext.planung.abwesenheit import hinweise
+
+	if not task.exp_start_date:
+		return []
+	return hinweise(
+		user, getdate(task.exp_start_date), getdate(task.exp_end_date or task.exp_start_date), name
+	)
+
+
 def stand(task: str) -> dict:
 	"""Zuweisungen (ToDos, ohne entfernte) der Task mit Mitarbeiter."""
 	todos = frappe.get_all(
@@ -301,6 +312,7 @@ def zuweisen(task: str, employee: str) -> dict:
 		vorhanden = offene_todos(task, m.user_id)
 	else:
 		hinweise.insert(0, _("{0} ist dem Arbeitspaket bereits zugewiesen.").format(m.employee_name))
+	hinweise += _hinweis_abwesenheit(t, m.user_id, m.employee_name)
 	hinweise += _hinweis_ueberlast(t, m.user_id)
 	ergebnis = stand(task)
 	ergebnis.update(

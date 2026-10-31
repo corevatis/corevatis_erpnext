@@ -6,6 +6,37 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (Plantafel, Phase 1 P1.4, Issue Handwerker#79)
+
+- **Desk-Seite „Plantafel“** (`page/plantafel`, Leiste „Betrieb“ statt „Wochenplan“, Arbeitsbereich
+  „Vorgänge“): Mitarbeiter × Tage (Woche Mo–Fr, Sa/So einblendbar, Monat) mit Besichtigungsterminen,
+  Arbeitspaketen (Zeitraum mit Uhrzeiten, Zeitraster nach Arbeitszeit), Abwesenheiten, Feiertagen,
+  Fahrzeug je Einsatz, Tageslast; Überschneidungen und doppelt eingeplante Fahrzeuge rot, Fahrzeitlücken
+  (D14-Regeln) als Hinweis. Reihenfolge der Mitarbeiter einstellbar (Planungseinstellungen
+  `plantafel_reihenfolge`). Büro/Meister planen, Monteure sehen ihre eigene Zeile (nur lesen).
+  `…planung.plantafel.tafel(von, ansicht, wochenende, projekt, mitarbeiter)`.
+- **Verschieben per Ziehen:** `…planung.plantafel.arbeitspaket_verschieben(task, datum, mitarbeiter,
+  von_mitarbeiter, trotzdem, freigeben)` (Zeitraum um ganze Tage, Zuweisung 5.2 umgehängt; Konflikte:
+  Abwesenheit, Termin des Mitarbeiters, Feiertag am Zieltag) und `…crm.termin.termin_verschieben(termin,
+  beginn, meister, trotzdem)` (Dauer bleibt, dieselbe Konfliktprüfung wie `termin_anlegen`, Zuweisung und
+  Freigabe nachgezogen, Bestätigungstext neu, nicht gesendet). Konflikt → `TerminKonflikt` (417) mit
+  Grund und „Trotzdem verschieben“ (Vermerk); jede Verschiebung schreibt einen Kommentar an den Beleg.
+- Doctype **Abwesenheit** (Mitarbeiter, von, bis, Art Urlaub/Krank/Schulung/Sonstiges, ganztags oder
+  Uhrzeiten, Notiz; Büro schreibt, Meister/Monteur lesen eigene über `permission_query_conditions`/
+  `has_permission`). Terminplanung (`terminplanung.belegungen`), Konflikttexte („… ist Di 04.11. abwesend
+  (Urlaub).“), Zuweisungs-Hinweis und Wochenplan (`abwesend` je Zeile) kennen Abwesenheiten. Die Art
+  (Urlaub, Krank, …) sehen nur Büro/System Manager und der Betroffene selbst, alle anderen „Abwesend“
+  (Security-Review: Krankheit ist ein Gesundheitsdatum).
+- Doctype **Fahrzeug** (Kennzeichen, Bezeichnung, aktiv, optional Lager) und Feld `cv_fahrzeug` an Task
+  und Event; `…planung.plantafel.fahrzeug_zuordnen(doctype, name, fahrzeug, trotzdem)` mit Konflikt bei
+  gleichzeitigem Einsatz.
+- **Druck** `…planung.plantafel.drucken(von, wochenende, projekt)`: Wochenplan als PDF im Querformat
+  (Mitarbeiter × Tage, Einsätze mit Fahrzeug und Adresse - PLZ/Ort für fremde Vorgänge -, Abwesenheiten,
+  Feiertage).
+- Report „Wochenplan“ (5.2) leitet im Desk mit seinen Filtern zur Plantafel um; Daten und REST bleiben.
+  `terminplanung.task_belegung` als gemeinsame Umrechnung Task → Belegung. Tests `test_plantafel`,
+  Erweiterung `test_terminplanung` (Abwesenheit sperrt den Meister).
+
 ### Hinzugefügt (Terminplanung Besichtigung, Durchstich D14, Anforderung 31.10.)
 
 - **Wunschtermin des Kunden**: Webform „Kostenlose Einschätzung“ mit Abschnitt „Wunschtermin für die

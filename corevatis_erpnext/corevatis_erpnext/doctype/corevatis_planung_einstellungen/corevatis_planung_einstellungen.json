@@ -28,7 +28,9 @@
   "column_break_fahrzeit",
   "fahrzeit_umwegfaktor",
   "fahrzeit_kmh",
-  "fahrzeit_minimum"
+  "fahrzeit_minimum",
+  "plantafel_section",
+  "plantafel_reihenfolge"
  ],
  "fields": [
   {
@@ -180,12 +182,24 @@
    "fieldtype": "Int",
    "label": "Minimum Travel Time (Minutes)",
    "non_negative": 1
+  },
+  {
+   "fieldname": "plantafel_section",
+   "fieldtype": "Section Break",
+   "label": "Planning Board",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "plantafel_reihenfolge",
+   "fieldtype": "Small Text",
+   "label": "Row Order of Employees",
+   "description": "One employee ID per line; set via “Reihenfolge” on the planning board. Employees not listed follow alphabetically."
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-31 12:00:00.000000",
+ "modified": "2026-10-31 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Corevatis ERPNext",
  "name": "Corevatis Planung Einstellungen",

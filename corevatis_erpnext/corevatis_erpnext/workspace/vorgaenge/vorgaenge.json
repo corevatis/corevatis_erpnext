@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\": \"cvvgcb0\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Vorgänge Übersicht\", \"col\": 12}}, {\"id\": \"cvvgnc0\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Vorgänge offen\", \"col\": 4}}, {\"id\": \"cvvgnc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Vorgänge überfällig\", \"col\": 4}}, {\"id\": \"cvvgnc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Vorgänge: Betrieb am Zug\", \"col\": 4}}, {\"id\": \"cvvgnc3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Offene Termine\", \"col\": 6}}, {\"id\": \"cvvgnc4\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Angebote offen\", \"col\": 6}}, {\"id\": \"cvvgsp0\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvvgsc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Vorgangsliste\", \"col\": 3}}, {\"id\": \"cvvgsc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Neue Anfrage\", \"col\": 3}}, {\"id\": \"cvvgsc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Offene Anfragen\", \"col\": 3}}, {\"id\": \"cvvgsc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Termine\", \"col\": 3}}, {\"id\": \"cvvgsc4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Objekte\", \"col\": 3}}, {\"id\": \"cvvgsc5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Aufmaße\", \"col\": 3}}, {\"id\": \"cvvgsc6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Angebote\", \"col\": 3}}, {\"id\": \"cvvgsc7\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Aufträge\", \"col\": 3}}, {\"id\": \"cvvgsc8\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Projekte\", \"col\": 3}}, {\"id\": \"cvvgsc10\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Wochenplan\", \"col\": 3}}, {\"id\": \"cvvgsc9\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Rechnungen\", \"col\": 3}}, {\"id\": \"cvvgsp1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvvgcd0\", \"type\": \"card\", \"data\": {\"card_name\": \"Vorgang\", \"col\": 4}}, {\"id\": \"cvvgcd1\", \"type\": \"card\", \"data\": {\"card_name\": \"Einstellungen\", \"col\": 4}}]",
+ "content": "[{\"id\": \"cvvgcb0\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Vorgänge Übersicht\", \"col\": 12}}, {\"id\": \"cvvgnc0\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Vorgänge offen\", \"col\": 4}}, {\"id\": \"cvvgnc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Vorgänge überfällig\", \"col\": 4}}, {\"id\": \"cvvgnc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Vorgänge: Betrieb am Zug\", \"col\": 4}}, {\"id\": \"cvvgnc3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Offene Termine\", \"col\": 6}}, {\"id\": \"cvvgnc4\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Angebote offen\", \"col\": 6}}, {\"id\": \"cvvgsp0\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvvgsc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Vorgangsliste\", \"col\": 3}}, {\"id\": \"cvvgsc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Neue Anfrage\", \"col\": 3}}, {\"id\": \"cvvgsc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Offene Anfragen\", \"col\": 3}}, {\"id\": \"cvvgsc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Termine\", \"col\": 3}}, {\"id\": \"cvvgsc4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Objekte\", \"col\": 3}}, {\"id\": \"cvvgsc5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Aufmaße\", \"col\": 3}}, {\"id\": \"cvvgsc6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Angebote\", \"col\": 3}}, {\"id\": \"cvvgsc7\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Aufträge\", \"col\": 3}}, {\"id\": \"cvvgsc8\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Projekte\", \"col\": 3}}, {\"id\": \"cvvgsc10\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Plantafel\", \"col\": 3}}, {\"id\": \"cvvgsc9\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Rechnungen\", \"col\": 3}}, {\"id\": \"cvvgsp1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvvgcd0\", \"type\": \"card\", \"data\": {\"card_name\": \"Vorgang\", \"col\": 4}}, {\"id\": \"cvvgcd1\", \"type\": \"card\", \"data\": {\"card_name\": \"Einstellungen\", \"col\": 4}}]",
  "creation": "2026-10-29 18:00:00.000000",
  "custom_blocks": [
   {
@@ -106,13 +106,12 @@
   {
    "dependencies": "",
    "hidden": 0,
-   "is_query_report": 1,
-   "label": "Wochenplan",
+   "is_query_report": 0,
+   "label": "Plantafel",
    "link_count": 0,
-   "link_to": "Wochenplan",
-   "link_type": "Report",
+   "link_to": "plantafel",
+   "link_type": "Page",
    "onboard": 0,
-   "report_ref_doctype": "Task",
    "type": "Link"
   },
   {
@@ -157,7 +156,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-30 12:00:00.000000",
+ "modified": "2026-10-31 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Corevatis ERPNext",
  "name": "Vorgänge",
@@ -267,10 +266,9 @@
   },
   {
    "color": "Yellow",
-   "label": "Wochenplan",
-   "link_to": "Wochenplan",
-   "report_ref_doctype": "Task",
-   "type": "Report"
+   "label": "Plantafel",
+   "link_to": "plantafel",
+   "type": "Page"
   },
   {
    "color": "Red",
