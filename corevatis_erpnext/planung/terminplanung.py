@@ -602,7 +602,11 @@ def _antwort(doc, minuten, w, auswahl, hinweise, ziel, ctx, zeitraum) -> dict:
 			)
 		)
 	if ctx.budget.fehlgeschlagen:
-		hinweise.append(_("Fahrzeit geschätzt: Die Kartensuche (OpenStreetMap) ist gerade nicht erreichbar."))
+		hinweise.append(
+			_(
+				"Fahrzeit geschätzt: Die Geokodierung ist gerade nicht möglich (OpenStreetMap oder Zwischenspeicher)."
+			)
+		)
 	return {
 		"lead": doc.name,
 		"dauer": minuten,

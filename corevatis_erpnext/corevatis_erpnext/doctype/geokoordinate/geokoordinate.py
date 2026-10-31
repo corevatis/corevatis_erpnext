@@ -23,8 +23,11 @@ class Geokoordinate(Document):
 	def validate(self):
 		from corevatis_erpnext.planung.geokodierung import QUELLE_KEIN_TREFFER, QUELLE_MANUELL
 
-		# leere Float-Felder speichert Frappe als 0 - (0, 0) gilt deshalb als „keine Koordinaten“
-		hat_koordinaten = bool(flt(self.lat) or flt(self.lon))
+		# leere Float-Felder speichert Frappe als 0 - (0, 0) gilt deshalb als „keine Koordinaten“;
+		# die Spalten sind NOT NULL, deshalb nie None stehen lassen
+		self.lat, self.lon = flt(self.lat), flt(self.lon)
+		hat_koordinaten = bool(self.lat or self.lon)
+		self.gefunden = 1 if hat_koordinaten else 0
 		if hat_koordinaten:
 			if not (-90 <= flt(self.lat) <= 90 and -180 <= flt(self.lon) <= 180):
 				frappe.throw(
