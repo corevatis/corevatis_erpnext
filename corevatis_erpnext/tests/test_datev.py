@@ -497,10 +497,16 @@ class TestDatevExport(IntegrationTestCase):
 
 	def test_monatsexport(self):
 		from corevatis_erpnext.datev import debitoren
-		from corevatis_erpnext.datev.export import belegfeld2
+		from corevatis_erpnext.datev.export import DatevFehler, belegfeld2
 
+		# Belege anderer Tests im selben Monat vorab exportieren (Rollback erst je Klasse), damit
+		# dieser Export mit „nur neue Belege“ genau den eigenen Vorgang enthält
+		try:
+			self.export()
+		except DatevFehler:
+			pass  # noch keine Buchungen im Zeitraum
 		v = self.vorgang_komplett()
-		doc, r = self.export()
+		doc, r = self.export(nur_neue=1)
 		self.assertTrue(r["ok"], r.get("zusammenfassung"))
 		self.assertEqual((doc.status, doc.pruefung, doc.wiederholung), ("Erstellt", "OK", 0))
 		self.assertEqual(
