@@ -140,6 +140,8 @@ doc_events = {
 			"corevatis_erpnext.abnahme.rechnung_pruefen",
 		],
 		"on_update": "corevatis_erpnext.abnahme.rechnung.rechnung_kommentar",
+		# 7.1/7.2: Freigabe einer Abschlags-/Schlussrechnung nur durch das Büro, Positionen zum Auftrag
+		"before_submit": "corevatis_erpnext.abrechnung.auftrag.rechnung_freigabe",
 		"on_submit": [
 			"corevatis_erpnext.abnahme.rechnung.rechnung_kommentar",
 			# Dokumentenmappe (D.2): Rechnungs-PDF in Ordner 07 Rechnung

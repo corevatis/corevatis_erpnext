@@ -447,6 +447,12 @@ class TestAbrechnung(IntegrationTestCase):
 			"corevatis_erpnext.abrechnung.auftrag.rechnung_storniert", events["Sales Invoice"]["on_cancel"]
 		)
 		self.assertIn(
+			"corevatis_erpnext.abrechnung.auftrag.rechnung_freigabe", events["Sales Invoice"]["before_submit"]
+		)
+		self.assertIn(
+			"corevatis_erpnext.abrechnung.auftrag.rechnung_validieren", events["Sales Invoice"]["validate"]
+		)
+		self.assertIn(
 			"corevatis_erpnext.abrechnung.auftrag.zahlung_gebucht", events["Payment Entry"]["on_submit"]
 		)
 		js = frappe.get_hooks("doctype_js", app_name="corevatis_erpnext")

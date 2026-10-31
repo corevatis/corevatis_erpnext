@@ -346,9 +346,14 @@ def _nach_rechnung(doc) -> None:
 		plan.aktualisieren_zum_auftrag(auftrag)
 
 
-def rechnung_eingereicht(doc, method=None) -> None:
-	"""``Sales Invoice.on_submit``: Freigabe prüfen, abgerechneter Anteil am Auftrag, Stand des Abschlagsplans."""
+def rechnung_freigabe(doc, method=None) -> None:
+	"""``Sales Invoice.before_submit``: Freigabe einer Abschlags-/Schlussrechnung prüfen - vor dem
+	Schreiben, damit eine abgelehnte Freigabe keinen Zwischenstand hinterlässt."""
 	rechnung_freigabe_pruefen(doc)
+
+
+def rechnung_eingereicht(doc, method=None) -> None:
+	"""``Sales Invoice.on_submit``: abgerechneter Anteil am Auftrag und Stand des Abschlagsplans."""
 	_nach_rechnung(doc)
 
 
