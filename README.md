@@ -282,6 +282,30 @@ Modul `corevatis_erpnext/datev/`, baut auf [erpnext_datev](https://github.com/al
 - Site-Template `datev` (`_standard.json`): DATEV Settings je Firma (Platzhalter für Berater- und
   Mandantennummer), Prüfpunkte. Doku: `docs/7.4-datev-export.md` (Repo Handwerker).
 
+## Textbausteine, Vorlagen, Serienbrief (Phase 2, P2.6)
+
+Bausteine sind ERPNexts `Terms and Conditions` (im Desk „Textbaustein“), erweitert um Art, Belegart,
+Verfahren, Firma, Reihenfolge, Gültig ab/bis und Mahnstufe (`textbausteine/felder.py`). Leiste „Betrieb“ →
+Stammdaten → Textbausteine; Büro pflegt, Meister liest.
+
+- Platzhalter `[[Name]]` aus dem Katalog `textbausteine/platzhalter.py` (Kunde, Anrede, Objekt, Angebot,
+  Auftrag, Rechnung, Betrag, Offen, Faelligkeit, Zahlungsfrist, Firma, Sachbearbeiter, Heute …). Speichern
+  prüft den Text, unbekannte Platzhalter ergeben einen Fehler mit der Liste. Kein Jinja über Text des Büros;
+  ERPNexts Jinja-Rendern der Bausteine lässt `[[…]]` stehen, die Belege ersetzen sie beim Speichern
+  (`textbausteine.beleg_validate`), die Mahnung beim Erstellen (`abrechnung.mahnung.mahnung_erstellen`).
+- Auswahl: `textbausteine.bester(art, firma, belegart, verfahren)` - Treffer bei Firma vor Verfahren vor
+  Belegart, leere Felder gelten für alle, abgelaufene und deaktivierte zählen nicht, dann Reihenfolge.
+  Angebot: Vorbemerkung und Gewährleistung über `angebot.textbausteine.texte_einsetzen`; Zahlungsbedingungen:
+  Baustein mit Firma oder Verfahren vor `Company.default_selling_terms`. Auftrag/Rechnung ohne
+  Zahlungsbedingungen bekommen den passenden Baustein (`beleg_before_insert`).
+- Vorschau am Baustein (`textbausteine.vorschau`) mit dem letzten Beleg der Belegart.
+- Mahntexte: Bausteine „Mahntext Zahlungserinnerung/1. Mahnung/2. Mahnung“; Speichern überträgt den Text in
+  `Dunning Type.dunning_letter_text` der Firma bzw. aller Firmen ohne eigenen Baustein.
+- Serienbrief: Kundenliste → Auswahl → Aktionen → „Serienbrief“ → Baustein (Art Anschreiben), Betreff, Firma →
+  eine private PDF-Datei mit einer Seite je Kunde (`textbausteine/serienbrief.py`, wkhtmltopdf + pypdf).
+  Nur Büro/System Manager, höchstens 200 Kunden, kein E-Mail-Versand.
+- Doku: `docs/P2.6-textbausteine.md` (Repo Handwerker).
+
 ## Lizenz
 
 Copyright (C) 2026 Corevatis
@@ -317,6 +341,7 @@ corevatis_erpnext/
                         Wochenplan (5.2), Terminplanung Besichtigung (terminplanung, slotrechner,
                         geokodierung - D14), Plantafel (plantafel, abwesenheit - P1.4)
   datev/                DATEV-Monatsexport (7.4): export, debitoren, pruefung (ohne Frappe), felder
+  textbausteine/        Textbausteine im Desk (P2.6): felder, platzhalter, serienbrief; Hooks an Terms and Conditions
   public/js/            Desk-Skripte (hooks.doctype_js): galerie.js, lead_galerie.js, lead_termin.bundle.js,
                         quotation_annahme.js, planung.js
   corevatis_erpnext/    Modul "Corevatis ERPNext" (Singles „Corevatis Vertrieb Einstellungen“,

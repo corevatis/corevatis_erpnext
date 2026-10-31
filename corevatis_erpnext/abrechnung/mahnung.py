@@ -374,6 +374,12 @@ def mahnung_erstellen(sales_invoice: str, stufe=None, bestaetigen=0) -> dict:
 		doc.cv_zahlungsfrist = add_days(today(), e.mahnung_zahlungsfrist)
 		doc.cv_projekt = r.project
 	doc.get_dunning_letter_text()
+	# Textbausteine (P2.6): Platzhalter des Mahntexts mit den Werten der Mahnung füllen
+	from corevatis_erpnext.textbausteine import platzhalter
+
+	kontext = platzhalter.kontext_aus(doc)
+	doc.body_text = platzhalter.ersetzen(doc.body_text, kontext)
+	doc.closing_text = platzhalter.ersetzen(doc.closing_text, kontext)
 	doc.insert()
 	doc.submit()
 	text = _("{0} {1} erstellt: offen {2}, Mahngebühr {3}, zahlbar bis {4}.").format(

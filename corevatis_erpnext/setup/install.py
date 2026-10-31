@@ -43,6 +43,10 @@ def after_install() -> None:
 	from corevatis_erpnext.angebot.textbausteine import ensure_textbausteine
 
 	ensure_textbausteine()
+	# Textbausteine im Desk (P2.6): Felder, Rechte, Einordnung, Mahntexte, Anschreiben
+	from corevatis_erpnext.textbausteine import ensure_setup as ensure_textbausteine_desk
+
+	ensure_textbausteine_desk()
 
 	ensure_angebot_setup()
 	# Zeiterfassung (3.9): Activity Types Arbeitszeit/Fahrzeit/Pause, Timesheet Detail.cv_sync_key
@@ -97,6 +101,10 @@ def after_migrate() -> None:
 	from corevatis_erpnext.angebot.textbausteine import ensure_textbausteine
 
 	ensure_textbausteine()
+	# Textbausteine im Desk (P2.6): Felder, Rechte, Einordnung, Mahntexte, Anschreiben
+	from corevatis_erpnext.textbausteine import ensure_setup as ensure_textbausteine_desk
+
+	ensure_textbausteine_desk()
 
 	# Angebotsannahme/Nachfassen (4.4/4.5) zuletzt: der Spiegel Quotation -> Sales Order
 	# übernimmt die cv_*-Felder, die andere Schritte am Angebot angelegt haben

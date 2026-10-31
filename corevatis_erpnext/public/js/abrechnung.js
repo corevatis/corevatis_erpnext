@@ -9,7 +9,9 @@ frappe.provide("corevatis_erpnext.abrechnung");
 	const ROLLEN = ["Büro", "System Manager", "Administrator"];
 	const GRUPPE = __("Abrechnung");
 	const esc = (s) => frappe.utils.escape_html(s == null ? "" : String(s));
-	const geld = (w, waehrung) => format_currency(w || 0, waehrung || frappe.boot.sysdefaults.currency);
+	// Die Engine liefert Beträge als Dezimal-Zeichenketten („5232.04“); format_currency würde den Punkt im deutschen
+	// Zahlenformat als Tausendertrenner lesen (Abnahme Build 30: Meldung mit hundertfachen Beträgen). Erst zur Zahl machen.
+	const geld = (w, waehrung) => format_currency(parseFloat(w) || 0, waehrung || frappe.boot.sysdefaults.currency);
 	const zahl = (w, n = 2) => format_number(w || 0, null, n);
 	const prozent = (w) => (Math.round((w || 0) * 100) / 100).toLocaleString(frappe.boot.lang || "de");
 	const darf = () => ROLLEN.some((r) => frappe.user.has_role(r));
