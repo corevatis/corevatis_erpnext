@@ -1,0 +1,228 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:ABP-{YYYY}-{#####}",
+ "creation": "2026-10-31 18:00:00.000000",
+ "description": "Down payment schedule of a sales order: lines with percent or amount, due at, status and invoices (Corevatis)",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_kopf",
+  "auftrag",
+  "projekt",
+  "kunde",
+  "titel",
+  "column_kopf",
+  "auftragssumme_netto",
+  "steuersatz",
+  "vorlage",
+  "status",
+  "section_zeilen",
+  "zeilen",
+  "section_stand",
+  "gestellt_prozent",
+  "gestellt_netto",
+  "gestellt_brutto",
+  "column_stand",
+  "offen_netto",
+  "schlussrechnung",
+  "bemerkung"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_kopf",
+   "fieldtype": "Section Break",
+   "label": "Order"
+  },
+  {
+   "fieldname": "auftrag",
+   "fieldtype": "Link",
+   "options": "Sales Order",
+   "label": "Sales Order",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "projekt",
+   "fieldtype": "Link",
+   "options": "Project",
+   "label": "Project",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "kunde",
+   "fieldtype": "Link",
+   "options": "Customer",
+   "label": "Customer",
+   "fetch_from": "auftrag.customer",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "titel",
+   "fieldtype": "Data",
+   "label": "Title",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_kopf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "auftragssumme_netto",
+   "fieldtype": "Currency",
+   "label": "Order Total (Net)",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Net total of the sales order (refreshed by the server)"
+  },
+  {
+   "fieldname": "steuersatz",
+   "fieldtype": "Percent",
+   "label": "Tax Rate",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "vorlage",
+   "fieldtype": "Data",
+   "label": "Template",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Template the schedule was created from"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Offen\nTeilweise gestellt\nVollständig gestellt\nSchlussrechnung",
+   "default": "Offen",
+   "read_only": 1,
+   "no_copy": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "section_zeilen",
+   "fieldtype": "Section Break",
+   "label": "Down Payments"
+  },
+  {
+   "fieldname": "zeilen",
+   "fieldtype": "Table",
+   "options": "Abschlagsplan Zeile",
+   "label": "Down Payment Lines",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_stand",
+   "fieldtype": "Section Break",
+   "label": "Status of Invoicing"
+  },
+  {
+   "fieldname": "gestellt_prozent",
+   "fieldtype": "Percent",
+   "label": "Invoiced Percent",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Released down payment invoices in percent of the order total"
+  },
+  {
+   "fieldname": "gestellt_netto",
+   "fieldtype": "Currency",
+   "label": "Invoiced Net",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "gestellt_brutto",
+   "fieldtype": "Currency",
+   "label": "Invoiced Gross",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_stand",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "offen_netto",
+   "fieldtype": "Currency",
+   "label": "Open Net",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Lines not yet invoiced"
+  },
+  {
+   "fieldname": "schlussrechnung",
+   "fieldtype": "Link",
+   "options": "Sales Invoice",
+   "label": "Final Invoice",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "bemerkung",
+   "fieldtype": "Small Text",
+   "label": "Remark"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-31 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Abschlagsplan",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 0,
+   "share": 0
+  },
+  {
+   "role": "Büro",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "print": 1,
+   "email": 0,
+   "share": 0
+  },
+  {
+   "role": "Meister",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "print": 1,
+   "email": 0,
+   "share": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "titel",
+ "track_changes": 1
+}

@@ -300,10 +300,12 @@ class TestProzessleiste(IntegrationTestCase):
 						_schritt(stand, "ausfuehrung")["aktion"]["js"],
 						"corevatis_erpnext.prozess.arbeitspakete_erzeugen",
 					)
+				# Abrechnung 7.1: die Leiste führt über „Abschlag stellen“ (Abschlagsplan aus der Annahme)
 				self.assertEqual(
 					_schritt(stand, "rechnung")["aktion"]["js"],
-					"corevatis_erpnext.prozess.rechnung_aus_auftrag",
+					"corevatis_erpnext.abrechnung.abschlag_dialog",
 				)
+				self.assertIn("Abschlagsplan", _schritt(stand, "rechnung")["text"])
 		self.assertEqual(status("Project", r["projekt"])["ampel"]["farbe"], "grün")
 
 		# geplanter Start vor 5 Tagen, keine Zeitbuchung: überfällig

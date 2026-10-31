@@ -1,0 +1,155 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-31 18:00:00.000000",
+ "description": "Line of a down payment schedule: percent or amount, due at, status and invoice (Corevatis)",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "nr",
+  "bezeichnung",
+  "prozent",
+  "betrag",
+  "faellig_bei",
+  "datum",
+  "status",
+  "rechnung",
+  "section_betraege",
+  "netto",
+  "steuer",
+  "brutto",
+  "column_kumuliert",
+  "kumuliert_prozent",
+  "kumuliert_netto"
+ ],
+ "fields": [
+  {
+   "fieldname": "nr",
+   "fieldtype": "Int",
+   "label": "No.",
+   "in_list_view": 1,
+   "columns": 1,
+   "read_only": 1,
+   "non_negative": 1
+  },
+  {
+   "fieldname": "bezeichnung",
+   "fieldtype": "Data",
+   "label": "Designation",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "prozent",
+   "fieldtype": "Percent",
+   "label": "Percent of Order Total",
+   "in_list_view": 1,
+   "columns": 1,
+   "description": "Share of the order total (net). Either percent or amount."
+  },
+  {
+   "fieldname": "betrag",
+   "fieldtype": "Currency",
+   "label": "Amount (Net)",
+   "in_list_view": 1,
+   "columns": 1,
+   "description": "Fixed net amount instead of a percentage"
+  },
+  {
+   "fieldname": "faellig_bei",
+   "fieldtype": "Select",
+   "label": "Due At",
+   "in_list_view": 1,
+   "columns": 2,
+   "options": "bei Baubeginn\nbei Baufortschritt\nbei Abnahme\nDatum",
+   "default": "bei Baufortschritt"
+  },
+  {
+   "fieldname": "datum",
+   "fieldtype": "Date",
+   "label": "Date",
+   "in_list_view": 1,
+   "columns": 1,
+   "description": "Planned date (due at “Datum”) or posting date of the invoice"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "in_list_view": 1,
+   "columns": 1,
+   "options": "offen\nEntwurf\ngestellt\nbezahlt",
+   "default": "offen",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "rechnung",
+   "fieldtype": "Link",
+   "options": "Sales Invoice",
+   "label": "Invoice",
+   "in_list_view": 1,
+   "columns": 1,
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_betraege",
+   "fieldtype": "Section Break",
+   "label": "Amounts"
+  },
+  {
+   "fieldname": "netto",
+   "fieldtype": "Currency",
+   "label": "Net",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Calculated, or the invoice amount once invoiced"
+  },
+  {
+   "fieldname": "steuer",
+   "fieldtype": "Currency",
+   "label": "Tax",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "brutto",
+   "fieldtype": "Currency",
+   "label": "Gross",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_kumuliert",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "kumuliert_prozent",
+   "fieldtype": "Percent",
+   "label": "Cumulative Percent",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "kumuliert_netto",
+   "fieldtype": "Currency",
+   "label": "Cumulative Net",
+   "read_only": 1,
+   "no_copy": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-31 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Abschlagsplan Zeile",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

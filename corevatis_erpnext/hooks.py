@@ -77,14 +77,17 @@ doctype_js = {
 	"Befund": ["public/js/galerie.js", "public/js/befund_galerie.js", _PROZESSLEISTE],
 	# Arbeitspakete und Materialbedarf erzeugen (5.1), am Projekt Button „Wochenplan öffnen“
 	# (5.2; öffnet die Plantafel P1.4 mit Projektfilter)
-	"Sales Order": ["public/js/planung.js", _PROZESSLEISTE],
-	"Project": ["public/js/planung.js", _PROZESSLEISTE],
+	# Abrechnung (7.1/7.2): „Abschlag stellen“, „Schlussrechnung erstellen“ an Auftrag und Projekt
+	"Sales Order": ["public/js/planung.js", "public/js/abrechnung.js", _PROZESSLEISTE],
+	"Project": ["public/js/planung.js", "public/js/abrechnung.js", _PROZESSLEISTE],
 	# Zuweisung Mitarbeiter (5.2): Abschnitt „Zuweisung“ mit Dropdown; zuweisung.js ist die
 	# Bibliothek (auch vom Wochenplan per frappe.require geladen)
 	"Task": ["public/js/zuweisung.js", "public/js/task_zuweisung.js"],
 	"Objekt": [_PROZESSLEISTE],
-	# Rechnung: Mappenprüfung übersteuern (Epic D, D.5)
-	"Sales Invoice": [_PROZESSLEISTE, "public/js/mappe_uebersteuern.js"],
+	# Rechnung: Mappenprüfung übersteuern (Epic D, D.5); Abrechnung (7.1/7.2): Zustandstext,
+	# „Rechnung freigeben“, ERPNext-Ballast ausblenden
+	"Sales Invoice": ["public/js/abrechnung.js", _PROZESSLEISTE, "public/js/mappe_uebersteuern.js"],
+	"Abschlagsplan": ["public/js/abrechnung.js"],
 	# Abnahme (6.1): Doctype aus corevatis, ohne Kern lädt es nie; „Mangel-Aufgaben erzeugen“
 	"Abnahmeprotokoll": ["public/js/abnahme.js", _PROZESSLEISTE],
 }
@@ -139,7 +142,16 @@ doc_events = {
 			"corevatis_erpnext.abnahme.rechnung.rechnung_kommentar",
 			# Dokumentenmappe (D.2): Rechnungs-PDF in Ordner 07 Rechnung
 			"corevatis_erpnext.mappe.rechnung_freigegeben",
+			# 7.1/7.2: abgerechneter Anteil am Auftrag (per_billed) und Stand des Abschlagsplans
+			"corevatis_erpnext.abrechnung.auftrag.rechnung_eingereicht",
 		],
+		"on_cancel": "corevatis_erpnext.abrechnung.auftrag.rechnung_storniert",
+		"on_trash": "corevatis_erpnext.abrechnung.auftrag.rechnung_geloescht",
+	},
+	# 7.1: Abschlagszeile „bezahlt“, wenn eine Zahlung zur Abschlagsrechnung gebucht/storniert wird
+	"Payment Entry": {
+		"on_submit": "corevatis_erpnext.abrechnung.auftrag.zahlung_gebucht",
+		"on_cancel": "corevatis_erpnext.abrechnung.auftrag.zahlung_gebucht",
 	},
 	# Befunde mvp-test: Hinweis auf Positionen ohne Preis (falsche Preisliste)
 	# Angebotsdruck (4.3): Textbausteine in leere Felder, Eventual-/Alternativpositionen
@@ -167,12 +179,15 @@ doc_events = {
 	},
 	# 4.4: Projekt, Lead „Gewonnen“ und Angebotsstatus auch beim ERPNext-Weg „Erstellen → Auftrag“;
 	# 5.1 danach: Arbeitspakete (Task) und Materialbedarf (Material Request) - braucht das Projekt
+	# 7.1 danach: Abschlagsplan aus der Vorlage, wenn der Auftrag ein Projekt hat
 	"Sales Order": {
 		"on_submit": [
 			"corevatis_erpnext.angebot.annahme.auftrag_eingereicht",
 			"corevatis_erpnext.planung.auftrag_eingereicht",
 			# Dokumentenmappe (D.2): Auftragsbestätigung als PDF in Ordner 04 Auftrag
 			"corevatis_erpnext.mappe.auftrag_freigegeben",
+			# 7.1: Abschlagsplan aus der Vorlage, wenn der Auftrag ein Projekt hat
+			"corevatis_erpnext.abrechnung.plan.auftrag_eingereicht",
 		],
 	},
 	# Befunde mvp-test: Objekt eines Leads am Lead eintragen (Lead.cv_objekt, 2.1);
@@ -195,6 +210,8 @@ doc_events = {
 	},
 	"Project": {
 		"validate": "corevatis_erpnext.abnahme.projekt_validieren",
+		# 7.1: Abschlagsplan beim Anlegen des Projekts aus der Annahme (4.4)
+		"after_insert": "corevatis_erpnext.abrechnung.plan.projekt_angelegt",
 	},
 	"Objekt": {
 		"validate": "corevatis_erpnext.vor_ort.lead_objekt.objekt_kunde_pruefen",

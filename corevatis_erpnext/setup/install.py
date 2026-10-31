@@ -59,6 +59,7 @@ def after_install() -> None:
 	ensure_abnahme()
 	# Dokumentenmappe (Epic D): Ampel am Projekt, Übersteuerung an Angebot und Rechnung
 	ensure_mappe()
+	ensure_abrechnung()
 
 
 def after_migrate() -> None:
@@ -112,6 +113,14 @@ def after_migrate() -> None:
 	ensure_abnahme()
 	# Dokumentenmappe (Epic D): Ampel am Projekt, Übersteuerung an Angebot und Rechnung
 	ensure_mappe()
+	# Abrechnung (7.1/7.2): Sales-Invoice-Felder nach den Abnahme-Feldern, Abschlagsartikel, negative Preise
+	ensure_abrechnung()
+
+
+def ensure_abrechnung() -> None:
+	from corevatis_erpnext.abrechnung import ensure_abrechnung_setup
+
+	ensure_abrechnung_setup()
 
 
 def ensure_abnahme() -> None:

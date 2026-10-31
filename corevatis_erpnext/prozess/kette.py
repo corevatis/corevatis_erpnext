@@ -423,9 +423,11 @@ def sammeln(
 		projekte,
 		("name", "project_name", "status", "percent_complete", "expected_start_date", "creation"),
 	)
-	k.rechnungen = _zeilen(
-		"Sales Invoice", rechnungen, ("name", "docstatus", "status", "is_return", "creation")
-	)
+	# Abrechnung (7.1/7.2): Art der Rechnung, Abschlagsnummer, Beträge; Abschlagsplan zum Auftrag
+	from corevatis_erpnext.abrechnung import prozess as abrechnung
+
+	k.rechnungen = _zeilen("Sales Invoice", rechnungen, abrechnung.rechnung_felder())
+	k.abschlagsplan = abrechnung.plan_zu_auftraegen([a.name for a in k.auftraege if a.docstatus == 1])
 	if k.projekte:
 		namen = [p.name for p in k.projekte]
 		from corevatis_erpnext.planung.projekt import zaehlen
@@ -712,21 +714,20 @@ def schritte(k: frappe._dict, einst=None) -> list[dict]:
 	else:
 		ergebnis.append(_schritt("abnahme", OFFEN, _("Noch nicht abgenommen")))
 
-	# 8 Rechnung
-	belege = [_beleg("Sales Invoice", r.name, _("Entwurf") if r.docstatus == 0 else "") for r in k.rechnungen]
-	gebucht = [r for r in k.rechnungen if r.docstatus == 1 and not r.is_return]
-	abgerechnet = flt(auftrag.per_billed) if auftrag and auftrag.docstatus == 1 else 0
-	if gebucht and (not auftrag or abgerechnet >= 100):
-		ergebnis.append(_schritt("rechnung", ERLEDIGT, _("Abgerechnet"), belege))
-	elif gebucht:
-		text = _("Teilweise abgerechnet ({0} %)").format(cint(abgerechnet))
-		ergebnis.append(_schritt("rechnung", AKTIV, text, belege))
-	elif k.rechnungen:
-		ergebnis.append(_schritt("rechnung", AKTIV, _("Rechnung im Entwurf"), belege))
-	elif projekt and not abgenommen:
-		ergebnis.append(_schritt("rechnung", OFFEN, _("Schlussrechnung nach der Abnahme (Abschlag möglich)")))
-	else:
-		ergebnis.append(_schritt("rechnung", OFFEN, _("Noch keine Rechnung")))
+	# 8 Rechnung (Abrechnung 7.1/7.2: Abschläge, Schlussrechnung, Abschlagsplan)
+	from corevatis_erpnext.abrechnung import prozess as abrechnung
+
+	r = abrechnung.schritt(k, auftrag, projekt, abgenommen, ERLEDIGT, AKTIV, OFFEN, lesbar)
+	ergebnis.append(
+		_schritt(
+			"rechnung",
+			r["status"],
+			r["text"],
+			[_beleg(d, n, info) for d, n, info in r["belege"]],
+			r.get("datum"),
+			betrieb=r["betrieb"],
+		)
+	)
 
 	# übersprungene Schritte: offen, obwohl es bis zum Auftrag schon weiter ging
 	bis_auftrag = SCHRITT_KEYS.index("auftrag")
@@ -961,6 +962,14 @@ def aktionen(k: frappe._dict, liste: list[dict]) -> None:
 				aktion = _aktion(label, "Project", projekt.name, "corevatis_erpnext.planung.baustellenakte")
 			schritt["ausfuehrung"]["aktion"] = aktion
 
+	# Abnahme (6.1): zuletzt abgeschlossenes Protokoll zählt (wie in ``schritte``)
+	letzte = max(
+		[a for a in k.abnahmen if a.get("status") == ABNAHME_ABGESCHLOSSEN],
+		key=lambda a: str(a.get("abgeschlossen_am") or ""),
+		default=None,
+	)
+	abgenommen = bool(letzte) and letzte.get("ergebnis") in ABNAHME_ERLEDIGT
+
 	# Abnahmeprotokoll anlegen (6.1, Formular des Kerns; Meister/Büro mit Anlegerecht)
 	abn = schritt["abnahme"]
 	if (
@@ -975,9 +984,19 @@ def aktionen(k: frappe._dict, liste: list[dict]) -> None:
 			_("Abnahmeprotokoll anlegen"), neu=ABNAHMEPROTOKOLL, werte={"projekt": projekt.name}
 		)
 
-	# Rechnung erstellen (ERPNext „Erstellen → Rechnung“ am Auftrag)
+	# Rechnung (7.1/7.2): Rechnung freigeben, Schlussrechnung erstellen, Abschlag stellen -
+	# sonst ERPNext „Erstellen → Rechnung“ am Auftrag
+	from corevatis_erpnext.abrechnung import prozess as abrechnung
+
 	auftrag = _neuestes(k.auftraege, lambda a: a.docstatus == 1)
-	if (
+	eigene = (
+		abrechnung.aktion(k, auftrag, projekt, abgenommen, ERLEDIGT, lesbar, _darf)
+		if schritt["rechnung"]["status"] != ERLEDIGT
+		else None
+	)
+	if eigene:
+		schritt["rechnung"]["aktion"] = _aktion(**eigene)
+	elif (
 		auftrag
 		and schritt["rechnung"]["status"] != ERLEDIGT
 		and flt(auftrag.per_billed) < 100
