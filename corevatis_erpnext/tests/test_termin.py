@@ -28,6 +28,11 @@ class TestTermin(IntegrationTestCase):
 		css = patch("frappe.utils.jinja_globals.bundled_asset", return_value="/assets/fehlt/email.css")
 		css.start()
 		self.addCleanup(css.stop)
+		# Doppelbuchungsschutz (D14) hat eigene Tests (test_terminplanung); hier buchen die Tests
+		# denselben Meister absichtlich mehrfach zur gleichen Zeit
+		konflikte = patch("corevatis_erpnext.planung.terminplanung.konflikte", return_value=[])
+		konflikte.start()
+		self.addCleanup(konflikte.stop)
 		self.lead = make_lead(mobile_no="0251 123456")
 		self.adresse = frappe.get_doc(
 			{

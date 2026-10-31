@@ -101,6 +101,12 @@ LEAD_FELDER = (
 	"cv_verlustgrund",
 	"cv_objekt_adresse",
 	"cv_termin",
+	# Wunschtermin des Kunden (D14)
+	"cv_wunsch1_datum",
+	"cv_wunsch1_fenster",
+	"cv_wunsch2_datum",
+	"cv_wunsch2_fenster",
+	"cv_wunsch_schnell",
 	"cv_objekt",
 	"cv_projekt",
 	"lead_owner",
@@ -584,10 +590,24 @@ def schritte(k: frappe._dict, einst=None) -> list[dict]:
 		beginn = get_datetime(termin.starts_on)
 		text = beginn.strftime("%d.%m.%Y %H:%M")
 		status = ERLEDIGT if beginn <= jetzt or termin.status == "Completed" else AKTIV
-		text = _("Besichtigt am {0}").format(text) if status == ERLEDIGT else _("Termin am {0}").format(text)
+		if status == ERLEDIGT:
+			text = _("Besichtigt am {0}").format(text)
+		else:
+			text = _("Termin am {0}").format(text)
+			if k.meister:
+				# D14: „Termin am 04.11.2026 09:30 mit Martin Meister“
+				text += " " + _("mit {0}").format(frappe.utils.get_fullname(k.meister) or k.meister)
 		ergebnis.append(_schritt("termin", status, text, [_beleg("Event", termin.name)], termin.starts_on))
 	else:
-		ergebnis.append(_schritt("termin", OFFEN if lead else ENTFAELLT, _("Noch kein Termin")))
+		text = _("Noch kein Termin")
+		if lead:
+			# D14: Wunsch des Kunden aus der Webform, z. B. „Wunsch: Di 04.11. vormittags, sonst …“
+			from corevatis_erpnext.planung.terminplanung import wunsch_text
+
+			w = wunsch_text(lead)
+			if w:
+				text += " \u00b7 " + _("Wunsch: {0}").format(w)
+		ergebnis.append(_schritt("termin", OFFEN if lead else ENTFAELLT, text))
 
 	# 3 Befund/Aufmaß
 	belege = [_beleg(OBJEKT, o.name, o.get("titel") or "") for o in k.objekte]

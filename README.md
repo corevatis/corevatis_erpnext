@@ -108,6 +108,20 @@ window.addEventListener("message", function (e) {
   einem Aufruf (`corevatis_erpnext.anfrage.lead.als_verloren_markieren`).
 - **Foto-Galerie**: `corevatis_erpnext.galerie(frm, {fieldname})` aus `public/js/galerie.js`,
   für weitere Doctypes die Datei in `doctype_js` eintragen und im `refresh` aufrufen.
+- **Terminplanung der Besichtigung** (Durchstich D14, `corevatis_erpnext.planung.terminplanung`):
+  Der Kunde nennt im Web Form bis zu zwei Wunschtermine (Datum + vormittags/nachmittags/ganztags) oder
+  „schnellstmöglich“ (`Lead.cv_wunsch1_datum` … `cv_wunsch_schnell`, Prüfung heute bis 90 Tage voraus).
+  Der Dialog „Termin anlegen“ zeigt oben die besten fünf freien Zeiten je Meister
+  (`GET/POST …planung.terminplanung.vorschlaege` mit `lead`, optional `dauer`, `ab`, `bis`, `meister`):
+  Ressourcen sind die aktiven Benutzer mit Rolle Meister, belegt durch Termine (Event), zugewiesene
+  Arbeitspakete (Task) und Feiertage der Firma, frei innerhalb der Arbeitszeit der Planungseinstellungen;
+  Fahrzeit = Luftlinie × Umwegfaktor ÷ Geschwindigkeit (Koordinaten über OpenStreetMap/Nominatim,
+  dauerhaft im Doctype **Geokoordinate**; ohne Treffer Standardfahrzeit „geschätzt“). Beim Anlegen prüft
+  `termin_anlegen` die Überschneidung mit der Planung des Meisters (plus Fahrzeit und Puffer) und lehnt
+  mit `TerminKonflikt` und Grund in Klartext ab; `trotzdem=1` übersteuert mit Vermerk am Termin.
+  `…terminplanung.pruefen` liefert die Konflikte für den Dialog. Orte fremder Anfragen nur als PLZ/Ort.
+  Einstellungen im Abschnitt „Besichtigungstermine“ der Planungseinstellungen (Dauer 60 min, Puffer
+  10 min, Standardfahrzeit 30 min, Umwegfaktor 1,3, 45 km/h, Mindestfahrzeit 10 min, Geokodierung aus).
 
 ## Angebot annehmen, ablehnen, nachfassen (Epic 4)
 
@@ -226,7 +240,9 @@ corevatis_erpnext/
                         Custom Fields cv_termin/cv_galerie (setup.py)
   crm/vorlagen/         Email Templates „Terminbestätigung Besichtigung“, „Angebot Nachfassen“
   angebot/              Angebot: Preis-Hinweis, Annahme/Ablehnung (4.4), Nachfassen (4.5), Feld-Spiegel
-  planung/              Auftrag → Arbeitspakete (Task) und Materialbedarf (Material Request) (5.1)
+  planung/              Auftrag → Arbeitspakete (Task) und Materialbedarf (Material Request) (5.1),
+                        Wochenplan (5.2), Terminplanung Besichtigung (terminplanung, slotrechner,
+                        geokodierung - D14)
   public/js/            Desk-Skripte (hooks.doctype_js): galerie.js, lead_galerie.js, lead_termin.js,
                         quotation_annahme.js, planung.js
   corevatis_erpnext/    Modul "Corevatis ERPNext" (Singles „Corevatis Vertrieb Einstellungen“,

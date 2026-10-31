@@ -216,3 +216,38 @@ Submit this document to confirm,Prüfen und oben „Freigeben“ klicken – dan
 Set as Lost,Vom Kunden abgelehnt
 Walls,Wände
 "Walls of the floor plan the quantity comes from, per room (W1 … from the scan, A-D by hand)","Wände des Grundrisses, aus denen die Menge kommt, je Raum (W1 … aus dem Scan, A–D von Hand)"
+Preferred Inspection Date,Wunschtermin für die Besichtigung
+Preferred Date 1,Wunschtermin 1
+Time Window 1,Zeitfenster 1
+Preferred Date 2,Wunschtermin 2
+Time Window 2,Zeitfenster 2
+As Soon as Possible,Schnellstmöglich
+The customer takes the first free appointment,Der Kunde nimmt den ersten freien Termin
+Inspection Appointments,Besichtigungstermine
+Inspection Duration (Minutes),Dauer Besichtigung (Minuten)
+Default time on site for an inspection; adjustable in the dialog “Schedule Appointment”,Zeit vor Ort für eine Besichtigung; im Dialog „Termin anlegen“ änderbar
+Buffer Between Appointments (Minutes),Puffer zwischen Terminen (Minuten)
+Kept free between the end of one appointment plus travel and the start of the next,Bleibt zwischen Ende eines Termins plus Fahrt und Beginn des nächsten frei
+Travel Time Without Geocoding (Minutes),Standardfahrzeit ohne Geokodierung (Minuten)
+"Used whenever an address has no coordinates (not found, no network, geocoding disabled); shown as “estimated”","Gilt, wenn eine Adresse keine Koordinaten hat (nicht gefunden, kein Netz, Geokodierung aus); Anzeige „geschätzt“"
+Disable Geocoding,Geokodierung aus
+No requests to OpenStreetMap (Nominatim); all travel times use the default travel time,Keine Anfragen an OpenStreetMap (Nominatim); alle Fahrzeiten mit der Standardfahrzeit
+Detour Factor,Umwegfaktor
+Travel distance = straight-line distance × detour factor,Fahrstrecke = Luftlinie × Umwegfaktor
+Average Speed (km/h),Durchschnittsgeschwindigkeit (km/h)
+"Travel time = travel distance ÷ average speed, rounded up to 5 minutes","Fahrzeit = Fahrstrecke ÷ Geschwindigkeit, auf 5 Minuten aufgerundet"
+Minimum Travel Time (Minutes),Mindestfahrzeit (Minuten)
+Travel time between two places is never shorter than this,Die Fahrzeit zwischen zwei Orten ist nie kürzer
+"Settings for work packages, material requirements and inspection appointments (Corevatis)","Einstellungen für Arbeitspakete, Materialbedarf und Besichtigungstermine (Corevatis)"
+Geokoordinate,Geokoordinate
+Address,Adresse
+Address Key,Adressschlüssel
+Key of the normalised address; set automatically,Schlüssel der normalisierten Adresse; wird automatisch gesetzt
+Latitude,Breitengrad
+Longitude,Längengrad
+Source,Quelle
+Geocoding Source,Quelle der Koordinaten
+Nominatim: found on OpenStreetMap. Manuell: entered by the office. Kein Treffer: not found (retried after 30 days).,Nominatim: auf OpenStreetMap gefunden. Manuell: vom Büro eingetragen. Kein Treffer: nicht gefunden (neuer Versuch nach 30 Tagen).
+Geocoded At,Stand
+Match on the Map,Treffer auf der Karte
+Geocoded address (OpenStreetMap / Nominatim) for travel times of inspection appointments (Corevatis),Geokodierte Adresse (OpenStreetMap / Nominatim) für die Fahrzeiten der Besichtigungstermine (Corevatis)

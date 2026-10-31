@@ -6,6 +6,47 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (Terminplanung Besichtigung, Durchstich D14, Anforderung 31.10.)
+
+- **Wunschtermin des Kunden**: Webform „Kostenlose Einschätzung“ mit Abschnitt „Wunschtermin für die
+  Besichtigung“ (bis zu zwei Wünsche mit Datum und Zeitfenster vormittags/nachmittags/ganztags,
+  „schnellstmöglich“); Prüfung im Browser und am Server (nicht in der Vergangenheit, höchstens 90 Tage
+  voraus, Datum als Datum). Neue Lead-Felder `cv_wunsch1_datum`, `cv_wunsch1_fenster`, `cv_wunsch2_datum`,
+  `cv_wunsch2_fenster`, `cv_wunsch_schnell` (Abschnitt nach der Anfrage). Die Prozessleiste zeigt im
+  Schritt „Termin“ den Wunsch („Wunsch: Di 04.11. vormittags, sonst Mi 05.11. ganztags“) und nach dem
+  Anlegen „Termin am … mit <Meister>“.
+- `corevatis_erpnext.planung.terminplanung`: `vorschlaege(lead, dauer, ab, bis, meister)` (freie Zeiten je
+  Meister in den Wunschfenstern und den nächsten 10 Arbeitstagen, bewertet nach Wunsch → früh → wenig
+  Fahrt) und `pruefen(lead, beginn, meister, dauer)` (Konflikte in Klartext), beide nur Büro/Meister/
+  System Manager mit Leserecht auf die Anfrage; Orte fremder Anfragen nur als PLZ/Ort, mit Leserecht die
+  Anschrift, nie Kundennamen. Belegt ist ein Meister durch Termine, zugewiesene Arbeitspakete und
+  Feiertage; frei innerhalb der Arbeitszeit (Mo-Fr) der Planungseinstellungen.
+- `planung.slotrechner` (ohne Frappe): Fahrzeit = Luftlinie × Umwegfaktor ÷ Geschwindigkeit, mindestens
+  Mindestfahrzeit, auf 5 Minuten aufgerundet; Slots mit Fahrt von der vorigen Belegung (sonst Firma ab
+  Tagesbeginn) und zur nächsten (sonst Firma bis Tagesende) plus Puffer.
+- `planung.geokodierung` und Doctype **Geokoordinate**: Adressen einmal bei Nominatim (OpenStreetMap,
+  feste URL, eigener User-Agent, eine Anfrage je Sekunde, Timeout 5 s, keine Weiterleitungen, höchstens 8
+  neue Adressen je Aufruf) nachschlagen und dauerhaft merken (auch „Kein Treffer“, neuer Versuch nach
+  30 Tagen); nach Netzfehler 10 Minuten Pause; ohne Koordinaten Standardfahrzeit „geschätzt“. Manuell
+  korrigierte Einträge („Manuell“) werden nicht überschrieben. Keine API-Schlüssel, keine Kosten.
+- **Doppelbuchungsschutz**: `crm.termin.termin_anlegen` (einziger Einstieg, auch für Sync-Handler der
+  App) prüft Termin plus Fahrzeiten plus Puffer gegen Termine, Arbeitspakete und Feiertage des Meisters
+  und lehnt mit `crm.termin.TerminKonflikt` (417) ab: Klartext in `grund`/Meldung („Martin Meister ist
+  09:00–10:30 bei Mühlenweg 5, 25 min Fahrt.“) und maschinenlesbar in `konflikte` (je Eintrag `meister`,
+  `von`, `bis`, `ort`, `fahrzeit_min`, `art`, `text`; auch in der Antwort `konflikte`); `trotzdem=1`
+  (Keyword-Argument) übersteuert mit Vermerk am Termin. `terminplanung.berechne_vorschlaege(lead, dauer,
+  ab, bis, meister)` ist die frei aufrufbare Berechnung ohne Rechteprüfung (Aufrufer prüft), die
+  Whitelist-Methode `vorschlaege` der geprüfte Wrapper. Der eigene, zu verschiebende Termin derselben Anfrage zählt nicht als Konflikt. Die Dauer
+  ohne Angabe kommt aus „Dauer Besichtigung“.
+- Dialog „Termin anlegen“ (`public/js/lead_termin.js`): oben die besten fünf Vorschläge (Wunsch des
+  Kunden hervorgehoben, Klick übernimmt Datum, Uhrzeit, Dauer und Meister), Live-Konfliktprüfung mit
+  Haken „Trotzdem anlegen“.
+- „Corevatis Planung Einstellungen“, Abschnitt „Besichtigungstermine“: Dauer Besichtigung (60 min),
+  Puffer zwischen Terminen (10 min), Standardfahrzeit ohne Geokodierung (30 min), Geokodierung aus,
+  Umwegfaktor (1,3), Durchschnittsgeschwindigkeit (45 km/h), Mindestfahrzeit (10 min).
+- Tests `test_terminplanung` (Rechenregeln, Geokodierung mit gemocktem Nominatim, Vorschläge, Konflikte,
+  Rechte, Prozessleiste), Webform-Tests zum Wunschtermin.
+
 ### Geändert (Wand-Bezeichnungen, Rückmeldung 31.10.)
 
 - Angebotsgenerator: jede Position nennt die Wände des Grundrisses, aus denen ihre Menge kommt –

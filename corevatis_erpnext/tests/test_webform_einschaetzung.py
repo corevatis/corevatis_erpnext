@@ -16,7 +16,7 @@ from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import get_test_client
+from frappe.utils import add_days, get_test_client, getdate, today
 
 from corevatis_erpnext.tests._helpers import make_lead
 from corevatis_erpnext.webform import einschaetzung as ez
@@ -494,6 +494,74 @@ class TestWebFormEinschaetzung(IntegrationTestCase):
 			),
 			2,
 		)
+
+	# --- Wunschtermin für die Besichtigung (Durchstich D14) ---------------
+
+	def test_wunschtermin_gespeichert(self):
+		erster = getdate(add_days(today(), 3))
+		zweiter = getdate(add_days(today(), 10))
+		data = self.payload(
+			cv_fotos=[],
+			cv_wunsch1_datum=str(erster),
+			cv_wunsch1_fenster="vormittags",
+			# deutsches Datumsformat ohne Zeitfenster: gilt ganztags
+			cv_wunsch2_datum=f"{zweiter:%d.%m.%Y}",
+			cv_wunsch_schnell=1,
+		)
+		response = self.submit(data)
+		self.assertEqual(response.status_code, 200, response.get_data(as_text=True))
+		lead = frappe.get_doc("Lead", self.leads(data["email_id"])[0])
+		self.assertEqual(getdate(lead.cv_wunsch1_datum), erster)
+		self.assertEqual(lead.cv_wunsch1_fenster, "vormittags")
+		self.assertEqual(getdate(lead.cv_wunsch2_datum), zweiter)
+		self.assertEqual(lead.cv_wunsch2_fenster, "ganztags")
+		self.assertEqual(lead.cv_wunsch_schnell, 1)
+
+	def test_wunschtermin_ungueltig(self):
+		for werte in (
+			{"cv_wunsch1_datum": str(add_days(today(), -1))},
+			{"cv_wunsch1_datum": str(add_days(today(), ez.WUNSCH_TAGE_VORAUS + 1))},
+			{"cv_wunsch1_datum": "morgen früh"},
+			{"cv_wunsch2_datum": "2030-13-45"},
+			{"cv_wunsch1_datum": str(add_days(today(), 2)), "cv_wunsch1_fenster": "abends"},
+		):
+			data = self.payload(cv_fotos=[], **werte)
+			response = self.submit(data)
+			self.assertEqual(response.status_code, 417, (werte, response.get_data(as_text=True)[:300]))
+			self.assertEqual(self.leads(data["email_id"]), [], werte)
+
+	def test_wunschtermin_fenster_ohne_datum(self):
+		data = self.payload(cv_fotos=[], cv_wunsch1_fenster="nachmittags", cv_wunsch_schnell="")
+		self.assertEqual(self.submit(data).status_code, 200)
+		lead = frappe.get_doc("Lead", self.leads(data["email_id"])[0])
+		self.assertFalse(lead.cv_wunsch1_datum)
+		self.assertFalse(lead.cv_wunsch1_fenster)
+		self.assertEqual(lead.cv_wunsch_schnell, 0)
+
+	def test_wunschtermin_in_weiterer_anfrage(self):
+		# bekannte E-Mail: der Wunsch steht im Kommentar, die Felder des offenen Leads bleiben
+		data = self.payload(cv_fotos=[])
+		self.assertEqual(self.submit(data).status_code, 200)
+		[name] = self.leads(data["email_id"])
+		again = self.payload(
+			email_id=data["email_id"],
+			cv_fotos=[],
+			cv_wunsch1_datum=str(add_days(today(), 4)),
+			cv_wunsch_schnell=1,
+		)
+		self.assertEqual(self.submit(again).status_code, 200)
+		# neuer Snapshot (Anfrage lief in eigener Verbindung), wie test_bekannte_email_haengt_an_offenen_lead
+		self.assertEqual(self.leads(data["email_id"]), [name])
+		lead = frappe.get_doc("Lead", name)
+		self.assertFalse(lead.cv_wunsch1_datum)
+		kommentar = frappe.get_all(
+			"Comment",
+			filters={"reference_doctype": "Lead", "reference_name": name, "comment_type": "Comment"},
+			pluck="content",
+		)[0]
+		self.assertIn("Wunschtermin 1", kommentar)
+		self.assertIn(frappe.utils.formatdate(add_days(today(), 4)), kommentar)
+		self.assertIn("Schnellstmöglich", kommentar)
 
 	def _reset_limits(self, *buckets):
 		for bucket in buckets:

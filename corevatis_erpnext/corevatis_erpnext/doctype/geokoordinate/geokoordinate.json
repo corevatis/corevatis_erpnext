@@ -1,0 +1,135 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "field:adresse_hash",
+ "creation": "2026-10-31 12:00:00.000000",
+ "description": "Geocoded address (OpenStreetMap / Nominatim) for travel times of inspection appointments (Corevatis)",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "adresse",
+  "adresse_hash",
+  "column_break_koordinaten",
+  "lat",
+  "lon",
+  "section_quelle",
+  "quelle",
+  "stand",
+  "anzeige"
+ ],
+ "fields": [
+  {
+   "fieldname": "adresse",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Address",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "description": "Key of the normalised address; set automatically",
+   "fieldname": "adresse_hash",
+   "fieldtype": "Data",
+   "label": "Address Key",
+   "no_copy": 1,
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_koordinaten",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "lat",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Latitude",
+   "precision": "7"
+  },
+  {
+   "fieldname": "lon",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Longitude",
+   "precision": "7"
+  },
+  {
+   "fieldname": "section_quelle",
+   "fieldtype": "Section Break",
+   "label": "Source"
+  },
+  {
+   "description": "Nominatim: found on OpenStreetMap. Manuell: entered by the office. Kein Treffer: not found (retried after 30 days).",
+   "fieldname": "quelle",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Geocoding Source",
+   "options": "\nNominatim\nManuell\nKein Treffer"
+  },
+  {
+   "fieldname": "stand",
+   "fieldtype": "Datetime",
+   "label": "Geocoded At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "anzeige",
+   "fieldtype": "Data",
+   "label": "Match on the Map",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-31 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Geokoordinate",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "export": 1,
+   "print": 0,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 1,
+   "role": "Büro",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 1,
+   "role": "Meister",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "adresse",
+ "track_changes": 1
+}

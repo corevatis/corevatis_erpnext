@@ -21,6 +21,11 @@ Ablauf (Button „Termin anlegen“ am Lead, ``public/js/lead_termin.js``):
 Rechte: Rollen Büro oder Meister (System Manager/Administrator ebenfalls) und
 Schreibrecht auf den Lead.
 
+Doppelbuchungsschutz (Durchstich D14, ``planung.terminplanung``): Vor dem Anlegen wird geprüft, ob
+der Termin samt Fahrzeit und Puffer mit Terminen, Arbeitspaketen oder Feiertagen des Meisters
+zusammenstößt. Bei Konflikt ``TerminKonflikt`` (417) mit dem Grund in Klartext; das Büro kann mit
+``trotzdem=1`` übersteuern - der Termin bekommt dann einen Vermerk.
+
 Google Calendar: Der Termin wird nur mit dem Google-Kalender des Meisters synchronisiert,
 wenn die Site das ausdrücklich erlaubt (site_config ``cv_termin_google_sync: 1``, Standard
 aus) - Betreff (Kundenname) und PLZ/Ort gingen sonst ohne Entscheidung der Site an Google
@@ -47,6 +52,25 @@ DAUER_MIN, DAUER_MAX = 15, 12 * 60
 CONF_GOOGLE_SYNC = "cv_termin_google_sync"
 
 WOCHENTAGE = ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
+
+
+class TerminKonflikt(frappe.ValidationError):
+	"""Der Termin überschneidet sich mit der Planung des Meisters (HTTP 417, ``exc_type``; D14).
+
+	``grund`` ist der Klartext (eine Zeile je Konflikt), ``konflikte`` die maschinenlesbare Liste -
+	je Eintrag ``meister``, ``meister_name``, ``von``, ``bis``, ``ort``, ``fahrzeit_min``, ``art``,
+	``doctype``, ``name``, ``text`` -, ``meister`` der Benutzer. Sync-Handler (App) können eine Ablehnung
+	damit mit Grund weitergeben; im Desk steht der Grund zusätzlich als Meldung (``frappe.msgprint``).
+	"""
+
+	def __init__(self, grund: str = "", konflikte: list[dict] | None = None, meister: str | None = None):
+		super().__init__(grund)
+		self.grund = grund
+		self.konflikte = konflikte or []
+		self.meister = meister
+
+	def as_dict(self) -> dict:
+		return {"grund": self.grund, "meister": self.meister, "konflikte": self.konflikte}
 
 
 # --- Rechte ---------------------------------------------------------------------------------
@@ -86,15 +110,17 @@ def termin_anlegen(
 	dauer: int | str | None = 60,
 	notiz: str | None = None,
 	bestaetigung: int | str | bool | None = 1,
+	trotzdem: int | str | bool | None = 0,
 ) -> dict:
 	"""Legt den Besichtigungstermin an und gibt Event, Status und Bestätigung zurück.
 
 	:param lead: Name des Leads
 	:param beginn: Beginn (``YYYY-MM-DD HH:MM[:SS]``, Systemzeitzone)
 	:param meister: Benutzer (E-Mail) mit Rolle Meister
-	:param dauer: Dauer in Minuten (15-720)
+	:param dauer: Dauer in Minuten (15-720; leer = „Dauer Besichtigung“ aus den Planungseinstellungen)
 	:param notiz: interne Notiz für den Meister (nicht in der Kundenbestätigung)
 	:param bestaetigung: 1 = Kundenbestätigung in die Email Queue legen (falls E-Mail vorhanden)
+	:param trotzdem: 1 = Überschneidung mit der Planung des Meisters bewusst übersteuern (Vermerk)
 	"""
 	_pruefe_rolle()
 	doc = frappe.get_doc("Lead", lead)
@@ -106,6 +132,14 @@ def termin_anlegen(
 		frappe.throw(_("Die Dauer muss zwischen {0} und {1} Minuten liegen.").format(DAUER_MIN, DAUER_MAX))
 	if meister not in {m["name"] for m in _meister()}:
 		frappe.throw(_("{0} ist kein aktiver Benutzer mit der Rolle Meister.").format(meister))
+
+	# Doppelbuchungsschutz (D14): Termine, Arbeitspakete, Feiertage des Meisters plus Fahrzeit und Puffer
+	from corevatis_erpnext.planung import terminplanung
+
+	ende = start + timedelta(minutes=minuten)
+	konflikte = terminplanung.konflikte(doc, meister, start, ende)
+	if konflikte and not cint(trotzdem):
+		terminplanung.konflikt_werfen(konflikte, meister)
 
 	kunde = kunden_name(doc)
 	adresse = objekt_adresse(doc)
@@ -119,7 +153,7 @@ def termin_anlegen(
 			"event_type": "Private",
 			"status": "Open",
 			"starts_on": start,
-			"ends_on": start + timedelta(minutes=minuten),
+			"ends_on": ende,
 			"send_reminder": 1,
 			# nur PLZ/Ort - vollständige Adresse, Telefon und Notizen stehen am Lead
 			"location": _ort(adresse) or None,
@@ -130,6 +164,15 @@ def termin_anlegen(
 	_google_calendar(event, meister)
 	event.insert()
 	_freigeben(event, meister)
+	if konflikte:
+		# Übersteuerung durch das Büro: am Termin vermerkt (Doppelbuchungsschutz D14)
+		event.add_comment(
+			"Info",
+			_("Trotz Überschneidung angelegt von {0}: {1}").format(
+				escape_html(get_fullname(frappe.session.user) or frappe.session.user),
+				" ".join(escape_html(k["text"]) for k in konflikte),
+			),
+		)
 
 	from frappe.desk.form.assign_to import add as assign
 
@@ -157,6 +200,7 @@ def termin_anlegen(
 		"warnungen": [warnung] if warnung else [],
 		"email_queue": None,
 		"empfaenger": doc.get("email_id") or None,
+		"konflikte": konflikte,
 	}
 	inhalt = bestaetigung_rendern(doc, event)
 	result["bestaetigung"] = inhalt
@@ -443,10 +487,17 @@ def _beginn(beginn):
 	return start
 
 
+def standard_dauer() -> int:
+	"""„Dauer Besichtigung“ aus den Planungseinstellungen (Standard 60 Minuten, D14)."""
+	from corevatis_erpnext.planung.einstellungen import einstellungen
+
+	return cint(einstellungen().besichtigung_dauer) or 60
+
+
 def _dauer(dauer) -> int:
-	"""Dauer in Minuten; leer → 60, kein ganzzahliger Wert → Meldung (nicht still 60)."""
+	"""Dauer in Minuten; leer → Standard aus den Einstellungen, kein ganzzahliger Wert → Meldung."""
 	if dauer is None or (isinstance(dauer, str) and not dauer.strip()):
-		return 60
+		return standard_dauer()
 	text = str(dauer).strip()
 	if isinstance(dauer, bool) or not text.lstrip("-").isdigit():
 		frappe.throw(_("Die Dauer muss in ganzen Minuten angegeben werden."))
