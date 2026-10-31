@@ -12,18 +12,17 @@ Kunden - damit der Steuerberater von Anfang an stabile Nummern bekommt.
 
 from __future__ import annotations
 
-import re
 from collections.abc import Iterable
 
 import frappe
 from frappe import _
 from frappe.utils import cint
 
+from corevatis_erpnext.datev import pruefung
 from corevatis_erpnext.datev.felder import DEBITOR_START_STANDARD, SETTINGS_DOCTYPE
 
 FELD = "debtor_creditor_number"
 ENDE_DEBITOREN = 69999
-RE_FORMELZEICHEN = re.compile(r"^[=+\-@\t\r]+")
 
 
 class DebitorenFehler(frappe.ValidationError):
@@ -134,13 +133,9 @@ def kunde_validate(doc, method=None) -> None:
 
 
 def text(wert, max_len: int) -> str:
-	"""Textfeld für die CSV: Leerraum gebündelt, Anführungszeichen und Semikolon (Trennzeichen) ersetzt,
-	führende Formelzeichen entfernt (Tabellenkalkulation des Steuerberaters), auf ``max_len`` gekürzt."""
-	if wert is None:
-		return ""
-	s = " ".join(str(wert).replace('"', "'").replace(";", ",").split())
-	s = RE_FORMELZEICHEN.sub("", s).strip()
-	return s[:max_len]
+	"""Textfeld für die CSV, siehe ``pruefung.textzelle`` (Leerraum, Anführungszeichen, Semikolon,
+	führende Formelzeichen, Länge)."""
+	return pruefung.textzelle(wert, max_len)
 
 
 def name_teilen(customer_name: str) -> tuple[str, str]:
@@ -198,9 +193,7 @@ def _anrede_kontakt(kontakt: str | None) -> str:
 
 
 def _rufnummer(wert) -> str:
-	"""``+49 251 ...`` → ``0049 251 ...``, damit ``text()`` das führende Plus nicht als Formelzeichen entfernt."""
-	s = (wert or "").strip()
-	return "00" + s[1:] if s.startswith("+") else s
+	return pruefung.rufnummer(wert)
 
 
 def stammdaten_zeilen(kunden: Iterable[str], company: str) -> tuple[list[dict], list[str]]:

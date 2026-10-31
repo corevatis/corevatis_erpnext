@@ -20,6 +20,9 @@ Die Debitoren-Stammdaten (Datenkategorie 16, „Debitoren/Kreditoren“ Version 
 
 Rückgabe ist ein ``Pruefergebnis`` mit ``fehler`` (Import würde scheitern oder Buchungen wären falsch)
 und ``hinweise`` (z. B. Platzhalter-Beraternummer ``0000000``).
+
+``textzelle`` bereinigt Textzellen vor dem Schreiben (Leerraum, Anführungszeichen, Semikolon, führende
+Formelzeichen); die Prüfung lehnt Zellen ab, die trotzdem mit einem Formelzeichen beginnen.
 """
 
 from __future__ import annotations
@@ -100,6 +103,25 @@ KEINE_TEXTSPALTEN = frozenset(
 		"Festschreibung",
 	}
 )
+
+
+def textzelle(wert, max_len: int) -> str:
+	"""Textzelle für eine CSV: Leerraum gebündelt (auch Tab, CR, LF), ``"`` → ``'``, Semikolon (Trennzeichen)
+	→ Komma, führende Formelzeichen ``= + - @`` wiederholt entfernt, bis keines mehr vorn steht
+	(``"=\t=cmd"`` → ``"cmd"``), auf ``max_len`` gekürzt. Ein führendes ``+`` von Rufnummern fällt
+	ebenfalls weg - Rufnummern vorher über ``rufnummer`` (``+49`` → ``0049``)."""
+	if wert is None:
+		return ""
+	s = " ".join(str(wert).replace('"', "'").replace(";", ",").split())
+	while s and s[0] in FORMELZEICHEN:
+		s = s[1:].lstrip()
+	return s[:max_len]
+
+
+def rufnummer(wert) -> str:
+	"""``+49 251 ...`` → ``0049 251 ...``, damit ``textzelle`` das Plus nicht als Formelzeichen entfernt."""
+	s = str(wert or "").strip()
+	return "00" + s[1:] if s.startswith("+") else s
 
 
 @dataclass
@@ -385,7 +407,7 @@ def _buchungszeile_pruefen(nr: int, w: dict, n: int, kopf: dict, ergebnis: Pruef
 
 def _formelzeichen_pruefen(nr: int, w: dict, ausnahmen: frozenset, ergebnis: Pruefergebnis) -> None:
 	for feld, wert in w.items():
-		if wert and feld not in ausnahmen and wert[0] in FORMELZEICHEN:
+		if wert and feld not in ausnahmen and wert.lstrip()[:1] in FORMELZEICHEN:
 			ergebnis.fehler_(nr, feld, f"{wert[:20]!r} beginnt mit einem Formelzeichen")
 
 

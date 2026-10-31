@@ -379,7 +379,7 @@ def debitoren_csv(kunden: list[str], company: str, filters: dict) -> tuple[bytes
 
 
 def dateiname(beleg: str) -> str:
-	return RE_DATEINAME.sub("_", beleg).strip("_") or "Beleg"
+	return RE_DATEINAME.sub("_", beleg).strip("_-") or "Beleg"
 
 
 def druckformat_waehlen(doc, e: frappe._dict) -> str | None:

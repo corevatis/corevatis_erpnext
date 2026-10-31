@@ -200,6 +200,7 @@ class TestPruefung(unittest.TestCase):
 			[("Beleginfo - Inhalt 5", 3)],
 		)
 		self.assertEqual(fehler(**{"Belegfeld 1": "+RE1"}), [("Belegfeld 1", 3)])
+		self.assertEqual(fehler(Buchungstext=" =1+1"), [("Buchungstext", 3)])
 		self.assertEqual(fehler(), [])
 		# Feldzahl, Zeichensatz, Zeilenende
 		e = pruefung.pruefe_buchungsstapel(_datei(zeilen=[_zeile() + ";x"]))
@@ -208,6 +209,20 @@ class TestPruefung(unittest.TestCase):
 		self.assertEqual([f.feld for f in e.fehler], ["Datei"])
 		e = pruefung.pruefe_buchungsstapel(_datei().replace(b"\r\n", b"\n"))
 		self.assertEqual([f.feld for f in e.fehler], ["Datei"])
+
+	def test_textzelle(self):
+		t = pruefung.textzelle
+		self.assertEqual(t(" =1+1", 60), "1+1")
+		self.assertEqual(t("=\t=cmd|' /C calc'!A0", 60), "cmd|' /C calc'!A0")
+		self.assertEqual(t("= - @ +HYPERLINK(1)", 60), "HYPERLINK(1)")
+		self.assertEqual(t("-5", 60), "5")
+		self.assertEqual(t("+49 2154", 60), "49 2154")  # Rufnummern vorher über rufnummer()
+		self.assertEqual(pruefung.rufnummer("+49 2154"), "0049 2154")
+		self.assertEqual(pruefung.rufnummer(" 0251 1 "), "0251 1")
+		self.assertEqual(t('Müller; "Sohn"\r\nGbR\t1', 60), "Müller, 'Sohn' GbR 1")
+		self.assertEqual(t("x" * 70, 60), "x" * 60)
+		self.assertEqual((t(None, 10), t("", 10), t("=", 10)), ("", "", ""))
+		self.assertEqual(t(1234, 10), "1234")
 
 	def test_debitoren(self):
 		try:
