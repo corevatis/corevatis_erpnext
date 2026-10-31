@@ -6,6 +6,14 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Behoben (Desk-Assets, Abnahme Build 29, Handwerker#85)
+
+- `betrieb.js`, `betrieb.css`, `mahnung_zahlung.js`, `zuweisung.js`, `lead_termin.js` sind jetzt Bundles
+  (`*.bundle.js`/`*.bundle.css`, Inhalts-Hash im Dateinamen, Auflösung über assets.json in `app_include_*` und
+  `frappe.require`). Die bisherigen festen Pfade `/assets/corevatis_erpnext/js/…` liefert nginx mit „immutable,
+  ein Jahr“ aus; Cloudflare und Browser hielten alte Stände, auf mvp-test fehlte dadurch der Ungelesen-Zähler
+  am Eintrag „Nachrichten“ zwei Deploys lang. Regel: keine festen Asset-Pfade mehr, neue Desk-Skripte als Bundle.
+
 ### Behoben (DATEV-Export, Abnahme Build 28, Handwerker#51)
 
 - Debitorennummer vergeben: Zeilensperre auf den DATEV Settings der Firma bis zum Commit. Zwei fast gleichzeitige

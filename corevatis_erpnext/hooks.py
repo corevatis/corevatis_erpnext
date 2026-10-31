@@ -14,10 +14,14 @@ app_license = "GPL-3.0-only"
 # corevatis, keine gemeinsamen Datenklassen (docs/mvp-plan.md, Lizenzarchitektur).
 required_apps = ["erpnext"]
 
-# Durchstich D4: Nummernkreis-Wähler in allen Formularen ausblenden (public/css/betrieb.css)
-app_include_css = "/assets/corevatis_erpnext/css/betrieb.css"
-# Durchstich D1: Links im Desk bleiben in der Leiste „Betrieb“ (public/js/betrieb.js)
-app_include_js = "/assets/corevatis_erpnext/js/betrieb.js"
+# Desk-Assets nur als Bundles (public/**/*.bundle.*): Frappe hängt beim Build einen Inhalts-Hash an den
+# Dateinamen und löst die Namen über assets.json auf. Pfade wie /assets/<app>/js/x.js liefert nginx mit
+# „immutable, max-age 1 Jahr“ aus, Cloudflare und Browser behalten alte Stände (mvp-test, 31.10.2026:
+# der Ungelesen-Zähler der Leiste war nach zwei Deploys noch unsichtbar).
+# Durchstich D4: Nummernkreis-Wähler in allen Formularen ausblenden (public/css/betrieb.bundle.css)
+app_include_css = "betrieb.bundle.css"
+# Durchstich D1: Links im Desk bleiben in der Leiste „Betrieb“; Ungelesen-Zähler (public/js/betrieb.bundle.js)
+app_include_js = "betrieb.bundle.js"
 
 # Kachel auf dem Startbildschirm (/desk). Befunde mvp-test: der Auftraggeber fand „kein CRM“ -
 # v16 zeigt nur Apps mit diesem Hook und davon nur den ersten Eintrag je App. Prozessleiste: eine

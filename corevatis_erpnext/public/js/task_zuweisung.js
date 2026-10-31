@@ -1,6 +1,6 @@
 // Corevatis – Task-Formular: Abschnitt „Zuweisung“ (Aufgabe 5.2)
 // Dropdown der planbaren Mitarbeiter, Zuweisungen (ToDos) mit „Entfernen“, Hinweis auf Vorgänger.
-// Bibliothek: public/js/zuweisung.js (vorher geladen, doctype_js)
+// Bibliothek: public/js/zuweisung.bundle.js (vorher geladen, doctype_js)
 (function () {
 	const p = corevatis_erpnext.planung;
 

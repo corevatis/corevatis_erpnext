@@ -118,7 +118,7 @@ table.cv-pt.cv-pt-monat td.cv-pt-zelle { min-height: 44px; height: 44px; }
 			this.gespeichert = this.lesen_speicher();
 			this.felder();
 			this.knoepfe();
-			frappe.require("/assets/corevatis_erpnext/js/zuweisung.js");
+			frappe.require("zuweisung.bundle.js");
 			this.laden();
 		}
 
@@ -596,7 +596,7 @@ table.cv-pt.cv-pt-monat td.cv-pt-zelle { min-height: 44px; height: 44px; }
 
 		bestaetigung(m) {
 			// Text der Kundenbestätigung neu (wird nicht automatisch gesendet) - Dialog aus lead_termin.js
-			frappe.require("/assets/corevatis_erpnext/js/lead_termin.js", () => {
+			frappe.require("lead_termin.bundle.js", () => {
 				const frm = { doc: { name: m.lead, email_id: m.empfaenger }, reload_doc() {} };
 				const hinweise = [__("Termin {0} verschoben auf {1}.", [m.event, frappe.datetime.str_to_user(m.beginn)])].concat(m.hinweise || []);
 				if ((m.konflikte || []).length) hinweise.push(__("Trotz Überschneidung verschoben: {0}", [m.konflikte.map((k) => k.text).join(" ")]));
@@ -656,7 +656,7 @@ table.cv-pt.cv-pt-monat td.cv-pt-zelle { min-height: 44px; height: 44px; }
 			if (schreib && e.doctype === "Task") {
 				dialog.add_custom_action(__("Mitarbeiter zuweisen …"), () => {
 					dialog.hide();
-					frappe.require("/assets/corevatis_erpnext/js/zuweisung.js", () =>
+					frappe.require("zuweisung.bundle.js", () =>
 						corevatis_erpnext.planung.zuweisung_dialog(e.name, () => this.laden())
 					);
 				});

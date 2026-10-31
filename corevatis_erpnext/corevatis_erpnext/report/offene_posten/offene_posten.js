@@ -1,5 +1,5 @@
 // Offene Posten (7.5): offene Rechnungen mit Mahnstufe und Mahnvorschlag. Server: offene_posten.py;
-// „Mahnen“ je Zeile über corevatis_erpnext.abrechnung.mahnen_dialog (public/js/mahnung_zahlung.js).
+// „Mahnen“ je Zeile über corevatis_erpnext.abrechnung.mahnen_dialog (public/js/mahnung_zahlung.bundle.js).
 frappe.query_reports["Offene Posten"] = {
 	filters: [
 		{ fieldname: "kunde", label: __("Kunde"), fieldtype: "Link", options: "Customer" },
@@ -7,7 +7,7 @@ frappe.query_reports["Offene Posten"] = {
 		{ fieldname: "nur_mahnbar", label: __("Nur mit Mahnvorschlag"), fieldtype: "Check", default: 0 },
 	],
 	onload(report) {
-		frappe.require("/assets/corevatis_erpnext/js/mahnung_zahlung.js", () => {
+		frappe.require("mahnung_zahlung.bundle.js", () => {
 			report.page.add_inner_button(__("Zahlungseingang"), () => frappe.set_route("query-report", "Zahlungseingang"));
 		});
 	},
