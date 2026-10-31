@@ -51,7 +51,7 @@ def stand(doctype: str, name: str) -> dict | None:
 @frappe.whitelist()
 def ungelesen_gesamt() -> int:
 	"""Ungelesene Nachrichten des angemeldeten Benutzers über alle seine Vorgänge (Badge in der
-	Leiste „Betrieb“, ``betrieb.js``); ``0`` ohne Kern."""
+	Leiste „Betrieb“, ``betrieb.bundle.js``); ``0`` ohne Kern."""
 	if not kern_da():
 		return 0
 	return cint(_kern(KERN_UNGELESEN)())

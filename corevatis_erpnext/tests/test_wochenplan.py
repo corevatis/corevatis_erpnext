@@ -513,7 +513,7 @@ class TestWochenplan(IntegrationTestCase):
 		self.assertEqual(meta.get_field("cv_zuweisung").fieldtype, "HTML")
 		self.assertEqual(meta.get_field("cv_section_zuweisung").fieldtype, "Section Break")
 		js = frappe.get_hooks("doctype_js", app_name="corevatis_erpnext")
-		self.assertEqual(js["Task"], ["public/js/zuweisung.js", "public/js/task_zuweisung.js"])
+		self.assertEqual(js["Task"], ["public/js/zuweisung.bundle.js", "public/js/task_zuweisung.js"])
 		self.assertIn("public/js/planung.js", js["Project"])
 		bericht = frappe.get_doc("Report", "Wochenplan")
 		self.assertEqual((bericht.report_type, bericht.ref_doctype), ("Script Report", "Task"))
