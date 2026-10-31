@@ -32,6 +32,12 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   Belegdatum TTMM im Zeitraum, Belegfeld 1 (Pflicht, Zeichen, 36), Belegfeld 2 (12), Buchungstext (60),
   Beleginfo, Auftragsnummer, Fälligkeit; Debitoren-Stammdaten. Läuft vor dem Speichern des Exports
   (Fehler → Status „Fehlgeschlagen“, nichts gespeichert, nichts markiert).
+- **Schutz vor CSV-/Formel-Injection** (Security-Review): jede Textzelle des Buchungsstapels - auch von
+  erpnext_datev gelieferte wie die Zahlungsreferenz aus dem Kontoauszug - läuft über `debitoren.text`
+  (Leerraum, Anführungszeichen, Semikolon, führende `= + - @`), Belegfeld 1/2 ohne führendes `+`/`-`,
+  Belegliste im ZIP über `csv.writer` mit Anführungszeichen; die Formatprüfung lehnt Zellen ab, die mit
+  einem Formelzeichen beginnen. Anrede der Debitoren aus Kunde oder Hauptkontakt (`Customer.salutation`
+  fehlt in v16), Rufnummern `+49 …` als `0049 …`.
 - **Markierung** `cv_datev_export` / `cv_datev_exportiert_am` an Sales Invoice und Payment Entry (nur
   Server); Wiederholungen werden im Protokoll und in der Belegliste („zuvor exportiert in“) genannt;
   Hinweis auf Storni nach einem Export.
