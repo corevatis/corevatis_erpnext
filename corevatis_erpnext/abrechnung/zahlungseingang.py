@@ -199,12 +199,52 @@ def datei_lesen(datei: str) -> tuple[bytes, str, str]:
 		frappe.throw(_("Nur CSV- oder CAMT-XML-Dateien (.csv, .txt, .xml)."), ZahlungFehler)
 	if cint(f.file_size) > MAX_BYTES:
 		frappe.throw(_("Die Datei ist größer als {0} MB.").format(MAX_BYTES // (1024 * 1024)), ZahlungFehler)
-	inhalt = f.get_content()
-	if isinstance(inhalt, str):
-		inhalt = inhalt.encode("utf-8")
+	inhalt = _inhalt(f)
 	if len(inhalt) > MAX_BYTES:
 		frappe.throw(_("Die Datei ist größer als {0} MB.").format(MAX_BYTES // (1024 * 1024)), ZahlungFehler)
 	return inhalt, f.file_name or name, name
+
+
+# Dateien im Objektspeicher (``frappe_s3_attachment``, MVP 0.5): ``file_url`` zeigt auf den Download-Endpunkt,
+# der Inhalt liegt nicht im Dateisystem der Site. Gleiche Konvention wie ``corevatis.mappe.inhalt`` im Kern.
+S3_DOWNLOAD_PRAEFIX = "/api/method/frappe_s3_attachment.controller.generate_file"
+S3_OPERATIONS = "frappe_s3_attachment.controller.S3Operations"
+
+
+def _s3_schluessel(f) -> str | None:
+	"""Objektschlüssel eines ``File`` im Objektspeicher: das Feld ``s3_key`` des Forks (schreibgeschützt),
+	für Altbestand ohne Feld die kanonische Download-URL ``?key=…&file_name=…`` (genau diese Parameter in
+	dieser Reihenfolge, wie ``corevatis.mappe``); sonst ``None`` (lokale Datei)."""
+	from urllib.parse import parse_qsl, urlsplit
+
+	url = f.file_url or ""
+	if not url.startswith(S3_DOWNLOAD_PRAEFIX + "?"):
+		return None
+	if f.meta.has_field("s3_key") and f.get("s3_key"):
+		return f.get("s3_key")
+	params = parse_qsl(urlsplit(url).query, keep_blank_values=True)
+	if len(params) != 2 or params[0][0] != "key" or params[1][0] != "file_name":
+		return None
+	return params[0][1] or None
+
+
+def _s3_lesen(key: str) -> bytes:
+	objekt = frappe.get_attr(S3_OPERATIONS)().read_file_from_s3(key)
+	return objekt["Body"].read(MAX_BYTES + 1)
+
+
+def _inhalt(f) -> bytes:
+	"""Inhalt eines ``File``: aus dem Objektspeicher, wenn die URL dorthin zeigt und die App installiert ist,
+	sonst aus dem Dateisystem (``get_content``)."""
+	key = _s3_schluessel(f)
+	if key and "frappe_s3_attachment" in frappe.get_installed_apps():
+		try:
+			return _s3_lesen(key)
+		except Exception:
+			frappe.log_error(title=f"Kontoauszug {f.file_name}: Datei im Objektspeicher nicht lesbar")
+			frappe.throw(_("Die Datei konnte aus dem Objektspeicher nicht gelesen werden."), ZahlungFehler)
+	inhalt = f.get_content()
+	return inhalt.encode("utf-8") if isinstance(inhalt, str) else inhalt
 
 
 def _mapping(e: frappe._dict) -> dict:
