@@ -490,6 +490,9 @@ def angebot_fuellen(doc, aufmass, kalkulation: dict, quotation_to: str, party: s
 	)
 	if frappe.db.exists("Price List", PREISLISTE):
 		doc.selling_price_list = PREISLISTE
+	# Befund mvp-test 31.10.: Beim Ersetzen eines Entwurfs am Folgetag blieb der alte Zahlungsplan
+	# (Fälligkeit vor dem neuen Buchungsdatum) stehen; ERPNext baut ihn aus den Zahlungsbedingungen neu
+	doc.set("payment_schedule", [])
 	# Vorbemerkung und Garantiehinweis aus den Textbausteinen (4.3), wie beim Anlegen im Desk
 	ensure_textbaustein()
 	textbausteine.texte_einsetzen(doc)
