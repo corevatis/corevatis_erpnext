@@ -157,12 +157,39 @@ class TestKontoauszugParser(unittest.TestCase):
 		self.assertEqual(buchungen[2].verwendungszweck, "Abschlag Keller E2E-77")
 		buchungen2, _h, fmt = K.lese(roh, "auszug.xml")
 		self.assertEqual((fmt, len(buchungen2)), ("camt", 3))
-		# XML-Bomben und externe Entitäten werden nicht gelesen
+		# XML-Bomben und externe Entitäten werden nicht gelesen - auch hinter einem langen Kommentar
+		# (jenseits der Schnellprüfung), in UTF-16 und als externe DTD (Security-Review)
 		boese = b'<?xml version="1.0"?><!DOCTYPE x [<!ENTITY a "aaaa">]><Document><BkToCstmrStmt/></Document>'
 		with self.assertRaises(K.KontoauszugFehler):
 			K.lese_camt(boese)
+		spaet = (
+			b'<?xml version="1.0"?><!-- '
+			+ b"x" * 5000
+			+ b' --><!DOCTYPE Document [<!ENTITY a "aaaa">]><Document>&a;</Document>'
+		)
+		with self.assertRaises(K.KontoauszugFehler):
+			K.lese_camt(spaet)
+		utf16 = '<?xml version="1.0" encoding="UTF-16"?><!DOCTYPE Document [<!ENTITY a "aaaa">]><Document>&a;</Document>'.encode(
+			"utf-16"
+		)
+		with self.assertRaises(K.KontoauszugFehler):
+			K.lese_camt(utf16)
+		extern = (
+			b'<?xml version="1.0"?><!-- '
+			+ b"y" * 5000
+			+ b' --><!DOCTYPE Document SYSTEM "http://example.invalid/x.dtd"><Document><BkToCstmrStmt/></Document>'
+		)
+		with self.assertRaises(K.KontoauszugFehler):
+			K.lese_camt(extern)
 		with self.assertRaises(K.KontoauszugFehler):
 			K.lese_camt(b"<Document><kaputt>")
+		# ohne DOCTYPE, aber mit Kommentar vor der Wurzel lesbar
+		praefix = (
+			(ORDNER / "camt053.xml")
+			.read_text(encoding="utf-8")
+			.replace("<Document xmlns=", "<!-- Kommentar --><Document xmlns=")
+		)
+		self.assertEqual(len(K.lese_camt(praefix.encode("utf-8"))[0]), 3)
 
 
 class TestZahlungseingang(IntegrationTestCase):

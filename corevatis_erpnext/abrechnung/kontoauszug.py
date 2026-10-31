@@ -4,9 +4,11 @@ Datum, Betrag (Gutschrift positiv, Abgang negativ), Name und IBAN des Zahlers, V
 Buchungstext, Bankreferenz und einem Dublettenschlüssel.
 
 Sicherheit: Die Datei ist Fremddaten. Größe und Typ prüft der Aufrufer (``zahlungseingang``); hier
-werden Texte nur gelesen, nie ausgeführt. XML: kein DOCTYPE/ENTITY (XML-Bomben, externe Entitäten
-abgewiesen), nur Elementtexte. CSV: Zellen mit führendem ``=``, ``+``, ``-``, ``@`` sind für einen
-Export zu entschärfen (``export_sicher``), damit Tabellenprogramme keine Formeln ausführen.
+werden Texte nur gelesen, nie ausgeführt. XML wird mit lxml ohne Entitätsauflösung, ohne DTD und ohne
+Netzzugriff gelesen; jede DOCTYPE-Deklaration (intern wie extern, in jeder Kodierung und an jeder Stelle)
+führt zum Abbruch (XML-Bomben, externe Entitäten) - der Parser selbst erkennt sie, die Textsuche am Anfang
+ist nur eine Schnellprüfung. CSV: Zellen mit führendem ``=``, ``+``, ``-``, ``@`` sind für einen Export zu
+entschärfen (``export_sicher``), damit Tabellenprogramme keine Formeln ausführen.
 """
 
 from __future__ import annotations
@@ -18,7 +20,8 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from xml.etree import ElementTree
+
+from lxml import etree
 
 TRENNZEICHEN = (";", ",", "\t")
 # Spaltenüberschriften (kleingeschrieben) je Bedeutung: Sparkasse (CSV-CAMT), VR-Bank/GLS, Postbank, allgemein
@@ -325,12 +328,36 @@ def lese_csv(
 # --- CAMT.053 -----------------------------------------------------------------------------------
 
 
-def _t(element, pfad: str) -> str:
-	"""Text des ersten Elements unter ``pfad`` (Namensraum egal), leer wenn nicht vorhanden."""
-	if element is None:
+def _lokal(tag) -> str:
+	"""Lokaler Name eines Elements ohne Namensraum; leer für Kommentare und Verarbeitungsanweisungen."""
+	if not isinstance(tag, str):
 		return ""
-	teil = element.find(pfad)
+	return tag.rsplit("}", 1)[-1]
+
+
+def _kinder(element, name: str) -> list:
+	return [k for k in element if _lokal(k.tag) == name] if element is not None else []
+
+
+def _finde(element, pfad: str):
+	"""Erstes Element unter ``pfad`` („A/B/C“, Namensraum egal), ``None`` wenn nicht vorhanden."""
+	for name in pfad.split("/"):
+		kinder = _kinder(element, name)
+		if not kinder:
+			return None
+		element = kinder[0]
+	return element
+
+
+def _t(element, pfad: str) -> str:
+	"""Text des ersten Elements unter ``pfad``, leer wenn nicht vorhanden."""
+	teil = _finde(element, pfad)
 	return (teil.text or "").strip() if teil is not None else ""
+
+
+def _alle(element, name: str) -> list:
+	"""Alle Nachkommen mit dem lokalen Namen ``name``."""
+	return [e for e in element.iter() if _lokal(e.tag) == name]
 
 
 def ist_camt(daten: bytes | str) -> bool:
@@ -338,27 +365,46 @@ def ist_camt(daten: bytes | str) -> bool:
 	return b"<Document" in anfang or b"camt.05" in anfang or b"BkToCstmrStmt" in anfang
 
 
-def lese_camt(daten: bytes | str) -> tuple[list[Buchung], list[str]]:
-	"""CAMT.053 (camt.053.001.02 … .08): je ``Ntry`` eine Buchung; Gutschrift (CRDT) positiv."""
+def xml_wurzel(daten: bytes | str):
+	"""XML sicher einlesen (Security-Review): lxml ohne Entitätsauflösung, ohne DTD, ohne Netz, ohne
+	riesige Bäume; eine DOCTYPE-Deklaration - intern oder extern, egal in welcher Kodierung oder nach wie
+	vielen Kommentaren - wird abgewiesen."""
 	roh = daten.encode("utf-8") if isinstance(daten, str) else daten
 	kopf = roh[:4000].upper()
 	if any(v.upper() in kopf for v in CAMT_VERBOTEN):
 		raise KontoauszugFehler("XML mit DOCTYPE/ENTITY wird nicht gelesen.")
+	parser = etree.XMLParser(
+		resolve_entities=False,
+		no_network=True,
+		load_dtd=False,
+		dtd_validation=False,
+		attribute_defaults=False,
+		huge_tree=False,
+		recover=False,
+	)
 	try:
-		wurzel = ElementTree.fromstring(roh)
-	except ElementTree.ParseError as fehler:
+		wurzel = etree.fromstring(roh, parser)
+	except (etree.XMLSyntaxError, ValueError) as fehler:
 		raise KontoauszugFehler(f"XML nicht lesbar: {fehler}")
+	if wurzel is None:
+		raise KontoauszugFehler("XML nicht lesbar: kein Wurzelelement.")
+	info = wurzel.getroottree().docinfo
+	if info.doctype or info.internalDTD is not None or info.externalDTD is not None:
+		raise KontoauszugFehler("XML mit DOCTYPE/ENTITY wird nicht gelesen.")
+	return wurzel
+
+
+def lese_camt(daten: bytes | str) -> tuple[list[Buchung], list[str]]:
+	"""CAMT.053 (camt.053.001.02 … .08): je ``Ntry`` eine Buchung; Gutschrift (CRDT) positiv."""
+	wurzel = xml_wurzel(daten)
 	hinweise: list[str] = []
 	buchungen: list[Buchung] = []
 	konto = ""
-	for stmt in wurzel.iter():
-		if stmt.tag.endswith("}Stmt") or stmt.tag == "Stmt":
-			konto = normalisiere(_t(stmt, "{*}Acct/{*}Id/{*}IBAN"))
-			break
-	for nr, ntry in enumerate(
-		(e for e in wurzel.iter() if e.tag.endswith("}Ntry") or e.tag == "Ntry"), start=1
-	):
-		amt = ntry.find("{*}Amt")
+	stmts = _alle(wurzel, "Stmt")
+	if stmts:
+		konto = normalisiere(_t(stmts[0], "Acct/Id/IBAN"))
+	for nr, ntry in enumerate(_alle(wurzel, "Ntry"), start=1):
+		amt = _finde(ntry, "Amt")
 		if amt is None or not (amt.text or "").strip():
 			hinweise.append(f"Buchung {nr}: kein Betrag - übersprungen.")
 			continue
@@ -367,29 +413,25 @@ def lese_camt(daten: bytes | str) -> tuple[list[Buchung], list[str]]:
 		except ValueError:
 			hinweise.append(f"Buchung {nr}: Betrag nicht lesbar ({amt.text!r}).")
 			continue
-		if _t(ntry, "{*}CdtDbtInd").upper() == "DBIT":
+		if _t(ntry, "CdtDbtInd").upper() == "DBIT":
 			betrag = -abs(betrag)
-		if _t(ntry, "{*}Sts") and _t(ntry, "{*}Sts").upper() not in ("BOOK", "BOOKED"):
+		status = _t(ntry, "Sts") or _t(ntry, "Sts/Cd")
+		if status and status.upper() not in ("BOOK", "BOOKED"):
 			# nur gebuchte Umsätze (keine vorgemerkten)
-			sts = ntry.find("{*}Sts")
-			if sts is not None and (sts.text or "").strip().upper() not in ("BOOK",) and not _t(sts, "{*}Cd"):
-				hinweise.append(f"Buchung {nr}: Status {sts.text} - übersprungen.")
-				continue
-		datum = datum_parsen(_t(ntry, "{*}BookgDt/{*}Dt") or _t(ntry, "{*}BookgDt/{*}DtTm"))
-		valuta = datum_parsen(_t(ntry, "{*}ValDt/{*}Dt") or _t(ntry, "{*}ValDt/{*}DtTm"))
-		tx = ntry.find("{*}NtryDtls/{*}TxDtls")
+			hinweise.append(f"Buchung {nr}: Status {status} - übersprungen.")
+			continue
+		datum = datum_parsen(_t(ntry, "BookgDt/Dt") or _t(ntry, "BookgDt/DtTm"))
+		valuta = datum_parsen(_t(ntry, "ValDt/Dt") or _t(ntry, "ValDt/DtTm"))
+		tx = _finde(ntry, "NtryDtls/TxDtls")
 		gegenseite = "Dbtr" if betrag > 0 else "Cdtr"
-		name = _t(tx, f"{{*}}RltdPties/{{*}}{gegenseite}/{{*}}Nm") or _t(
-			tx, f"{{*}}RltdPties/{{*}}{gegenseite}/{{*}}Pty/{{*}}Nm"
-		)
-		iban = _t(tx, f"{{*}}RltdPties/{{*}}{gegenseite}Acct/{{*}}Id/{{*}}IBAN")
-		zweck = " ".join(
-			(u.text or "").strip()
-			for u in (tx.findall("{*}RmtInf/{*}Ustrd") if tx is not None else [])
-			if u.text
-		)
-		referenz = _t(ntry, "{*}AcctSvcrRef") or _t(tx, "{*}Refs/{*}AcctSvcrRef")
-		e2e = _t(tx, "{*}Refs/{*}EndToEndId")
+		name = _t(tx, f"RltdPties/{gegenseite}/Nm") or _t(tx, f"RltdPties/{gegenseite}/Pty/Nm")
+		iban = _t(tx, f"RltdPties/{gegenseite}Acct/Id/IBAN")
+		rmt = _finde(tx, "RmtInf")
+		zweck = " ".join((u.text or "").strip() for u in _kinder(rmt, "Ustrd") if u.text)
+		referenz = _t(ntry, "AcctSvcrRef") or _t(tx, "Refs/AcctSvcrRef")
+		e2e = _t(tx, "Refs/EndToEndId")
+		if e2e and e2e.upper() != "NOTPROVIDED" and e2e not in zweck:
+			zweck = f"{zweck} {e2e}".strip()
 		buchungen.append(
 			Buchung(
 				datum=datum or valuta,
@@ -397,12 +439,8 @@ def lese_camt(daten: bytes | str) -> tuple[list[Buchung], list[str]]:
 				waehrung=(amt.get("Ccy") or "EUR").upper(),
 				name=name,
 				iban=normalisiere(iban) if iban else "",
-				verwendungszweck=re.sub(
-					r"\s+",
-					" ",
-					zweck + (f" {e2e}" if e2e and e2e.upper() != "NOTPROVIDED" and e2e not in zweck else ""),
-				),
-				buchungstext=_t(ntry, "{*}AddtlNtryInf") or _t(ntry, "{*}BkTxCd/{*}Prtry/{*}Cd"),
+				verwendungszweck=re.sub(r"\s+", " ", zweck),
+				buchungstext=_t(ntry, "AddtlNtryInf") or _t(ntry, "BkTxCd/Prtry/Cd"),
 				referenz=referenz,
 				konto_iban=konto,
 				zeile=nr,
