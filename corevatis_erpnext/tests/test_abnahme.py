@@ -378,9 +378,8 @@ class TestAbnahme(IntegrationTestCase):
 		self.assertEqual(abn["status"], "offen")
 		self.assertEqual(abn["aktion"]["neu"], K.ABNAHMEPROTOKOLL)
 		self.assertEqual(abn["aktion"]["werte"], {"projekt": self.projekt})
-		self.assertEqual(
-			_schritt(stand, "rechnung")["text"], "Schlussrechnung nach der Abnahme (Abschlag möglich)"
-		)
+		# Abrechnung 7.1: vor der Abnahme zeigt der Schritt den Abschlagsplan aus der Annahme
+		self.assertIn("Abschlagsplan: 0 von 3 gestellt", _schritt(stand, "rechnung")["text"])
 		# Projekt „Completed“ zählt nicht mehr als Abnahme
 		frappe.db.set_value("Project", self.projekt, "status", "Completed")
 		self.assertEqual(_schritt(status("Project", self.projekt), "abnahme")["status"], "offen")

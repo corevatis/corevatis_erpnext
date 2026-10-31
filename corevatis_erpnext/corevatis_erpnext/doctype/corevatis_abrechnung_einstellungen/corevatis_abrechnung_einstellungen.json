@@ -1,0 +1,133 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-31 18:00:00.000000",
+ "description": "Settings for down payment schedules, down payment invoices, final invoices and the labour share (§ 35a EStG) (Corevatis)",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_plan",
+  "abschlagsplan_automatisch",
+  "abschlagsplan_vorlage",
+  "abschlag_mindestsumme",
+  "column_plan",
+  "vorlage_zeilen",
+  "section_rechnung",
+  "abschlag_artikel",
+  "column_rechnung",
+  "lohnanteil_prozent_standard",
+  "lohnanteil_mit_zuschlaegen"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_plan",
+   "fieldtype": "Section Break",
+   "label": "Down Payment Schedule"
+  },
+  {
+   "fieldname": "abschlagsplan_automatisch",
+   "fieldtype": "Check",
+   "label": "Create Schedule with the Project",
+   "default": "1",
+   "description": "When the project is created from the accepted offer: one down payment schedule from the template."
+  },
+  {
+   "fieldname": "abschlagsplan_vorlage",
+   "fieldtype": "Select",
+   "label": "Schedule Template",
+   "options": "30/40/30\n50/50\nEigene Vorlage",
+   "default": "30/40/30",
+   "description": "30/40/30: at start of work, on progress, at acceptance. 50/50: at start of work, at acceptance. Eigene Vorlage: lines below."
+  },
+  {
+   "fieldname": "abschlag_mindestsumme",
+   "fieldtype": "Currency",
+   "label": "Minimum Order Total (Net)",
+   "default": "0",
+   "description": "No schedule for orders below this net total (0 = always)"
+  },
+  {
+   "fieldname": "column_plan",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "vorlage_zeilen",
+   "fieldtype": "Table",
+   "options": "Abschlagsplan Vorlage Zeile",
+   "label": "Own Template",
+   "depends_on": "eval:doc.abschlagsplan_vorlage=='Eigene Vorlage'"
+  },
+  {
+   "fieldname": "section_rechnung",
+   "fieldtype": "Section Break",
+   "label": "Invoices"
+  },
+  {
+   "fieldname": "abschlag_artikel",
+   "fieldtype": "Link",
+   "options": "Item",
+   "label": "Down Payment Item",
+   "description": "Service item for down payment lines and deductions (empty: ABSCHLAG, created automatically)"
+  },
+  {
+   "fieldname": "column_rechnung",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "lohnanteil_prozent_standard",
+   "fieldtype": "Percent",
+   "label": "Default Labour Share (%)",
+   "default": "0",
+   "description": "Fallback for positions without costing (minutes × hourly rate), e.g. manual supplements. 0 = no labour share shown for such positions."
+  },
+  {
+   "fieldname": "lohnanteil_mit_zuschlaegen",
+   "fieldtype": "Check",
+   "label": "Labour Share Including Surcharges",
+   "default": "0",
+   "description": "On: labour share = minutes × hourly rate × (unit price ÷ unit cost), i.e. overheads and profit allocated to labour. Off: minutes × hourly rate only."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-31 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Corevatis Abrechnung Einstellungen",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "email": 0,
+   "print": 0,
+   "share": 0
+  },
+  {
+   "role": "Büro",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "email": 0,
+   "print": 0,
+   "share": 0
+  },
+  {
+   "role": "Meister",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "email": 0,
+   "print": 0,
+   "share": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

@@ -286,3 +286,102 @@ Folder Check Overridden,Mappenprüfung übersteuert
 Reason for Folder Override,Begründung der Übersteuerung
 Folder Override By,Übersteuert von
 Office or System Manager only, with a reason; logged in Mappenpruefung,"Nur Büro oder System Manager, mit Begründung; protokolliert in der Mappenprüfung"
+"30/40/30: at start of work, on progress, at acceptance. 50/50: at start of work, at acceptance. Eigene Vorlage: lines below.","30/40/30: bei Baubeginn, bei Baufortschritt, bei Abnahme. 50/50: bei Baubeginn, bei Abnahme. Eigene Vorlage: Zeilen unten."
+Abschlagsplan,Abschlagsplan
+Abschlagsplan Vorlage Zeile,Abschlagsplan Vorlage Zeile
+Abschlagsplan Zeile,Abschlagsplan Zeile
+Amount (Net),Betrag (netto)
+Amounts,Beträge
+"Calculated, or the invoice amount once invoiced",Berechnet; sobald gestellt der Betrag der Rechnung
+Corevatis Abrechnung Einstellungen,Corevatis Abrechnung Einstellungen
+Create Schedule with the Project,Abschlagsplan mit dem Projekt anlegen
+Cumulative Net,Kumuliert netto
+Cumulative Percent,Kumuliert Prozent
+Customer,Kunde
+Date,Datum
+Default Labour Share (%),Lohnanteil Standard (%)
+Designation,Bezeichnung
+Down Payment Invoices,Abschlagsrechnungen
+Down Payment Item,Abschlagsartikel
+Down Payment Lines,Abschlagszeilen
+Down Payment No.,Abschlag Nr.
+Down Payment Overview,Abschlagsübersicht
+Down Payment Percent,Abschlag Prozent
+Down Payment Schedule,Abschlagsplan
+Down Payments,Abschläge
+Down Payments Deducted (Gross),Abzüglich Abschläge (brutto)
+Down Payments Deducted (Net),Abzüglich Abschläge (netto)
+Down Payments Deducted (Tax),Abzüglich Abschläge (USt)
+Down Payments and Final Invoice (Corevatis),Abschläge und Schlussrechnung (Corevatis)
+"Down payment invoice deducted on a final invoice: number, invoice, date, net, tax, gross (Corevatis, for printing)","Auf der Schlussrechnung abgezogene Abschlagsrechnung: Nr., Rechnung, Datum, netto, USt, brutto (Corevatis, für den Druck)"
+"Down payment schedule of a sales order: lines with percent or amount, due at, status and invoices (Corevatis)","Abschlagsplan eines Auftrags: Zeilen mit Prozent oder Betrag, Fälligkeit, Status und Rechnungen (Corevatis)"
+Due At,Fällig
+"Fallback for positions without costing (minutes × hourly rate), e.g. manual supplements. 0 = no labour share shown for such positions.","Rückfall für Positionen ohne Kalkulation (Minuten × Stundensatz), z. B. von Hand erfasste Nachträge. 0 = für solche Positionen kein Lohnanteil."
+Final Invoice,Schlussrechnung
+"Final invoice of the order: actual quantities, supplements, down payments deducted","Schlussrechnung zum Auftrag: Ist-Mengen, Nachträge, abzüglich Abschläge"
+Final invoice: deducted down payment invoices. Down payment invoice: earlier down payments.,Schlussrechnung: abgezogene Abschlagsrechnungen. Abschlagsrechnung: bisher gestellte Abschläge.
+"Final invoice: order positions with actual quantities plus supplements, before deductions","Schlussrechnung: Auftragspositionen mit Ist-Mengen plus Nachträge, vor den Abzügen"
+Fixed net amount instead of a percentage,Fester Nettobetrag statt Prozentsatz
+Gross,Brutto
+Invoice,Rechnung
+Invoice Calculation (JSON),Rechenweg der Rechnung (JSON)
+Invoiced Gross,Gestellt brutto
+Invoiced Including This (%),Gestellt einschließlich dieser (%)
+Invoiced Including This (Net),Gestellt einschließlich dieser (netto)
+Invoiced Net,Gestellt netto
+Invoiced Percent,Gestellt Prozent
+Invoices,Rechnungen
+Labour Share (%),Lohnanteil (%)
+Labour Share (Gross),Lohnanteil (brutto)
+Labour Share (Net),Lohnanteil (netto)
+Labour Share (Tax),Lohnanteil (USt)
+Labour Share (§ 35a EStG),Lohnanteil (§ 35a EStG)
+Labour Share Including Surcharges,Lohnanteil mit Zuschlägen
+"Labour costs contained in this invoice (household-related services, § 35a EStG)","In dieser Rechnung enthaltene Arbeitskosten (haushaltsnahe Handwerkerleistungen, § 35a EStG)"
+"Line of a down payment schedule: percent or amount, due at, status and invoice (Corevatis)","Zeile eines Abschlagsplans: Prozent oder Betrag, Fälligkeit, Status und Rechnung (Corevatis)"
+Line of the own down payment schedule template in the settings (Corevatis),Zeile der eigenen Abschlagsplan-Vorlage in den Einstellungen (Corevatis)
+Lines not yet invoiced,Noch nicht gestellte Zeilen
+Minimum Order Total (Net),Mindestauftragssumme (netto)
+Net,Netto
+Net total of the sales order (refreshed by the server),Nettosumme des Auftrags (vom Server nachgeführt)
+No schedule for orders below this net total (0 = always),Kein Abschlagsplan für Aufträge unter dieser Nettosumme (0 = immer)
+No.,Nr.
+"On: labour share = minutes × hourly rate × (unit price ÷ unit cost), i.e. overheads and profit allocated to labour. Off: minutes × hourly rate only.","An: Lohnanteil = Minuten × Stundensatz × (Einzelpreis ÷ Einzelkosten), also Gemeinkosten und Gewinn anteilig auf den Lohn. Aus: nur Minuten × Stundensatz."
+Open Net,Offen netto
+Order,Auftrag
+Order Total (Net),Auftragssumme (netto)
+Ordered Quantity,Auftragsmenge
+Own Template,Eigene Vorlage
+Paid,Bezahlt
+Paid in full when the final invoice was created,Beim Erstellen der Schlussrechnung vollständig bezahlt
+Percent of Order Total,Prozent der Auftragssumme
+Planned date (due at “Datum”) or posting date of the invoice,Geplantes Datum (Fälligkeit „Datum“) oder Buchungsdatum der Rechnung
+Position Type,Positionsart
+Project,Projekt
+Quantity of the order line (final invoice),Menge der Auftragszeile (Schlussrechnung)
+Rechnung Abschlag,Rechnung Abschlag
+Related Order Line,Zugehörige Auftragszeile
+Released down payment invoices in percent of the order total,Freigegebene Abschlagsrechnungen in Prozent der Auftragssumme
+Remark,Bemerkung
+Schedule Line,Planzeile
+Schedule Template,Vorlage des Abschlagsplans
+"Service item for down payment lines and deductions (empty: ABSCHLAG, created automatically)","Service-Artikel für Abschlagszeilen und Abzüge (leer: ABSCHLAG, wird automatisch angelegt)"
+Services (Gross),Leistung (brutto)
+Services (Net),Leistung (netto)
+Services (Tax),Leistung (USt)
+"Settings for down payment schedules, down payment invoices, final invoices and the labour share (§ 35a EStG) (Corevatis)","Einstellungen für Abschlagspläne, Abschlagsrechnungen, Schlussrechnungen und den Lohnanteil (§ 35a EStG) (Corevatis)"
+Settled Sales Order,Abgerechneter Auftrag
+Share of the order total (net). Either percent or amount.,Anteil an der Auftragssumme (netto). Entweder Prozent oder Betrag.
+Status,Status
+Status of Invoicing,Stand der Abrechnung
+Tax,USt
+Tax Rate,Steuersatz
+Template,Vorlage
+Template the schedule was created from,"Vorlage, aus der der Plan entstanden ist"
+Title,Titel
+When the project is created from the accepted offer: one down payment schedule from the template.,Beim Anlegen des Projekts aus dem angenommenen Angebot: ein Abschlagsplan aus der Vorlage.
+Abschlagspläne,Abschlagspläne
+Offen,Offen
+Teilweise gestellt,Teilweise gestellt
+Vollständig gestellt,Vollständig gestellt
+Schlussrechnung,Schlussrechnung

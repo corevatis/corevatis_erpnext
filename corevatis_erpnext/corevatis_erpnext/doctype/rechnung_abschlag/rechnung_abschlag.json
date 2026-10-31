@@ -1,0 +1,99 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-31 18:00:00.000000",
+ "description": "Down payment invoice deducted on a final invoice: number, invoice, date, net, tax, gross (Corevatis, for printing)",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "nr",
+  "rechnung",
+  "datum",
+  "bezeichnung",
+  "netto",
+  "steuer",
+  "brutto",
+  "bezahlt"
+ ],
+ "fields": [
+  {
+   "fieldname": "nr",
+   "fieldtype": "Int",
+   "label": "No.",
+   "in_list_view": 1,
+   "columns": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "rechnung",
+   "fieldtype": "Link",
+   "options": "Sales Invoice",
+   "label": "Down Payment Invoice",
+   "in_list_view": 1,
+   "columns": 2,
+   "read_only": 1
+  },
+  {
+   "fieldname": "datum",
+   "fieldtype": "Date",
+   "label": "Date",
+   "in_list_view": 1,
+   "columns": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "bezeichnung",
+   "fieldtype": "Data",
+   "label": "Designation",
+   "in_list_view": 1,
+   "columns": 2,
+   "read_only": 1
+  },
+  {
+   "fieldname": "netto",
+   "fieldtype": "Currency",
+   "label": "Net",
+   "in_list_view": 1,
+   "columns": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "steuer",
+   "fieldtype": "Currency",
+   "label": "Tax",
+   "in_list_view": 1,
+   "columns": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "brutto",
+   "fieldtype": "Currency",
+   "label": "Gross",
+   "in_list_view": 1,
+   "columns": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "bezahlt",
+   "fieldtype": "Check",
+   "label": "Paid",
+   "in_list_view": 1,
+   "columns": 1,
+   "read_only": 1,
+   "description": "Paid in full when the final invoice was created"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-31 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Rechnung Abschlag",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
