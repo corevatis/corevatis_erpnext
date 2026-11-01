@@ -64,6 +64,8 @@ before_app_uninstall = "corevatis_erpnext.vor_ort.lead_objekt.before_app_uninsta
 # Prozessleiste (prozessleiste.js) im Formularkopf aller Belege der Kette; prozess_lead.js räumt
 # das Lead-Formular auf (Befunde mvp-test Nr. 21)
 _PROZESSLEISTE = "public/js/prozessleiste.js"
+# Materialwirtschaft (P2.2): Dialoge Bestellen, Lieferung buchen, Fahrzeug beladen, Mindestbestand
+_MATERIAL = "public/js/materialwirtschaft.js"
 # Textbausteine (P2.6): Platzhalter-Hilfe und Vorschau am Baustein (Terms and Conditions)
 doctype_js = {
 	"Terms and Conditions": "public/js/textbaustein.js",
@@ -95,7 +97,11 @@ doctype_js = {
 		"public/js/abrechnung.js",
 		_PROZESSLEISTE,
 	],
-	"Project": ["public/js/planung.js", "public/js/abrechnung.js", _PROZESSLEISTE],
+	# Materialwirtschaft (P2.2): „Material bestellen“ am Projekt, Bestellung und Lieferung in Handwerkersprache
+	"Project": ["public/js/planung.js", "public/js/abrechnung.js", _PROZESSLEISTE, _MATERIAL],
+	"Material Request": [_MATERIAL],
+	"Purchase Order": [_MATERIAL],
+	"Purchase Receipt": [_MATERIAL],
 	# Zuweisung Mitarbeiter (5.2): Abschnitt „Zuweisung“ mit Dropdown; zuweisung.bundle.js ist die
 	# Bibliothek (auch vom Wochenplan per frappe.require geladen)
 	"Task": ["public/js/zuweisung.bundle.js", "public/js/task_zuweisung.js"],

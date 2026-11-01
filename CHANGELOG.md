@@ -6,6 +6,41 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (Materialwirtschaft, Phase 2 P2.2, Handwerker#90)
+
+- Modul `corevatis_erpnext.materialwirtschaft`: ERPNext Einkauf und Lager in der Reihenfolge des Betriebs, Belege
+  bleiben Standard (Material Request, Purchase Order, Purchase Receipt, Stock Entry, Item Reorder).
+- **Material bestellen**: Hauptknopf an der Materialanforderung (Art Einkauf, offene Positionen) und Knopf „Material
+  bestellen“ am Projekt (Menü Planung) sowie in der Prozessleiste. Dialog mit Positionen, Lieferant je Zeile
+  (Standardlieferant aus Artikel/Artikelgruppe/Marke, sonst Auswahl), Lieferung ins Hauptlager oder direkt ins
+  Fahrzeuglager eines zugewiesenen Monteurs, „sofort freigeben“. Ein Entwurf wird dabei eingereicht; je Lieferant
+  entsteht eine Bestellung mit Projekt am Beleg und an jeder Zeile, Preis aus Einkaufspreisliste, letztem
+  Einkaufspreis oder Bewertungspreis (`bestellung_vorbereiten`, `bestellen`).
+- **Lieferung buchen**: Hauptknopf an der freigegebenen Bestellung. Dialog mit bestellter, schon gelieferter und jetzt
+  gelieferter Menge (Teillieferung), Lager, Lieferschein-Nummer, Scanfeld (EAN zählt die Zeile hoch, `ean_suchen`),
+  „sofort buchen“ (Bestand steigt). Ergebnis mit Bestand danach und offenen Positionen (`lieferung_vorbereiten`,
+  `lieferung_buchen`). Die Eingangsrechnung bleibt ERPNext „Erstellen → Eingangsrechnung“.
+- **Fahrzeug beladen**: Bericht „Fahrzeuglager“ (Leiste „Betrieb“ → Zeiten und Material) je Mitarbeiter: Bestand auf dem
+  Fahrzeug, Bedarf der zugewiesenen Baustellen der nächsten sieben Tage (Materialanforderungen abzüglich schon
+  entnommener Mengen), Mindestbestand des Fahrzeugs, Bestand im Hauptlager, Vorschlag; Knopf „Fahrzeug beladen“ bucht
+  die Umlagerung Hauptlager → Fahrzeuglager (`fahrzeug_vorschlag`, `fahrzeug_beladen`).
+- **Mindestbestand** je Artikel und Lager als ERPNext `Item Reorder` (Art Bestellung oder Umlagerung; Fahrzeuglager
+  standardmäßig Umlagerung), gepflegt über den Dialog „Mindestbestand setzen“ (`mindestbestand_setzen`, Büro und
+  Meister). Bericht „Nachbestellen“: Artikel unter Mindestbestand mit Bestand, verfügbarer Menge, Nachbestellmenge wie
+  der ERPNext-Job, Art und Lieferant; Knopf „Bedarf anlegen“ legt je Lager und Art eine Materialanforderung an
+  (`nachbestellung_anlegen`). Die ERPNext-Nachbestellautomatik und ihre E-Mails werden bei `migrate` ausgeschaltet
+  (`Stock Settings.auto_indent`, `reorder_email_notify`).
+- **Prozessleiste**: Pille „Material: 2 offen, 1 bestellt, 3 geliefert“ am Projekt und Auftrag mit Knopf „Bestellen“
+  bzw. „Material“ (`stand`). Zustandstexte an Materialanforderung, Bestellung und Lieferung; verwirrende
+  ERPNext-Menüpunkte (Angebotsanfrage, Lieferantenangebot, Arbeitsauftrag, Pickliste, Zahlung …) für Büro und Meister
+  ausgeblendet.
+- **Rechte** (`ensure_rechte`, idempotent): Büro voll auf Lieferant, Bestellung, Lieferung, Materialanforderung sowie
+  lesen/schreiben/anlegen/buchen auf Materialbuchung (Fahrzeug beladen); Meister liest Lieferant, Bestellung und
+  Lieferung (Materialanforderung und Materialbuchung hat er aus 0.4 voll). Leiste „Betrieb“: Bestellungen,
+  Lieferungen, Nachbestellen, Fahrzeuglager (Zeiten und Material), Lieferanten (Stammdaten); Übersetzungen Lieferant,
+  Bestellung, Lieferung, Mindestbestand.
+- Nachkalkulation (P2.1) unverändert: Wareneingänge und Umlagerungen zählen nicht als Verbrauch (Test).
+
 ### Geändert (Abwesenheiten: Meister sieht das Team, Phase 2 P2.5, Handwerker#88)
 
 - Liste und Formular „Abwesenheit“: der Meister sieht jetzt alle Abwesenheiten des Betriebs (Entscheidung Mike

@@ -1056,6 +1056,7 @@ def auswerten(k: frappe._dict, einst=None, mit_aktionen: bool = True) -> dict:
 		"mappe": _mappe(k, lead_lesbar),
 		"nachrichten": _nachrichten(k, lead_lesbar),
 		"nachkalkulation": _nachkalkulation(k),
+		"material": _material(k),
 	}
 
 
@@ -1112,6 +1113,25 @@ def _nachkalkulation(k: frappe._dict) -> dict | None:
 		return nachkalkulation.kennzahl(start_name)
 	except Exception:
 		frappe.log_error(title="Prozessleiste: Nachkalkulation")
+		return None
+
+
+def _material(k: frappe._dict) -> dict | None:
+	"""Materialwirtschaft (P2.2): Pille „Material: 2 offen, 1 bestellt, 3 geliefert“ am Projekt und am
+	Auftrag mit Knopf zur Materialanforderung; nur Büro/Meister, ``None`` ohne Materialanforderung.
+	Fehler halten die Leiste nicht auf."""
+	try:
+		start_doctype, start_name = k.get("start") or (None, None)
+		if start_doctype not in ("Project", "Sales Order") or not start_name:
+			return None
+		from corevatis_erpnext import materialwirtschaft
+
+		projekt = _neuestes(k.projekte) if k.projekte else None
+		if not projekt or not lesbar("Project", projekt.name):
+			return None
+		return materialwirtschaft.stand(projekt.name)
+	except Exception:
+		frappe.log_error(title="Prozessleiste: Material")
 		return None
 
 

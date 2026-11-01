@@ -60,6 +60,8 @@ def after_install() -> None:
 	ensure_planung_setup()
 	# Mitarbeiter (P2.5): Employee.cv_urlaubsanspruch, cv_urlaub_uebertrag, cv_saldo_uebertrag
 	ensure_mitarbeiter()
+	# Materialwirtschaft (P2.2): Rechte Büro/Meister auf Lieferant, Bestellung, Lieferung; Nachbestellautomatik aus
+	ensure_materialwirtschaft()
 
 	ensure_prozess()
 	ensure_abnahme()
@@ -122,6 +124,8 @@ def after_migrate() -> None:
 	ensure_material()
 	# Mitarbeiter (P2.5): Employee.cv_urlaubsanspruch, cv_urlaub_uebertrag, cv_saldo_uebertrag
 	ensure_mitarbeiter()
+	# Materialwirtschaft (P2.2): Rechte Büro/Meister auf Lieferant, Bestellung, Lieferung; Nachbestellautomatik aus
+	ensure_materialwirtschaft()
 	# Abnahme (6.1/6.2): Task/Project/Sales Invoice-Felder
 	ensure_abnahme()
 	# Dokumentenmappe (Epic D): Ampel am Projekt, Übersteuerung an Angebot und Rechnung
@@ -137,6 +141,12 @@ def ensure_mitarbeiter() -> None:
 	from corevatis_erpnext.mitarbeiter import ensure_setup as ensure_mitarbeiter_setup
 
 	ensure_mitarbeiter_setup()
+
+
+def ensure_materialwirtschaft() -> None:
+	from corevatis_erpnext.materialwirtschaft import ensure_setup as ensure_materialwirtschaft_setup
+
+	ensure_materialwirtschaft_setup()
 
 
 def ensure_abrechnung() -> None:
