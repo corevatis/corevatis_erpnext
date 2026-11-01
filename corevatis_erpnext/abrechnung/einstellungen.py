@@ -4,8 +4,10 @@
   bei Baufortschritt, bei Abnahme), ``50/50`` (bei Baubeginn, bei Abnahme) oder eigene Zeilen;
   Mindestsumme (Standard 0 = immer).
 - Rechnungen: Service-Artikel für Abschlagszeilen und Abzüge (Standard ``ABSCHLAG``, wird angelegt).
-- Lohnanteil § 35a EStG: Rückfall-Prozentsatz für Positionen ohne Kalkulation (Standard 0 = kein
-  Ausweis), optional Zuschläge anteilig auf den Lohn (Standard aus: Minuten x Stundensatz).
+- Lohnanteil § 35a EStG und Ausweis Lohn/Material (#105): Rückfall-Prozentsatz für Positionen ohne
+  Kalkulation (Standard 0 = alles Material), Zuschläge nach Kostenanteilen auf Material und Lohn
+  verteilt (Standard an seit #105: Material + Lohn = Netto; aus: Minuten x Stundensatz + Erschwernis),
+  Material und Lohn je Position drucken (Standard an).
 - Mahnwesen (7.5): Fristen Zahlungserinnerung 7 Tage nach Fälligkeit, 1. Mahnung 14 Tage danach,
   2. Mahnung 14 Tage danach; Zahlungsfrist in der Mahnung 7 Tage; Mahngebühr 1. Mahnung 0 €,
   2. Mahnung 5 €; Ertragskonto der Gebühr (leer = SKR-Konto 2650/7100, sonst Standard-Erlöskonto).
@@ -44,7 +46,8 @@ STANDARD = {
 	"abschlag_mindestsumme": 0.0,
 	"abschlag_artikel": None,
 	"lohnanteil_prozent_standard": 0.0,
-	"lohnanteil_mit_zuschlaegen": 0,
+	"lohnanteil_mit_zuschlaegen": 1,
+	"lohn_material_je_position": 1,
 	# Mahnwesen (7.5)
 	"mahnfrist_erinnerung": 7,
 	"mahnfrist_mahnung1": 14,
@@ -74,7 +77,12 @@ def einstellungen() -> frappe._dict:
 		for key in STANDARD:
 			if gespeichert.get(key) not in (None, ""):
 				werte[key] = gespeichert[key]
-	for key in ("abschlagsplan_automatisch", "lohnanteil_mit_zuschlaegen", "nur_gutschriften"):
+	for key in (
+		"abschlagsplan_automatisch",
+		"lohnanteil_mit_zuschlaegen",
+		"lohn_material_je_position",
+		"nur_gutschriften",
+	):
 		werte[key] = cint(werte[key])
 	for key in GANZZAHLEN:
 		werte[key] = max(cint(werte[key]), 0)

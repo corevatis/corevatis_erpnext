@@ -215,6 +215,8 @@ doc_events = {
 		"validate": [
 			# 7.1/7.2: Abrechnungsfelder (Auftrag, Art, Beträge) setzt nur der Server
 			"corevatis_erpnext.abrechnung.auftrag.rechnung_validieren",
+			# #105: Material und Lohn je Position und am Kopf (nach den Serverfeldern: Lohn = § 35a)
+			"corevatis_erpnext.abrechnung.lohn_material.beleg_validieren",
 			"corevatis_erpnext.mappe.rechnung_pruefen",
 			"corevatis_erpnext.abnahme.rechnung_pruefen",
 			# Textbausteine (P2.6): Platzhalter in Zahlungsbedingungen einsetzen
@@ -262,6 +264,8 @@ doc_events = {
 			"corevatis_erpnext.angebot.annahme.cv_lead_schuetzen",
 			# Dokumentenmappe (D.5): Übersteuerung nur Büro/System Manager, bei jedem Speichern gesichert
 			"corevatis_erpnext.mappe.angebot_validieren",
+			# #105: Material und Lohn je Position aus der Kalkulation, Summen netto/brutto
+			"corevatis_erpnext.abrechnung.lohn_material.beleg_validieren",
 		],
 		# Dokumentenmappe (D.2): „PDF bei Freigabe“ - Angebot Corevatis in Ordner 03 Angebot
 		"on_submit": "corevatis_erpnext.mappe.angebot_freigegeben",
@@ -274,7 +278,11 @@ doc_events = {
 	"Sales Order": {
 		# Textbausteine (P2.6): Zahlungsbedingungen der Auftragsbestätigung, Platzhalter
 		"before_insert": "corevatis_erpnext.textbausteine.beleg_before_insert",
-		"validate": "corevatis_erpnext.textbausteine.beleg_validate",
+		"validate": [
+			"corevatis_erpnext.textbausteine.beleg_validate",
+			# #105: Material und Lohn aus der Angebotszeile (anteilig), Summen netto/brutto
+			"corevatis_erpnext.abrechnung.lohn_material.beleg_validieren",
+		],
 		"on_submit": [
 			"corevatis_erpnext.angebot.annahme.auftrag_eingereicht",
 			"corevatis_erpnext.planung.auftrag_eingereicht",

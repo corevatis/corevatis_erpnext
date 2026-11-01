@@ -9,9 +9,12 @@
 - Abzugszeilen „abzüglich Abschlagsrechnung Nr. 1 vom … (netto)“ als Positionen mit negativem Preis
   (Selling Settings „negative Preise“, gesetzt von ``ensure_abrechnung_setup``); ERPNext rechnet die
   Steuer auf den verbleibenden Nettobetrag - wie die Engine.
-- Lohnanteil je Position aus der Kalkulation 4.1 (``Sales Order.cv_kalkulation_json``: Lohn =
-  Minuten x Stundensatz je Einheit, optional mit Zuschlägen), sonst Prozentsatz der Einstellungen;
-  das Büro kann ihn je Position überschreiben (höchstens Positionspreis, Engine kappt).
+- Lohnanteil je Position aus dem Ausweis Material/Lohn der Auftragszeile (#105,
+  ``Sales Order Item.cv_lohnanteil`` - derselbe Wert wie auf Angebot und Auftrag), sonst aus der
+  Kalkulation 4.1 (``Sales Order.cv_kalkulation_json``: Lohn = Minuten x Stundensatz je Einheit,
+  optional mit Zuschlägen), sonst Prozentsatz der Einstellungen; Nachträge als Regiestunde
+  (Verfahren „Sonstiges“, Einheit Stunde) 100 % Lohn; das Büro kann ihn je Position überschreiben
+  (höchstens Positionspreis, Engine kappt).
 - Vor der Abnahme (6.2) nur als Übersteuerung durch einen System Manager mit Begründung.
 """
 
@@ -45,6 +48,7 @@ from corevatis_erpnext.abrechnung.auftrag import (
 from corevatis_erpnext.abrechnung.einstellungen import einstellungen
 from corevatis_erpnext.abrechnung.felder import ART_ABZUG, ART_AUFTRAG, ART_MEHRMENGE, ART_NACHTRAG
 from corevatis_erpnext.abrechnung.kern import AbrechnungFehler
+from corevatis_erpnext.abrechnung.lohn_material import ist_regie
 
 TAGESRAPPORT, RAPPORT_POSITION = "Tagesrapport", "Rapport Position"
 ABNAHMEPROTOKOLL, ABNAHME_LEISTUNG = "Abnahmeprotokoll", "Abnahme Leistung"
@@ -94,9 +98,23 @@ def lohn_je_position(auftrag) -> dict[str, float]:
 	return ergebnis
 
 
+def lohn_je_zeile(auftrag) -> dict[str, float]:
+	"""Lohn je Einheit je Auftragszeile aus dem Ausweis Material/Lohn (#105): ``cv_lohnanteil`` ÷ Menge
+	der Auftragszeile; Zeilen ohne Lohn fehlen (dann Kalkulation bzw. Prozentsatz wie bisher)."""
+	ergebnis = {}
+	for z in auftrag.items:
+		lohn, menge = flt(z.get("cv_lohnanteil")), flt(z.qty)
+		if lohn > 0 and menge > 0:
+			ergebnis[z.name] = flt(lohn / menge, 6)
+	return ergebnis
+
+
 def lohnanteil_des_auftrags(auftrag) -> float | None:
-	"""Lohnanteil des ganzen Auftrags (Σ Lohn je Einheit x Menge) für den anteiligen Ausweis auf
-	Abschlagsrechnungen; ``None`` ohne Kalkulation."""
+	"""Lohnanteil des ganzen Auftrags für den anteiligen Ausweis auf Abschlagsrechnungen: Lohn des
+	Ausweises Material/Lohn (#105, ``cv_lohn_netto``), sonst Σ Lohn je Einheit x Menge aus der
+	Kalkulation; ``None`` ohne beides."""
+	if flt(auftrag.get("cv_lohn_netto")) > 0:
+		return flt(auftrag.cv_lohn_netto, 2)
 	lohn = lohn_je_position(auftrag)
 	if not lohn:
 		return None
@@ -169,11 +187,13 @@ def schlussrechnung_vorschlag(sales_order: str | None = None, project: str | Non
 	pruefe_rolle()
 	auftrag, projekt = auftrag_laden(sales_order, project, sperren=False)
 	lohn = lohn_je_position(auftrag)
+	zeilen_lohn = lohn_je_zeile(auftrag)
 	hinweise = ist_hinweise(projekt)
 	e = einstellungen()
 	positionen = []
 	for z in auftrag.items:
 		h = hinweise.get(z.name)
+		je_einheit = zeilen_lohn.get(z.name, lohn.get(z.item_code))
 		positionen.append(
 			{
 				"so_detail": z.name,
@@ -187,11 +207,9 @@ def schlussrechnung_vorschlag(sales_order: str | None = None, project: str | Non
 				"menge_rapport": flt(h["rapport_menge"]) if h and "rapport_menge" in h else None,
 				"einzelpreis": flt(z.rate),
 				"betrag_auftrag": flt(z.amount),
-				"lohn_je_einheit": lohn.get(z.item_code),
-				"lohnanteil": flt(lohn.get(z.item_code, 0.0) * flt(z.qty), 2)
-				if z.item_code in lohn
-				else None,
-				"lohn_quelle": LOHN_KALKULATION if z.item_code in lohn else LOHN_STANDARD,
+				"lohn_je_einheit": je_einheit,
+				"lohnanteil": flt(je_einheit * flt(z.qty), 2) if je_einheit is not None else None,
+				"lohn_quelle": LOHN_KALKULATION if je_einheit is not None else LOHN_STANDARD,
 				"hinweis": _hinweis_text(z, h),
 			}
 		)
@@ -249,6 +267,7 @@ def _positionen_eingabe(auftrag, eingaben: dict, lohn: dict) -> list[dict]:
 				_("Unbekannte Auftragsposition {0}.").format(frappe.utils.escape_html(str(key))),
 				AbrechnungFehler,
 			)
+	zeilen_lohn = lohn_je_zeile(auftrag)
 	positionen = []
 	for z in auftrag.items:
 		e = eingaben.get(z.name) or {}
@@ -273,6 +292,8 @@ def _positionen_eingabe(auftrag, eingaben: dict, lohn: dict) -> list[dict]:
 					frappe.ValidationError,
 				)
 			p["lohnanteil"] = str(flt(e["lohnanteil"], 2))
+		elif z.name in zeilen_lohn:
+			p["lohn_je_einheit"] = str(zeilen_lohn[z.name])
 		elif z.item_code in lohn:
 			p["lohn_je_einheit"] = str(lohn[z.item_code])
 		positionen.append(p)
@@ -321,6 +342,8 @@ def _nachtraege_eingabe(nachtraege: list, lohn: dict) -> list[dict]:
 			p["lohnanteil"] = str(flt(n["lohnanteil"], 2))
 		elif code in lohn:
 			p["lohn_je_einheit"] = str(lohn[code])
+		elif ist_regie(code, p["einheit"]):
+			p["lohnanteil"] = str(flt(menge * preis, 2))  # Regiestunden: 100 % Lohn (#105)
 		ergebnis.append(p)
 	return ergebnis
 

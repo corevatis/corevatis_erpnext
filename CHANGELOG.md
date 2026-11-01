@@ -6,6 +6,32 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Phase 3 P3.7 Lohn und Material getrennt ausweisen (Handwerker#105)
+
+- Felder `cv_materialanteil`/`cv_lohnanteil` je Position an Quotation Item (Spiegel Sales Order Item) und
+  Sales Invoice Item (`cv_materialanteil` neu neben dem § 35a-`cv_lohnanteil`), Abschnitt „Material und
+  Lohn“ mit `cv_material_netto`/`_brutto`, `cv_lohn_netto`/`_brutto` an Quotation (Spiegel Sales Order)
+  und Sales Invoice; nur lesen, gesetzt vom Server.
+- Neues Modul `abrechnung.lohn_material` (Hook `validate` an Quotation, Sales Order, Sales Invoice nach
+  `rechnung_validieren`): rechnet über die Kern-Engine `corevatis.engine.anteile` (per Name, ohne Kern
+  nichts). Angebot aus der Kalkulation (`cv_kalkulation_json`), Regiestunden (Verfahren „Sonstiges“, Einheit
+  Stunde) 100 % Lohn, sonst „Lohnanteil Standard (%)“; Auftrag spiegelt die Angebotszeile anteilig, Rechnung
+  die Auftragszeile (Teilmengen anteilig). Abschlags- und Schlussrechnung: Lohn = § 35a-Lohnanteil der
+  Abrechnung, Abzugszeilen zählen nicht (Summen = Leistung); gewöhnliche Rechnungen bekommen den
+  § 35a-Lohnanteil aus denselben Werten.
+- Abrechnung: Abschlagsrechnungen nehmen den Lohn des Auftrags aus `cv_lohn_netto`, die Schlussrechnung den
+  Lohn je Einheit aus `Sales Order Item.cv_lohnanteil` (vorher Kalkulation je Artikel); Nachträge als
+  Regiestunde 100 % Lohn. § 35a und Ausweis zeigen so dieselben Zahlen.
+- Corevatis Abrechnung Einstellungen: „Lohnanteil mit Zuschlägen“ jetzt Standard an (Material + Lohn =
+  Netto), neuer Schalter „Lohn und Material je Position ausweisen“ (Standard an, Druckformat). Schutz der
+  Check-Defaults wie Handwerker#99 (`load_from_db`).
+- Patch `v0_5.lohn_material`: Felder anlegen, „Lohnanteil mit Zuschlägen“ einmalig an, Angebote, Aufträge
+  und Rechnungen (nicht storniert) nachrechnen, ohne `modified` zu ändern.
+- Tests: `test_lohn_material` (Einstellungen, Angebot → Auftrag → Teilrechnung, Abschlag und
+  Schlussrechnung mit Regiestunde, ohne Engine), `test_angebot_felder`, Druck in `test_angebotsdruck`
+  und `test_rechnungsdruck` (nur mit erpnext_druckformate ab #105); `AnteileStellvertreter` in
+  `tests/_abrechnung.py`. Bestehende Abrechnungstests rechnen weiter ohne Zuschläge.
+
 ### Phase 3 P3.5 Sprachnotizen (Handwerker#97)
 
 - Neue Datei `public/js/sprachnotiz.js` (doctype_js an Befund, Baustellenmeldung und ToDo): Abschnitt

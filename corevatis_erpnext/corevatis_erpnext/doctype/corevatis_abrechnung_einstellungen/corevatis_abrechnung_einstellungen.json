@@ -18,6 +18,7 @@
   "column_rechnung",
   "lohnanteil_prozent_standard",
   "lohnanteil_mit_zuschlaegen",
+  "lohn_material_je_position",
   "section_mahnwesen",
   "mahnfrist_erinnerung",
   "mahnfrist_mahnung1",
@@ -104,8 +105,15 @@
    "fieldname": "lohnanteil_mit_zuschlaegen",
    "fieldtype": "Check",
    "label": "Labour Share Including Surcharges",
-   "default": "0",
-   "description": "On: labour share = minutes × hourly rate × (unit price ÷ unit cost), i.e. overheads and profit allocated to labour. Off: minutes × hourly rate only."
+   "default": "1",
+   "description": "On (default): surcharges (overheads, profit) are allocated to material and labour by their cost shares, so material + labour = net price. Off: labour = (minutes × hourly rate + hardship) × quantity, material = remainder."
+  },
+  {
+   "fieldname": "lohn_material_je_position",
+   "fieldtype": "Check",
+   "label": "Show Material and Labour per Position",
+   "default": "1",
+   "description": "Quotation and invoice print a line \"Material … € · Labour … €\" under each position. The totals (thereof material, thereof labour) are always printed."
   },
   {
    "fieldname": "section_mahnwesen",
@@ -226,7 +234,7 @@
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-01 09:00:00.000000",
+ "modified": "2026-11-02 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Corevatis ERPNext",
  "name": "Corevatis Abrechnung Einstellungen",

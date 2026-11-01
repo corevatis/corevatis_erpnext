@@ -21,6 +21,10 @@ ERWARTET = {
 		"cv_garantiehinweis": "Small Text",
 		"cv_kalkulation_json": "Code",
 		"cv_erzeugt_aus_aufmass": "Check",
+		"cv_material_netto": "Currency",
+		"cv_material_brutto": "Currency",
+		"cv_lohn_netto": "Currency",
+		"cv_lohn_brutto": "Currency",
 	},
 	"Quotation Item": {
 		"cv_raum": "Data",
@@ -32,6 +36,8 @@ ERWARTET = {
 		"cv_einzelkosten": "Currency",
 		"cv_eventualposition": "Check",
 		"cv_alternativposition": "Check",
+		"cv_materialanteil": "Currency",
+		"cv_lohnanteil": "Currency",
 	},
 }
 
@@ -62,6 +68,16 @@ class TestAngebotFelder(IntegrationTestCase):
 		self.assertTrue(meta.get_field("cv_kalkulation_json").read_only)
 		self.assertTrue(meta.get_field("cv_kalkulation_json").print_hide)
 		self.assertTrue(frappe.get_meta("Quotation Item").get_field("cv_einzelkosten").read_only)
+		# Material und Lohn (#105): nur Server, Ebene 0 (gedruckt), Spiegel am Auftrag
+		for doctype, feld in (
+			("Quotation", "cv_lohn_netto"),
+			("Quotation Item", "cv_materialanteil"),
+			("Quotation Item", "cv_lohnanteil"),
+		):
+			df = frappe.get_meta(doctype).get_field(feld)
+			self.assertEqual(
+				(df.read_only, df.permlevel, df.options), (1, 0, "currency"), f"{doctype}.{feld}"
+			)
 
 	def test_felder_speicherbar(self):
 		"""Werte an einem ungespeicherten Angebot setzen und validieren (Typen passen)."""

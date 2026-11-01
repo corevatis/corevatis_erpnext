@@ -19,7 +19,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, today
 
 from corevatis_erpnext.abnahme.rechnung import RechnungOhneAbnahme
-from corevatis_erpnext.abrechnung import abschlag, kern, plan, schluss
+from corevatis_erpnext.abrechnung import abschlag, kern, lohn_material, plan, schluss
 from corevatis_erpnext.abrechnung import auftrag as A
 from corevatis_erpnext.abrechnung.einstellungen import EINSTELLUNGEN, einstellungen
 from corevatis_erpnext.abrechnung.kern import AbrechnungFehler
@@ -357,6 +357,8 @@ class TestAbrechnung(IntegrationTestCase):
 		frappe.set_user("Administrator")
 		frappe.db.delete("Singles", {"doctype": EINSTELLUNGEN})
 		frappe.db.delete("Singles", {"doctype": "Corevatis Abnahme Einstellungen"})
+		# Sollwerte 7.1/7.2: Lohn = Minuten x Stundensatz (vor #105 der Standard)
+		frappe.db.set_single_value(EINSTELLUNGEN, "lohnanteil_mit_zuschlaegen", 0)
 		self.kern = KernStellvertreter()
 		p = patch.object(kern, "_aufloesen", self.kern.aufloesen)
 		p.start()
@@ -395,6 +397,7 @@ class TestAbrechnung(IntegrationTestCase):
 				),
 				update_modified=False,
 			)
+			lohn_material.nachtragen("Quotation", angebot.name)  # #105, ohne Engine: nichts
 		r = _als(BUERO, annahme.angebot_annehmen, angebot.name, einreichen=1)
 		return r["auftrag"], r["projekt"]
 

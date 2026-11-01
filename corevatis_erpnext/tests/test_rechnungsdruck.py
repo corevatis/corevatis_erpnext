@@ -34,6 +34,15 @@ LANGTEXT = (
 )
 
 
+def druck_mit_lohn_material() -> bool:
+	"""erpnext_druckformate mit Ausweis Material/Lohn (#105)? Die Bench holt den veröffentlichten Branch."""
+	try:
+		from erpnext_druckformate import angebot_corevatis
+	except ImportError:
+		return False
+	return hasattr(angebot_corevatis, "lohn_material_summen")
+
+
 def wkhtmltopdf_vorhanden() -> bool:
 	return bool(shutil.which("wkhtmltopdf"))
 
@@ -71,7 +80,10 @@ class TestRechnungsdruck(IntegrationTestCase):
 		self.addCleanup(setattr, frappe.local, "lang", self.lang)
 		frappe.db.delete("Singles", {"doctype": EINSTELLUNGEN})
 		frappe.db.delete("Singles", {"doctype": "Corevatis Abnahme Einstellungen"})
+		# Sollwerte 7.3: Lohn = Minuten x Stundensatz (vor #105 der Standard)
+		frappe.db.set_single_value(EINSTELLUNGEN, "lohnanteil_mit_zuschlaegen", 0)
 		H.kern_patch(self)
+		H.anteile_patch(self)
 
 	# --- Hilfen ------------------------------------------------------------------------------
 
@@ -185,6 +197,14 @@ class TestRechnungsdruck(IntegrationTestCase):
 		self.assertNotIn("Zahlungsbedingungen", alles)
 		# Positionen aus dem Formular (HTML): eine Abschlagsposition, Langtext mit Fälligkeit
 		self.assertIn("fällig bei Baubeginn", html)
+		if druck_mit_lohn_material():
+			# #105: 150 = Material 97,20 + Lohn 52,80 netto; brutto 115,67 / 62,83; Lohn = § 35a, einmal
+			flach = " ".join(alles.split())
+			self.assertIn("davon Materialkosten", flach)
+			self.assertIn("davon Lohnkosten (§ 35a EStG)", flach)
+			for betrag in (97.2, 115.67):
+				self.assertIn(self.geld(betrag), alles, betrag)
+			self.assertIn("siehe", flach)
 		# zweiter Abschlag, Abnahme, Schlussrechnung mit Mehrmenge und Nachtrag
 		r2 = H._als(H.BUERO, abschlag.abschlag_stellen, project=projekt)  # 40 % = 200
 		si2 = H.freigeben(r2["rechnung"])
@@ -229,6 +249,11 @@ class TestRechnungsdruck(IntegrationTestCase):
 		# § 35a: 12 x 17,60 + 60 = 271,20 netto / 322,73 brutto
 		self.assertIn(self.geld(271.2), alles)
 		self.assertIn(self.geld(322.73), alles)
+		if druck_mit_lohn_material():
+			# #105: Material der Leistung 680 - 271,20 = 408,80 netto, 486,47 brutto; Position 1:
+			# Material 324,00 · Lohn 176,00
+			for betrag in (408.8, 486.47, 324, 176):
+				self.assertIn(self.geld(betrag), alles, betrag)
 		# Summen stimmen mit dem Beleg überein
 		self.assertIn(si.get_formatted("grand_total"), alles)
 		self.assertEqual((flt(si.net_total), flt(si.grand_total)), (330.0, 392.7))
