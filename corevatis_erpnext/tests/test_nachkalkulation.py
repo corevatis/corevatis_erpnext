@@ -124,6 +124,22 @@ class TestNachkalkulation(IntegrationTestCase):
 		self.assertEqual(nk.ampel(10, 5, 40)[0], nk.ROT)
 		self.assertEqual(nk.ampel(10, 3, 40)[0], nk.GRUEN)
 
+	def test_abweichung_arbeitspakete(self):
+		"""#104: Sollstunden der Arbeitspakete gegen das Soll der Nachkalkulation (reine Funktion)."""
+		self.assertIsNone(nk.pakete_abweichung(10, None))
+		self.assertIsNone(nk.pakete_abweichung(0, 0))
+		self.assertEqual(nk.pakete_abweichung(0, 2), 1.0)
+		self.assertAlmostEqual(nk.pakete_abweichung(10, 10.5), 0.05)
+		self.assertAlmostEqual(nk.pakete_abweichung(10, 9), -0.1)
+		# Hinweis am Projekt erst über 5 %
+		frappe.db.set_value("Task", self.task, {"cv_auftrag": self.auftrag, "cv_sollstunden": 3.67})
+		self.assertFalse([h for h in nk.projekt_auswerten(self.projekt)["hinweise"] if "Arbeitspakete" in h])
+		frappe.db.set_value("Task", self.task, "cv_sollstunden", 3.0)
+		a = nk.projekt_auswerten(self.projekt)
+		self.assertEqual((a["summe"]["soll_h"], a["summe"]["soll_h_pakete"]), (3.67, 3.0))
+		self.assertEqual(self.zeile(a, "Innenabdichtung")["soll_h_pakete"], 3.0)
+		self.assertIn("um 18 %", a["hinweise"][0])
+
 	# --- Soll und Ist am Projekt ----------------------------------------------------------------
 
 	def test_soll_aus_kalkulation_ist_aus_zeiten_und_material(self):

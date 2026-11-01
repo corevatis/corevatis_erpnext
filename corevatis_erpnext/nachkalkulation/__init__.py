@@ -5,14 +5,18 @@ Soll je Auftragsposition (``planung.positionen``: Verfahren, Menge, Stückliste)
 
 - **Sollstunden** = Minuten je Einheit x Auftragsmenge ÷ 60. Minuten je Einheit zuerst aus der
   Kalkulation des angenommenen Angebots (``Quotation.cv_kalkulation_json``, Position mit demselben
-  Artikel in Reihenfolge), sonst aus der Stückliste (wie die Arbeitspakete, ``Task.cv_sollstunden``).
+  Artikel in Reihenfolge), sonst aus der Stückliste - dieselbe Quelle wie die Arbeitspakete
+  (``planung.positionen``/``planung.kalkulation``, Handwerker#104). Weichen die Sollstunden der
+  Arbeitspakete (``Task.cv_sollstunden``, ältere Pakete oder Handänderung) je Projekt um mehr als 5 %
+  ab, steht ein Hinweis am Projekt (Spalte „Soll h Pakete“ im Bericht).
 - **Sollmaterial** (Kosten) = Material je Einheit aus der Kalkulation (Einkaufspreis der Stückliste,
   ohne Zuschlag) x Auftragsmenge; ohne Kalkulation Stücklistenmengen x Bewertungspreis des Materials.
 - **Erlös** = Nettobetrag der Auftragspositionen des Verfahrens; nach freigegebener Schlussrechnung
   (7.2) die Nettobeträge ihrer Positionen (Ist-Mengen, Mehrmengen, Nachträge; Abzüge der Abschläge
   zählen nicht).
-- **Stundensatz** aus der Kalkulation (``schema.stundensatz``), sonst aus dem Kalkulationsschema des
-  Angebots (Kern-Doctype nur per Name gelesen), sonst 0 mit Hinweis. Lohnkosten Soll und Ist rechnen
+- **Stundensatz** aus der Kalkulation (``schema.stundensatz``, also das Kalkulationsschema beim
+  Erzeugen des Angebots), sonst aus dem Kalkulationsschema des Angebots (Kern-Doctype nur per Name
+  gelesen), sonst 0 mit Hinweis. Die Workstation „Montage“ wird nicht gelesen (``angebot.stundensatz``). Lohnkosten Soll und Ist rechnen
   mit demselben Satz (Annahme: kein Kostensatz je Mitarbeiter).
 
 Ist je Verfahren (Zuordnung über das Arbeitspaket ``Task.cv_verfahren``; Buchungen ohne Arbeitspaket
@@ -48,7 +52,8 @@ from frappe.utils import cint, flt, getdate
 from corevatis_erpnext.abrechnung.felder import ART_ABZUG
 from corevatis_erpnext.planung.auftrag import darf_planen
 from corevatis_erpnext.planung.bauablauf import VERFAHREN_SONSTIGES
-from corevatis_erpnext.planung.positionen import positionen
+from corevatis_erpnext.planung.kalkulation import SCHEMA_DOCTYPE, kalkulation_laden
+from corevatis_erpnext.planung.positionen import QUELLE_EINHEIT, positionen
 
 ARBEITSZEIT, FAHRZEIT, PAUSE = "Arbeitszeit", "Fahrzeit", "Pause"
 OHNE_PAKET = "Ohne Arbeitspaket"
@@ -58,9 +63,10 @@ AMPEL_GELB_AB = 1.0
 AMPEL_ROT_AB = 1.15
 PROJEKTE_MAX = 50
 TASK_ABGESCHLOSSEN = ("Completed", "Cancelled")
-SCHEMA_DOCTYPE = "Kalkulationsschema"
 # Abweichung, ab der die Lernschleife einen Vorschlag macht (5 %)
 REGEL_TOLERANZ = 0.05
+# Abweichung der Sollstunden der Arbeitspakete vom Soll der Nachkalkulation, ab der ein Hinweis kommt (#104)
+PAKETE_TOLERANZ = 0.05
 
 
 class NachkalkulationFehler(frappe.ValidationError):
@@ -81,56 +87,7 @@ def _hat(doctype: str, feld: str) -> bool:
 
 
 # --- Kalkulation des Angebots ------------------------------------------------------------------------
-
-
-def kalkulation_laden(auftrag) -> tuple[dict[str, list[dict]], float, str | None, list[str]]:
-	"""Positionen der Kalkulation je Artikel (Reihenfolge wie im Angebot), Stundensatz, Schema, Hinweise."""
-	hinweise: list[str] = []
-	angebote = []
-	for z in auftrag.items:
-		if z.get("prevdoc_docname") and z.prevdoc_docname not in angebote:
-			angebote.append(z.prevdoc_docname)
-	je_artikel: dict[str, list[dict]] = defaultdict(list)
-	stundensatz = 0.0
-	schema_name = None
-	if not _hat("Quotation", "cv_kalkulation_json"):
-		return je_artikel, stundensatz, schema_name, hinweise
-	for angebot in angebote:
-		roh, schema_name = frappe.db.get_value(
-			"Quotation", angebot, ["cv_kalkulation_json", "cv_kalkulationsschema"]
-		) or (None, None)
-		if not roh:
-			continue
-		try:
-			daten = json.loads(roh) if isinstance(roh, str) else roh
-		except ValueError:
-			hinweise.append(_("Kalkulation des Angebots {0} nicht lesbar.").format(angebot))
-			continue
-		schema = daten.get("schema") or {}
-		stundensatz = stundensatz or flt(schema.get("stundensatz"))
-		schema_name = schema_name or schema.get("name")
-		for p in daten.get("positionen") or []:
-			code = p.get("item_code") or p.get("id")
-			if not code:
-				continue
-			k = p.get("kalkulation") or {}
-			mengen = p.get("mengen") or {}
-			je_artikel[code].append(
-				{
-					"minuten": flt(k.get("minuten")),
-					"material": flt(k.get("material")),
-					"menge": flt(p.get("menge")),
-					"einzelpreis": flt(p.get("einzelpreis") or k.get("einzelpreis")),
-					"regel": mengen.get("regel") or None,
-					"regelart": mengen.get("kind") or None,
-					"verfahren": (p.get("herkunft") or {}).get("verfahren"),
-				}
-			)
-	if not stundensatz and schema_name and frappe.db.exists("DocType", SCHEMA_DOCTYPE):
-		stundensatz = flt(frappe.db.get_value(SCHEMA_DOCTYPE, schema_name, "stundensatz"))
-	if not stundensatz:
-		hinweise.append(_("Kein Stundensatz aus der Kalkulation: Lohnkosten werden mit 0 € gerechnet."))
-	return je_artikel, stundensatz, schema_name, hinweise
+# ``kalkulation_laden`` liegt in ``planung.kalkulation`` (gemeinsam mit den Arbeitspaketen, #104).
 
 
 def _materialwert(material: list[dict]) -> float:
@@ -163,26 +120,21 @@ def _leer() -> dict:
 
 def soll_je_verfahren(auftrag, kalk: dict[str, list[dict]]) -> tuple[dict[str, dict], list[dict], list[str]]:
 	"""Soll je Verfahren aus den Auftragspositionen; dazu die Positionen mit ihrer Soll-Herkunft."""
-	pos, hinweise = positionen(auftrag)
+	# Minuten je Einheit aus derselben Quelle wie die Arbeitspakete (planung.positionen, #104)
+	pos, hinweise = positionen(auftrag, kalk)
 	betrag = {z.name: flt(z.get("net_amount") or z.amount) for z in auftrag.items}
-	zaehler: dict[str, int] = defaultdict(int)
 	je_verfahren: dict[str, dict] = {}
 	for z in pos:
 		v = z["verfahren"] or VERFAHREN_SONSTIGES
 		s = je_verfahren.setdefault(v, _leer())
-		kandidaten = kalk.get(z["item_code"]) or []
-		k = kandidaten[zaehler[z["item_code"]]] if zaehler[z["item_code"]] < len(kandidaten) else None
-		zaehler[z["item_code"]] += 1
-		if k and k["minuten"]:
-			minuten = k["minuten"]
-			quelle = "kalkulation"
-		else:
-			minuten = flt(z["minuten_je_einheit"])
-			quelle = "stueckliste" if minuten else "keine"
+		k = z["kalkulation"]
 		material = k["material"] * z["menge"] if k and k["material"] else _materialwert(z["material"])
-		z["soll_minuten"] = flt(minuten * z["menge"], 6)
+		z["soll_minuten"] = flt(z["sollminuten"], 6)
 		z["soll_material"] = flt(material, 2)
-		z["soll_quelle"] = quelle
+		quelle = z["minuten_quelle"]
+		if not z["minuten_je_einheit"]:
+			quelle = "keine"
+		z["soll_quelle"] = "stueckliste" if quelle == QUELLE_EINHEIT else quelle
 		z["regel"] = k["regel"] if k else None
 		z["regelart"] = k["regelart"] if k else None
 		z["erloes"] = betrag.get(z["sales_order_item"], 0.0)
@@ -199,7 +151,7 @@ def soll_je_verfahren(auftrag, kalk: dict[str, list[dict]]) -> tuple[dict[str, d
 
 def _tasks(project: str) -> list[frappe._dict]:
 	felder = ["name", "subject", "status", "progress"]
-	felder += [f for f in ("cv_verfahren", "cv_sollstunden") if _hat("Task", f)]
+	felder += [f for f in ("cv_verfahren", "cv_sollstunden", "cv_auftrag") if _hat("Task", f)]
 	return frappe.get_all("Task", filters={"project": project}, fields=felder, order_by="creation")
 
 
@@ -397,6 +349,7 @@ def projekt_auswerten(project: str, von=None, bis=None) -> dict:
 		farbe, verhaeltnis = ampel(s["soll_h"], s["ist_h"], fortschritt)
 		soll_lohn = s["soll_h"] * stundensatz
 		ist_lohn = s["ist_h"] * stundensatz
+		pakete_h = _sollstunden_pakete(s["tasks"])
 		zeilen.append(
 			{
 				"verfahren": v,
@@ -405,6 +358,7 @@ def projekt_auswerten(project: str, von=None, bis=None) -> dict:
 				"status": _status_text(s["tasks"]),
 				"fortschritt": flt(fortschritt, 0),
 				"soll_h": flt(s["soll_h"], 2),
+				"soll_h_pakete": flt(pakete_h, 2) if pakete_h is not None else None,
 				"ist_h": flt(s["ist_h"], 2),
 				"fahrt_h": flt(s["fahrt_h"], 2),
 				"verbrauch": flt(s["ist_h"] / s["soll_h"] * 100, 0) if s["soll_h"] else None,
@@ -427,6 +381,23 @@ def projekt_auswerten(project: str, von=None, bis=None) -> dict:
 		)
 	summe = _summe(zeilen, waehrung)
 	summe["ampel"] = _ampel_gesamt(zeilen)
+	pakete = [t for t in tasks if auftrag and t.get("cv_auftrag") == auftrag.name]
+	summe["soll_h_pakete"] = _sollstunden_pakete(pakete)
+	abweichung = pakete_abweichung(summe["soll_h"], summe["soll_h_pakete"])
+	summe["pakete_abweichung"] = abweichung
+	if abweichung is not None and abs(abweichung) > PAKETE_TOLERANZ:
+		# vorn, damit der Hinweis in der Summenzeile des Berichts (200 Zeichen) sichtbar bleibt
+		hinweise.insert(
+			0,
+			_(
+				"Sollstunden der Arbeitspakete ({0} h) weichen um {1} % vom Soll der Nachkalkulation ({2} h) ab"
+				" (Arbeitspakete aus einem älteren Stand der Stückliste erzeugt oder von Hand geändert)."
+			).format(
+				_zahl(summe["soll_h_pakete"]),
+				cint(round(abs(abweichung) * 100)),
+				_zahl(summe["soll_h"]),
+			),
+		)
 	return {
 		"projekt": p.name,
 		"projekt_name": p.project_name,
@@ -441,6 +412,28 @@ def projekt_auswerten(project: str, von=None, bis=None) -> dict:
 		"summe": summe,
 		"hinweise": hinweise,
 	}
+
+
+def _sollstunden_pakete(tasks: list[frappe._dict]) -> float | None:
+	"""Summe ``Task.cv_sollstunden`` der nicht stornierten Arbeitspakete, ``None`` ohne Arbeitspaket."""
+	offen = [t for t in tasks if t.status != "Cancelled"]
+	if not offen:
+		return None
+	return flt(sum(flt(t.get("cv_sollstunden")) for t in offen), 2)
+
+
+def pakete_abweichung(soll_h: float, pakete_h: float | None) -> float | None:
+	"""Relative Abweichung der Arbeitspakete vom Soll der Nachkalkulation (0,1 = 10 % mehr),
+	``None`` ohne Arbeitspakete oder ohne beide Sollwerte."""
+	if pakete_h is None or (not soll_h and not pakete_h):
+		return None
+	if not soll_h:
+		return 1.0
+	return (pakete_h - soll_h) / soll_h
+
+
+def _zahl(wert: float) -> str:
+	return frappe.format_value(flt(wert, 2), {"fieldtype": "Float", "precision": 2})
 
 
 def _status_text(tasks: list[frappe._dict]) -> str:

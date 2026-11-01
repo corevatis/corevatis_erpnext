@@ -6,6 +6,28 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Kalkulation: Minuten je Einheit und Stundensatz aus einer Quelle (Handwerker#104)
+
+- Arbeitspakete (5.1) nehmen die Minuten je Einheit aus der im angenommenen Angebot eingefrorenen
+  Kalkulation (`Quotation.cv_kalkulation_json`), mit derselben Zuordnung wie die Nachkalkulation (P2.1):
+  neues Modul `planung.kalkulation` (`kalkulation_laden`, `zuordnen`), `planung.positionen.positionen`
+  liefert je Position `minuten_quelle` (`kalkulation`, `stueckliste`, `einheit`, `keine`) und die
+  zugeordnete Kalkulationsposition. Nur ohne Kalkulation (Altbestand, Handposition) gilt die Stückliste;
+  dann steht am Arbeitspaket ein Kommentar „Info“, ein Absatz in der Beschreibung (neue Spalte „Quelle“)
+  und `minuten_quelle` in `cv_positionen`. Der Materialbedarf bleibt bei der Stückliste.
+- Nachkalkulation liest die Sollminuten über `planung.positionen` (keine eigene Zuordnung mehr,
+  `nachkalkulation.kalkulation_laden` bleibt als Import erhalten). Neu je Verfahren und Projekt
+  `soll_h_pakete` (Summe `Task.cv_sollstunden`), Spalte „Soll h Pakete“ im Bericht und ein Hinweis am
+  Projekt, wenn die Arbeitspakete mehr als 5 % vom Soll abweichen (`pakete_abweichung`). Kein Patch für
+  bestehende Arbeitspakete.
+- Stundensatz: neues Modul `angebot.stundensatz`. Das Standard-Kalkulationsschema ist die Quelle; beim
+  Speichern (Hook `on_update` am Kern-Doctype „Kalkulationsschema“) und nach `migrate` setzt der Adapter die
+  Kostenkomponente „Lohn Montage“ der Workstations auf diesen Satz und lässt die Stücklistenkosten neu
+  rechnen. `pruefen()` meldet Abweichungen. Angebot, Nachkalkulation und Abrechnung lesen die Workstation
+  nicht.
+- Test `test_planung.test_schreibrechte_fuer_buttons` nimmt Büro auch das Anlegerecht an Material Request
+  (seit P2.2 hat Büro dort volle Rechte; der Test schlug auf `main` fehl).
+
 ### Zeitfenster der Zeiterfassung (Handwerker#108)
 
 - `zeiterfassung.zeitraum_pruefen`, `zeit_buchen` und `lauf_starten` nehmen optional `zurueck`/`voraus`

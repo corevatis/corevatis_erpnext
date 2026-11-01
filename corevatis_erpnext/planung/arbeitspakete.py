@@ -1,4 +1,5 @@
-"""Aufgabe 5.1: Arbeitspakete (Task) je Verfahren aus dem Auftrag, Sollstunden aus der Stückliste.
+"""Aufgabe 5.1: Arbeitspakete (Task) je Verfahren aus dem Auftrag, Sollstunden aus der Kalkulation des
+Angebots (Handwerker#104), sonst aus der Stückliste.
 
 Je Verfahren (``Sales Order Item.cv_verfahren``, sonst ``Item.cv_verfahren``, sonst „Sonstiges“)
 entsteht **ein** Task am Projekt des Auftrags (Entscheidung: keine Unter-Tasks je Position - die
@@ -6,7 +7,11 @@ Monteur-App zeigt ein Arbeitspaket je Verfahren, die Positionen stehen in der Be
 in ``cv_positionen``; Zeiterfassung und Fortschritt laufen je Arbeitspaket):
 
 - Titel „<Verfahren> <Gedankenstrich> <Räume, Bauteile>“ (ohne Raum/Bauteil: die Artikelnummern),
-- **Sollstunden** = Σ Montageminuten je Einheit mal Menge ÷ 60 (``expected_time``, ``cv_sollstunden``),
+- **Sollstunden** = Σ Montageminuten je Einheit mal Menge ÷ 60 (``expected_time``, ``cv_sollstunden``).
+  Minuten je Einheit aus der im Angebot eingefrorenen Kalkulation (``cv_kalkulation_json``), dieselbe
+  Quelle wie die Nachkalkulation (P2.1); trägt das Angebot für eine Position keine Kalkulation
+  (Altbestand, Handposition), gilt die Stückliste - mit Protokollhinweis am Arbeitspaket (Kommentar,
+  Absatz in der Beschreibung, ``minuten_quelle`` in ``cv_positionen``),
 - Reihenfolge und Abhängigkeit (``depends_on``) nach dem Bauablauf (``planung.bauablauf``),
 - ``exp_start_date``/``exp_end_date`` fortlaufend ab Projektstart (sonst Auftragsdatum):
   Dauer = Sollstunden ÷ Teamgröße, Arbeitstag = Tagesarbeitszeit ab Arbeitsbeginn, Mo-Fr ohne
@@ -28,7 +33,7 @@ from frappe.utils import add_days, flt, get_datetime, getdate
 from corevatis_erpnext.planung import bauablauf
 from corevatis_erpnext.planung.auftrag import auftrag_laden, pruefe_rolle, pruefe_schreibrechte
 from corevatis_erpnext.planung.einstellungen import einstellungen
-from corevatis_erpnext.planung.positionen import positionen
+from corevatis_erpnext.planung.positionen import QUELLE_KALKULATION, QUELLE_STUECKLISTE, positionen
 
 TRENNER = " \u2013 "  # Gedankenstrich (ruff RUF001)
 TITEL_LAENGE = 140
@@ -82,6 +87,29 @@ def pakete_bilden(liste: list[dict]) -> list[dict]:
 	return pakete
 
 
+QUELLE_TEXT = {
+	QUELLE_KALKULATION: "Angebot",
+	QUELLE_STUECKLISTE: "Stückliste",
+	"einheit": "Einheit",
+	"keine": "-",
+}
+
+
+def rueckfall_stueckliste(paket: dict) -> str | None:
+	"""Protokollhinweis, wenn Minuten je Einheit aus der Stückliste statt aus dem Angebot kommen."""
+	zeilen = [p for p in paket["positionen"] if p.get("minuten_quelle") == QUELLE_STUECKLISTE]
+	if not zeilen:
+		return None
+	return _(
+		"Minuten je Einheit aus der Stückliste, weil das Angebot für diese Positionen keine Kalkulation trägt: {0}."
+	).format(
+		", ".join(
+			f"{_('Pos.')} {p['pos']} {p['item_code']} ({_zahl(p['minuten_je_einheit'])} min, {p['bom']})"
+			for p in zeilen
+		)
+	)
+
+
 def _zahl(wert, stellen: int = 2) -> str:
 	return frappe.format(flt(wert, stellen), {"fieldtype": "Float", "precision": stellen})
 
@@ -98,9 +126,12 @@ def beschreibung(paket: dict, auftrag: str, teamgroesse: int) -> str:
 			f"<td style='text-align:right'>{_zahl(p['menge'])} {esc(p['einheit'] or '')}</td>"
 			f"<td>{esc(ort)}</td>"
 			f"<td style='text-align:right'>{_zahl(p['minuten_je_einheit'])}</td>"
+			f"<td>{esc(_(QUELLE_TEXT.get(p.get('minuten_quelle'), '-')))}</td>"
 			f"<td style='text-align:right'>{_zahl(p['sollminuten'] / 60)}</td>"
 			"</tr>"
 		)
+	rueckfall = rueckfall_stueckliste(paket)
+	fuss = f"<p>{esc(rueckfall)}</p>" if rueckfall else ""
 	kopf = _(
 		"Arbeitspaket aus Auftrag {0}: Sollstunden {1} h, Team {2} → Dauer {3} h. Positionen in Bauablauf-Reihenfolge:"
 	).format(
@@ -112,8 +143,9 @@ def beschreibung(paket: dict, auftrag: str, teamgroesse: int) -> str:
 	return (
 		f"<p>{kopf}</p><table class='table table-bordered'><thead><tr>"
 		f"<th>{_('Pos.')}</th><th>{_('Phase')}</th><th>{_('Leistung')}</th><th>{_('Menge')}</th>"
-		f"<th>{_('Raum/Bauteil')}</th><th>{_('min/Einheit')}</th><th>{_('Sollstunden')}</th>"
-		"</tr></thead><tbody>" + "".join(zeilen) + "</tbody></table>"
+		f"<th>{_('Raum/Bauteil')}</th><th>{_('min/Einheit')}</th><th>{_('Quelle')}</th>"
+		f"<th>{_('Sollstunden')}</th>"
+		"</tr></thead><tbody>" + "".join(zeilen) + "</tbody></table>" + fuss
 	)
 
 
@@ -131,6 +163,7 @@ def positionen_json(paket: dict) -> str:
 		"aufmass_position",
 		"bom",
 		"minuten_je_einheit",
+		"minuten_quelle",
 	)
 	return json.dumps(
 		[
@@ -236,6 +269,11 @@ def arbeitspakete_anlegen(auftrag, projekt: str, e=None, ignore_permissions: boo
 		)
 		task.flags.ignore_permissions = ignore_permissions
 		task.insert()
+		rueckfall = rueckfall_stueckliste(paket)
+		if rueckfall:
+			# Protokollhinweis im Verlauf des Arbeitspakets (#104)
+			task.add_comment("Info", rueckfall)
+			hinweise.append(f"{task.name}: {rueckfall}")
 		namen.append(task.name)
 		vorher = task.name
 	return _ergebnis(auftrag, projekt, namen, True, hinweise)

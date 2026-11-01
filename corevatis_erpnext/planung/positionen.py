@@ -1,8 +1,14 @@
-"""Auftragspositionen mit Standard-Stückliste: Montageminuten und Material je Einheit (5.1).
+"""Auftragspositionen mit Montageminuten und Material je Einheit (5.1).
 
-Gemeinsame Grundlage für Arbeitspakete (Sollstunden) und Materialbedarf. Gerechnet wird nur
-Menge mal Wert aus der Stückliste (ERPNext-Daten, wie eine Stücklistenauflösung) - die
-Kalkulation (Preise, Zuschläge) bleibt im Kern (Architekturregel 7).
+Gemeinsame Grundlage für Arbeitspakete (Sollstunden), Materialbedarf und Nachkalkulation (P2.1).
+Gerechnet wird nur Menge mal Wert je Einheit - die Kalkulation (Preise, Zuschläge) bleibt im Kern
+(Architekturregel 7).
+
+**Minuten je Einheit, eine Quelle (Handwerker#104):** zuerst aus der Kalkulation des angenommenen
+Angebots (``planung.kalkulation``, ``Quotation.cv_kalkulation_json``, Zuordnung wie P2.1), sonst
+aus der Stückliste. ``minuten_quelle`` je Position: ``kalkulation``, ``stueckliste``, ``einheit``
+(Positionen in Stunden/Minuten) oder ``keine``. Das Material kommt immer aus der Stückliste (die
+Kalkulation hält nur den Materialwert, keine Mengen).
 
 Je Position:
 
@@ -10,7 +16,7 @@ Je Position:
   des Auftrags (Standard zuerst, dann die neueste) - wie der Angebotsgenerator (4.1).
 - **Menge in Stücklisteneinheit:** ``stock_qty`` der Position (Lagereinheit des Artikels); weicht
   die Einheit der Stückliste (``BOM.uom``) ab, wird über die Umrechnung des Artikels umgerechnet.
-- **Minuten je Einheit:** Summe ``time_in_mins`` der Arbeitsgänge ÷ ``BOM.quantity`` (bei
+- **Minuten je Einheit (Rückfall):** Summe ``time_in_mins`` der Arbeitsgänge ÷ ``BOM.quantity`` (bei
   „Kosten nach Stücklistenmenge“ ÷ ``batch_size``).
 - **Material je Einheit:** aufgelöste Stückliste (``exploded_items``, auch Unterstücklisten),
   ``stock_qty`` ÷ ``BOM.quantity`` in der Lagereinheit des Materials.
@@ -26,9 +32,16 @@ from frappe import _
 from frappe.utils import flt
 
 from corevatis_erpnext.planung.bauablauf import VERFAHREN_SONSTIGES, phase, phasen_rang
+from corevatis_erpnext.planung.kalkulation import kalkulation_laden, zuordnen
 
 EINHEITEN_STUNDEN = ("h", "Hour", "Stunde")
 EINHEITEN_MINUTEN = ("min", "Minute")
+QUELLE_KALKULATION, QUELLE_STUECKLISTE, QUELLE_EINHEIT, QUELLE_KEINE = (
+	"kalkulation",
+	"stueckliste",
+	"einheit",
+	"keine",
+)
 
 
 def _stueckliste(item_code: str, firma: str, bom_no: str | None):
@@ -88,14 +101,20 @@ def _text(wert) -> str:
 	return " ".join(str(wert or "").split())
 
 
-def positionen(auftrag) -> tuple[list[dict], list[str]]:
-	"""Positionen des Auftrags mit Verfahren, Phase, Sollminuten und Material. Rückgabe ``(liste, hinweise)``."""
+def positionen(auftrag, kalk: dict[str, list[dict]] | None = None) -> tuple[list[dict], list[str]]:
+	"""Positionen des Auftrags mit Verfahren, Phase, Sollminuten und Material. Rückgabe ``(liste, hinweise)``.
+
+	``kalk``: Kalkulation je Artikel (``planung.kalkulation.kalkulation_laden``); ohne Angabe wird sie
+	hier gelesen. Je Position steht die zugeordnete Kalkulationsposition unter ``kalkulation``.
+	"""
 	hinweise: list[str] = []
-	je_artikel = verfahren_je_artikel([z.item_code for z in auftrag.items if z.item_code])
+	if kalk is None:
+		kalk = kalkulation_laden(auftrag)[0]
+	zeilen = [z for z in auftrag.items if z.item_code]
+	je_artikel = verfahren_je_artikel([z.item_code for z in zeilen])
+	zugeordnet = zuordnen([z.item_code for z in zeilen], kalk)
 	ergebnis = []
-	for z in auftrag.items:
-		if not z.item_code:
-			continue
+	for z, k in zip(zeilen, zugeordnet, strict=True):
 		verfahren = _text(z.get("cv_verfahren")) or _text(je_artikel.get(z.item_code)) or VERFAHREN_SONSTIGES
 		stock_uom = z.get("stock_uom") or frappe.get_cached_value("Item", z.item_code, "stock_uom")
 		menge = flt(z.get("stock_qty")) or flt(z.qty) * (flt(z.get("conversion_factor")) or 1.0)
@@ -115,27 +134,47 @@ def positionen(auftrag) -> tuple[list[dict], list[str]]:
 			"bom": None,
 			"minuten_je_einheit": 0.0,
 			"sollminuten": 0.0,
+			"minuten_quelle": QUELLE_KEINE,
+			"minuten_stueckliste": None,
+			"kalkulation": k,
 			"material": [],
 		}
 		bom = _stueckliste(z.item_code, auftrag.company, z.get("bom_no"))
 		if bom:
 			daten = stueckliste_je_einheit(bom)
-			menge_bom = menge / _umrechnung(z.item_code, daten["uom"], stock_uom)
+			umrechnung = _umrechnung(z.item_code, daten["uom"], stock_uom)
+			menge_bom = menge / umrechnung
 			eintrag.update(
 				bom=daten["bom"],
 				minuten_je_einheit=flt(daten["minuten"], 6),
 				sollminuten=flt(daten["minuten"] * menge_bom, 6),
+				minuten_quelle=QUELLE_STUECKLISTE,
+				# je Lagereinheit wie die Kalkulation, zum Vergleich in der Beschreibung
+				minuten_stueckliste=flt(daten["minuten"] / umrechnung, 6),
 				material=[{**m, "menge": flt(m["je_einheit"] * menge_bom, 9)} for m in daten["material"]],
 			)
 		elif stock_uom in EINHEITEN_STUNDEN:
-			eintrag.update(minuten_je_einheit=60.0, sollminuten=flt(menge * 60, 6))
+			eintrag.update(
+				minuten_je_einheit=60.0, sollminuten=flt(menge * 60, 6), minuten_quelle=QUELLE_EINHEIT
+			)
 		elif stock_uom in EINHEITEN_MINUTEN:
-			eintrag.update(minuten_je_einheit=1.0, sollminuten=flt(menge, 6))
-		else:
+			eintrag.update(minuten_je_einheit=1.0, sollminuten=flt(menge, 6), minuten_quelle=QUELLE_EINHEIT)
+		if k and k["minuten"]:
+			# eingefrorene Kalkulation des Angebots (je Lagereinheit, wie die Engine sie rechnet)
+			eintrag.update(
+				minuten_je_einheit=flt(k["minuten"], 6),
+				sollminuten=flt(k["minuten"] * menge, 6),
+				minuten_quelle=QUELLE_KALKULATION,
+			)
+		if not bom and eintrag["minuten_quelle"] == QUELLE_KEINE:
 			hinweise.append(
 				_("Position {0} ({1}) hat keine Stückliste: keine Sollstunden, kein Material.").format(
 					z.idx, z.item_code
 				)
+			)
+		elif not bom and eintrag["minuten_quelle"] == QUELLE_KALKULATION:
+			hinweise.append(
+				_("Position {0} ({1}) hat keine Stückliste: kein Material.").format(z.idx, z.item_code)
 			)
 		ergebnis.append(eintrag)
 	return ergebnis, hinweise
