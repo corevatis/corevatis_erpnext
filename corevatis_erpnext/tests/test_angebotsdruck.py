@@ -416,7 +416,10 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		davon Lohn 400,61 netto / 476,73 brutto; je Position „Material … · Lohn …“."""
 		from corevatis_erpnext.abrechnung.einstellungen import EINSTELLUNGEN
 		from corevatis_erpnext.tests._abrechnung import anteile_patch
-		from corevatis_erpnext.tests.test_rechnungsdruck import druck_mit_lohn_material
+		from corevatis_erpnext.tests.test_rechnungsdruck import (
+			druck_mit_arbeitskosten,
+			druck_mit_lohn_material,
+		)
 
 		if not druck_mit_lohn_material():
 			self.skipTest("erpnext_druckformate ohne Ausweis Material/Lohn (#105)")
@@ -452,7 +455,12 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		alles = "\n".join(texte)
 		flach = " ".join(alles.split())
 		self.assertIn("davon Materialkosten", flach)
-		self.assertIn("davon Lohnkosten", flach)
+		if druck_mit_arbeitskosten():
+			# Wortlaut § 35a Abs. 3 EStG; die Regiestunde zeigt nur „Lohn …“ (kein „Material € 0,00“)
+			self.assertIn("davon Arbeitskosten (§ 35a EStG, begünstigt)", flach)
+			self.assertNotIn("Material " + doc.items[1].get_formatted("cv_materialanteil"), flach)
+		else:
+			self.assertIn("davon Lohnkosten", flach)
 		self.assertIn("Material", flach)
 		for feld in ("cv_material_netto", "cv_material_brutto", "cv_lohn_netto", "cv_lohn_brutto"):
 			self.assertIn(doc.get_formatted(feld), alles, feld)

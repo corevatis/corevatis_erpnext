@@ -43,6 +43,15 @@ def druck_mit_lohn_material() -> bool:
 	return hasattr(angebot_corevatis, "lohn_material_summen")
 
 
+def druck_mit_arbeitskosten() -> bool:
+	"""erpnext_druckformate mit dem Wortlaut „Arbeitskosten“ (§ 35a EStG, Handwerker#105, fix/lohn-35a)?"""
+	try:
+		from erpnext_druckformate import angebot_corevatis
+	except ImportError:
+		return False
+	return hasattr(angebot_corevatis, "davon_zeilen")
+
+
 def wkhtmltopdf_vorhanden() -> bool:
 	return bool(shutil.which("wkhtmltopdf"))
 
@@ -201,10 +210,15 @@ class TestRechnungsdruck(IntegrationTestCase):
 			# #105: 150 = Material 97,20 + Lohn 52,80 netto; brutto 115,67 / 62,83; Lohn = § 35a, einmal
 			flach = " ".join(alles.split())
 			self.assertIn("davon Materialkosten", flach)
-			self.assertIn("davon Lohnkosten (§ 35a EStG)", flach)
 			for betrag in (97.2, 115.67):
 				self.assertIn(self.geld(betrag), alles, betrag)
-			self.assertIn("siehe", flach)
+			if druck_mit_arbeitskosten():
+				# Wortlaut § 35a Abs. 3 EStG und Satz zur Begünstigung unter den Summen
+				self.assertIn("davon Arbeitskosten (§ 35a EStG, begünstigt)", flach)
+				self.assertIn("Arbeitskosten können nach § 35a EStG steuerlich begünstigt sein", flach)
+			else:
+				self.assertIn("davon Lohnkosten (§ 35a EStG)", flach)
+				self.assertIn("siehe", flach)
 		# zweiter Abschlag, Abnahme, Schlussrechnung mit Mehrmenge und Nachtrag
 		r2 = H._als(H.BUERO, abschlag.abschlag_stellen, project=projekt)  # 40 % = 200
 		si2 = H.freigeben(r2["rechnung"])
@@ -254,6 +268,10 @@ class TestRechnungsdruck(IntegrationTestCase):
 			# Material 324,00 · Lohn 176,00
 			for betrag in (408.8, 486.47, 324, 176):
 				self.assertIn(self.geld(betrag), alles, betrag)
+			if druck_mit_arbeitskosten():
+				flach = " ".join(alles.split())
+				self.assertIn("davon Arbeitskosten (§ 35a EStG, begünstigt)", flach)
+				self.assertIn("Arbeitskosten der Abschlagsrechnungen sind darin enthalten", flach)
 		# Summen stimmen mit dem Beleg überein
 		self.assertIn(si.get_formatted("grand_total"), alles)
 		self.assertEqual((flt(si.net_total), flt(si.grand_total)), (330.0, 392.7))

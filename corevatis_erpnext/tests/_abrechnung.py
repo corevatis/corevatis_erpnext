@@ -95,10 +95,13 @@ class AnteileStellvertreter:
 				quelle, lohn = "regie", b
 			elif k:
 				assert set(k) <= set(lohn_material.KALKULATION_SCHLUESSEL), k
-				lk = _d(k["lohn"]) + _d(k.get("erschwernis") or 0)
+				m, mz, ma = (_d(k.get(f) or 0) for f in ("material", "materialzuschlag", "maschinen"))
 				ek = _d(k.get("einzelkosten") or 0) or (
-					_d(k.get("material") or 0) + _d(k.get("materialzuschlag") or 0) + lk
+					m + mz + _d(k["lohn"]) + _d(k.get("erschwernis") or 0)
 				)
+				if ma and o.get("mit_zuschlaegen"):
+					ma = ma * (m + mz) / m  # Maschinenkosten samt Anteil am Materialzuschlag (§ 35a)
+				lk = _d(k["lohn"]) + _d(k.get("erschwernis") or 0) + ma
 				quelle = "kalkulation"
 				lohn = _c(b * lk / ek) if o.get("mit_zuschlaegen") else min(_c(lk * _d(p["menge"])), b)
 			else:

@@ -106,14 +106,14 @@
    "fieldtype": "Check",
    "label": "Labour Share Including Surcharges",
    "default": "1",
-   "description": "On (default): surcharges (overheads, profit) are allocated to material and labour by their cost shares, so material + labour = net price. Off: labour = (minutes × hourly rate + hardship) × quantity, material = remainder."
+   "description": "On (default): overheads and profit are allocated to material and labour by their cost shares, so material + labour = net price. Reason: the customer pays the surcharges with the labour price as well as with the material price, and § 35a EStG favours the labour part of the price actually paid, so they are split proportionally (a percentage split by the issuer is permitted, BMF letter of 9 Nov 2016) instead of being added to material entirely. Off: labour = (minutes × hourly rate + hardship + machine and travel costs) × quantity, material = remainder."
   },
   {
    "fieldname": "lohn_material_je_position",
    "fieldtype": "Check",
    "label": "Show Material and Labour per Position",
    "default": "1",
-   "description": "Quotation and invoice print a line \"Material … € · Labour … €\" under each position. The totals (thereof material, thereof labour) are always printed."
+   "description": "Quotation, order confirmation and invoice print a line \"Material … € · Labour … €\" under each position (only the parts that are not zero). The totals (thereof labour costs under § 35a EStG, thereof material costs) are always printed."
   },
   {
    "fieldname": "section_mahnwesen",
@@ -234,7 +234,7 @@
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-02 12:00:00.000000",
+ "modified": "2026-11-03 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Corevatis ERPNext",
  "name": "Corevatis Abrechnung Einstellungen",

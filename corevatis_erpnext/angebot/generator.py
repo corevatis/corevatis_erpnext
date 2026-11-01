@@ -10,8 +10,9 @@ Ablauf (``erzeuge_angebot``):
    Durchstich A1: vom Meister bestätigte Menge je Raum/Bauteil) geben die Menge fest vor - die
    Summe dieser Zeilen je Item, ohne Mengenregel.
 3. Herstellkosten je Einheit aus der Standard-Stückliste der Firma: Material zum
-   Einkaufspreis (``raw_material_cost``), Montage in Minuten (Arbeitsgänge) - wie
-   ``katalog.uebersicht``. Gerechnet wird hier nichts (Architekturregel 7).
+   Einkaufspreis (``raw_material_cost``), davon Maschinen-, Geräte- und Fahrtkosten (Zeilen mit
+   ``Item.cv_maschinenkosten``, Handwerker#105: § 35a-Arbeitskosten), Montage in Minuten
+   (Arbeitsgänge) - wie ``katalog.uebersicht``. Gerechnet wird hier nichts (Architekturregel 7).
 4. Kalkulation im Kern: ``frappe.get_attr(KERN_KALKULATION)`` (Aufmaß → Mengen →
    Kalkulationsschema → Einzelpreise, ``corevatis.engine.quote``).
 5. Quotation anlegen: Partei (Kunde, Lead oder Platzhalter „Interessent“), Preisliste
@@ -35,6 +36,7 @@ from frappe.utils import add_days, cint, flt, nowdate
 
 from corevatis_erpnext.angebot import textbausteine
 from corevatis_erpnext.angebot.felder import MODULE
+from corevatis_erpnext.katalog.item_felder import MASCHINENKOSTEN
 
 # Vertrag mit corevatis (Doctype-Namen, Fassade) - geprüft in corevatis/tests/test_erpnext_contract.py
 KERN_APP = "corevatis"
@@ -43,6 +45,7 @@ OBJEKT_DOCTYPE = "Objekt"
 LEISTUNGSREGEL_DOCTYPE = "Leistungsregel"
 KALKULATIONSSCHEMA_DOCTYPE = "Kalkulationsschema"
 KERN_KALKULATION = "corevatis.angebot.kalkulation.kalkuliere"
+KERN_LEISTUNG_SCHLUESSEL = "corevatis.angebot.kalkulation.LEISTUNG_SCHLUESSEL"
 # Schlüssel, die der Adapter je Leistung an den Kern gibt (Teilmenge von LEISTUNG_SCHLUESSEL im Kern)
 LEISTUNG_SCHLUESSEL = (
 	"item_code",
@@ -51,6 +54,7 @@ LEISTUNG_SCHLUESSEL = (
 	"leistungsregel",
 	"menge",
 	"material_je_einheit",
+	"maschinen_je_einheit",
 	"montage_min_je_einheit",
 	"herkunft",
 )
@@ -95,6 +99,15 @@ def _kern_kalkulation():
 	return frappe.get_attr(KERN_KALKULATION)
 
 
+def _kern_nimmt_maschinen() -> bool:
+	"""Kennt die Fassade des Kerns ``maschinen_je_einheit`` (Handwerker#105)? Ältere Kerne lehnen
+	unbekannte Schlüssel ab - dann bleiben Maschinenkosten wie bisher im Material."""
+	try:
+		return "maschinen_je_einheit" in frappe.get_attr(KERN_LEISTUNG_SCHLUESSEL)
+	except Exception:
+		return False
+
+
 def _kurz(texte, laenge: int = DATA_LAENGE) -> str | None:
 	"""Eindeutige Werte (Reihenfolge bleibt) für ein Data-Feld, höchstens 140 Zeichen."""
 	werte = list(dict.fromkeys(t for t in texte if t))
@@ -118,11 +131,26 @@ def _bom_kosten(item_code: str, firma: str) -> dict | None:
 	bom = frappe.get_doc("BOM", namen[0])
 	menge = flt(bom.quantity) or 1
 	minuten = sum(flt(op.time_in_mins) for op in bom.get("operations") or [])
-	return {
+	material = flt(flt(bom.raw_material_cost) / menge, 6)
+	kosten = {
 		"bom": bom.name,
-		"material_je_einheit": str(flt(flt(bom.raw_material_cost) / menge, 6)),
+		"material_je_einheit": str(material),
 		"montage_min_je_einheit": str(flt(minuten / menge, 6)),
 	}
+	maschinen = min(flt(_maschinenkosten(bom.get("items") or []) / menge, 6), material)
+	if maschinen > 0:
+		kosten["maschinen_je_einheit"] = str(maschinen)
+	return kosten
+
+
+def _maschinenkosten(zeilen) -> float:
+	"""Summe der Stücklistenzeilen mit ``Item.cv_maschinenkosten`` (Maschinen-, Geräte- und
+	Fahrtkosten, z. B. Minibagger-Miete): Teil von ``raw_material_cost``, für § 35a Arbeitskosten."""
+	codes = sorted({z.item_code for z in zeilen if z.get("item_code")})
+	if not codes or not frappe.db.has_column("Item", MASCHINENKOSTEN):
+		return 0.0
+	treffer = set(frappe.get_all("Item", filters={"name": ["in", codes], MASCHINENKOSTEN: 1}, pluck="name"))
+	return sum(flt(z.amount) for z in zeilen if z.get("item_code") in treffer)
 
 
 # --------------------------------------------------------------------------- Leistungen
@@ -178,6 +206,7 @@ def leistungen_aus_aufmass(aufmass, firma: str) -> tuple[list[dict], list[str]]:
 			merken(item_code, zeile, regel)
 
 	leistungen = []
+	maschinen_an_kern = _kern_nimmt_maschinen()
 	for code, eintrag in auswahl.items():
 		item = frappe.db.get_value(
 			"Item",
@@ -214,6 +243,8 @@ def leistungen_aus_aufmass(aufmass, firma: str) -> tuple[list[dict], list[str]]:
 				"stueckliste": kosten["bom"],
 			},
 		}
+		if maschinen_an_kern and kosten.get("maschinen_je_einheit"):
+			leistung["maschinen_je_einheit"] = kosten["maschinen_je_einheit"]
 		if fest is not None:
 			# feste Menge der App statt Mengenregel (Kern: ``kalkuliere`` mit ``menge``)
 			leistung["menge"] = str(flt(fest, 6))

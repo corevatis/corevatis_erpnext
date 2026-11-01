@@ -11,3 +11,4 @@ corevatis_erpnext.patches.v0_4.alternativ_sets_aufloesen
 corevatis_erpnext.patches.v0_4.abwesenheit_versionen
 corevatis_erpnext.patches.v0_5.lohn_material
 corevatis_erpnext.patches.v0_5.katalog_innenwand
+corevatis_erpnext.patches.v0_5.maschinenkosten_35a

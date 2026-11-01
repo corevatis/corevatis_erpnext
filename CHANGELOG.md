@@ -57,6 +57,26 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 - Patch `v0_5.katalog_innenwand`: ergänzt IA-10 (Artikel, Preis, Stückliste) und die Regeln, präzisiert den
   unveränderten Langtext von IA-05 und schaltet die Testregel zum Artikel IA-150 (Abnahme 2.2, ohne
   Stückliste, deckt IA-05 und IA-10 doppelt ab) ab, statt sie zu löschen.
+### Arbeitskosten nach § 35a EStG: Maschinen- und Fahrtkosten (Handwerker#105)
+
+- Neues Item-Feld `cv_maschinenkosten` („Maschinen- oder Fahrtkosten (§ 35a EStG)“): Kosten des Artikels sind
+  Maschinen-, Geräte- oder Fahrtkosten. Nach § 35a Abs. 3 EStG und dem BMF-Schreiben vom 9.11.2016 gehören sie zu
+  den begünstigten Arbeitskosten, nicht zum Material. Im Katalog ist MAT-BAGGER („Minibagger … (Gerätemiete)“,
+  Stückliste AA-01) gekennzeichnet (Spalte `cv_maschinenkosten` in `06_item.csv`, Patch
+  `v0_5.maschinenkosten_35a` für bestehende Sites).
+- `angebot.generator`: die Stücklistenzeilen gekennzeichneter Artikel gehen als `maschinen_je_einheit` (Teil von
+  `material_je_einheit`, Preis unverändert) an die Kalkulation des Kerns - nur wenn der Kern den Schlüssel kennt
+  (corevatis mit `fix/lohn-35a`), sonst wie bisher.
+- `abrechnung.lohn_material`: `kalkulation.maschinen` geht an `corevatis.engine.anteile` (zählt dort zum Lohn,
+  mit Zuschlägen samt Anteil am Materialzuschlag); ein gekennzeichneter Artikel als eigene Position (Anfahrt,
+  Gerätestunde) ist 100 % Lohn wie eine Regiestunde, auch als Nachtrag der Schlussrechnung.
+- Corevatis Abrechnung Einstellungen: „Lohnanteil mit Zuschlägen“ (Standard an) begründet in der Beschreibung,
+  warum Gemeinkosten und Gewinn anteilig verteilt werden; „Lohn und Material je Position ausweisen“ nennt die
+  Auftragsbestätigung und den Wortlaut „Arbeitskosten“.
+- Druck-Tests (`test_angebotsdruck`, `test_rechnungsdruck`) prüfen mit erpnext_druckformate `fix/lohn-35a` den
+  Wortlaut „davon Arbeitskosten (§ 35a EStG, begünstigt)“ und den Satz zur Begünstigung, sonst wie bisher.
+- Bestehende Angebote behalten ihre Aufteilung (die gespeicherte Kalkulation kennt die Maschinenkosten nicht);
+  ein neu erzeugtes Angebot rechnet sie zum Lohn.
 
 ### Zeitfenster der Zeiterfassung (Handwerker#108)
 
