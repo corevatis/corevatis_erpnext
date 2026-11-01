@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\": \"cvnc0\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Neue Anfragen (7 Tage)\", \"col\": 4}}, {\"id\": \"cvnc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Offene Termine\", \"col\": 4}}, {\"id\": \"cvnc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Angebote offen\", \"col\": 4}}, {\"id\": \"cvsp1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvsc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Neue Anfrage\", \"col\": 3}}, {\"id\": \"cvsc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Offene Anfragen\", \"col\": 3}}, {\"id\": \"cvsc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Anfragen nach Status\", \"col\": 3}}, {\"id\": \"cvsc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Termine heute\", \"col\": 3}}, {\"id\": \"cvsc4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Termine\", \"col\": 3}}, {\"id\": \"cvsc5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Angebote\", \"col\": 3}}, {\"id\": \"cvsc6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Web Form Anfrage\", \"col\": 3}}, {\"id\": \"cvsp0\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvcd0\", \"type\": \"card\", \"data\": {\"card_name\": \"Anfragen\", \"col\": 3}}, {\"id\": \"cvcd1\", \"type\": \"card\", \"data\": {\"card_name\": \"Kunden\", \"col\": 3}}, {\"id\": \"cvcd2\", \"type\": \"card\", \"data\": {\"card_name\": \"Termine und Angebote\", \"col\": 3}}, {\"id\": \"cvcd4\", \"type\": \"card\", \"data\": {\"card_name\": \"Aufträge und Planung\", \"col\": 3}}, {\"id\": \"cvcd3\", \"type\": \"card\", \"data\": {\"card_name\": \"Einstellungen\", \"col\": 3}}]",
+ "content": "[{\"id\": \"cvnc0\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Neue Anfragen (7 Tage)\", \"col\": 4}}, {\"id\": \"cvnc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Offene Termine\", \"col\": 4}}, {\"id\": \"cvnc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Angebote offen\", \"col\": 4}}, {\"id\": \"cvsp1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvscA\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Alle Anfragen\", \"col\": 3}}, {\"id\": \"cvsc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Neue Anfrage\", \"col\": 3}}, {\"id\": \"cvsc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Offene Anfragen\", \"col\": 3}}, {\"id\": \"cvsc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Anfragen nach Status\", \"col\": 3}}, {\"id\": \"cvsc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Termine heute\", \"col\": 3}}, {\"id\": \"cvsc4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Termine\", \"col\": 3}}, {\"id\": \"cvsc5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Angebote\", \"col\": 3}}, {\"id\": \"cvsc6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Web Form Anfrage\", \"col\": 3}}, {\"id\": \"cvsp0\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvcd0\", \"type\": \"card\", \"data\": {\"card_name\": \"Anfragen\", \"col\": 3}}, {\"id\": \"cvcd1\", \"type\": \"card\", \"data\": {\"card_name\": \"Kunden\", \"col\": 3}}, {\"id\": \"cvcd2\", \"type\": \"card\", \"data\": {\"card_name\": \"Termine und Angebote\", \"col\": 3}}, {\"id\": \"cvcd4\", \"type\": \"card\", \"data\": {\"card_name\": \"Aufträge und Planung\", \"col\": 3}}, {\"id\": \"cvcd3\", \"type\": \"card\", \"data\": {\"card_name\": \"Einstellungen\", \"col\": 3}}]",
  "creation": "2026-10-28 12:00:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -251,7 +251,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-29 18:00:00.000000",
+ "modified": "2026-11-07 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Corevatis ERPNext",
  "name": "Anfragen",
@@ -287,6 +287,13 @@
  ],
  "sequence_id": 0.0,
  "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Alle Anfragen",
+   "link_to": "Lead",
+   "type": "DocType"
+  },
   {
    "color": "Green",
    "doc_view": "New",
