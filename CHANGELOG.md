@@ -16,6 +16,13 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 - Baustellenakte (Projekt/Auftrag): Hinweis „Sprachnotiz“ an Meldungen und Tagesrapporten mit Aufnahme;
   Einträge der Art `mangel` heißen „Meldung“.
 
+### Phase 3 P3.3 Pläne mit Pins (Handwerker#95)
+
+- Seitenleiste „Betrieb“: Eintrag „Pläne“ (Doctype `Plan` aus dem Kern) direkt nach „Objekte“.
+- Foto-Galerie am Befund: Fotos, die als Pin auf einem Plan liegen, tragen die Pin-Nummer („Pin 3“); liegt der
+  Befund selbst als Pin auf Plänen, steht unter der Galerie „Auf Plan: …“ mit Link. Daten über die Kern-Methode
+  `corevatis.plaene.desk.befund_pins` (nur Pläne mit Leserecht). Die Galerie hat dafür die Option `nachher`.
+
 ### Phase 3 P3.4 Aufgaben (Handwerker#96)
 
 - Seitenleiste „Betrieb“: Eintrag „Aufgaben“ nach „Nachrichten“ (ToDo-Liste, gefiltert auf Aufgaben mit Quelle
