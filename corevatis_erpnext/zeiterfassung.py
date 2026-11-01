@@ -68,7 +68,7 @@ class ZeitKonflikt(frappe.ValidationError):
 	``ueberlappung`` (ERPNext-Überlappung mit einer anderen Zeile), ``laeuft_bereits``
 	(Start, obwohl schon eine andere Buchung läuft), ``ungueltig`` (Ende nicht nach Beginn),
 	``zu_lang`` (mehr als 24 h), ``ausserhalb_zeitraum`` (mehr als 31 Tage zurück oder mehr
-	als einen Tag voraus), ``schluessel_fremd`` (Idempotenz-Key gehört zu Buchungen eines
+	als einen Tag voraus, in der Vorführung das weitere Fenster des Kerns), ``schluessel_fremd`` (Idempotenz-Key gehört zu Buchungen eines
 	anderen Mitarbeiters).
 	"""
 
@@ -246,25 +246,58 @@ def _vorhandene(employee: str, idempotency_key: str) -> list[dict]:
 	return zeilen
 
 
-def zeitraum_pruefen(von: _dt.datetime, bis: _dt.datetime | None = None) -> None:
+def _tage(fenster: _dt.timedelta) -> int:
+	return int(fenster.total_seconds() // 86400)
+
+
+def zeitraum_pruefen(
+	von: _dt.datetime,
+	bis: _dt.datetime | None = None,
+	zurueck: _dt.timedelta | None = None,
+	voraus: _dt.timedelta | None = None,
+) -> None:
 	"""Grenzen gegen beliebig lange bzw. weit entfernte Zeiträume (Security-Review 3.9).
 
 	Höchstens ``MAX_DAUER_STUNDEN`` je Buchung, Zeitpunkte höchstens ``MAX_TAGE_ZURUECK``
 	Tage in der Vergangenheit und ``MAX_TAGE_VORAUS`` in der Zukunft (Uhrabweichung des
-	Geräts). Verstoß → ``ZeitKonflikt("ausserhalb_zeitraum")`` bzw. ``("zu_lang")``.
+	Geräts). ``zurueck``/``voraus`` (Handwerker#108) übergibt der Kern aus seinen Grenzen
+	(``corevatis.api.zeiten.grenzen``, in der Vorführung 365 Tage für eigene Buchungen). Sie
+	**erweitern** das Standardfenster, verengen es aber nicht: Die engere Prüfung der
+	App-Zeitstempel (7 Tage/5 Minuten) macht der Kern selbst, hier wird auch der Beginn einer
+	laufenden Buchung geprüft, der beim Stopp älter sein darf als das Fenster des Kerns. Ohne
+	Angabe (Desk) gilt das Standardfenster. Verstoß → ``ZeitKonflikt("ausserhalb_zeitraum")``
+	(Text und ``details.richtung`` je Richtung) bzw. ``("zu_lang")``.
 	"""
+	zurueck = max(zurueck or _dt.timedelta(0), _dt.timedelta(days=MAX_TAGE_ZURUECK))
+	voraus = max(voraus or _dt.timedelta(0), _dt.timedelta(days=MAX_TAGE_VORAUS))
 	jetzt = now_datetime()
 	for wert in (von, bis):
 		if wert is None:
 			continue
-		if wert < jetzt - _dt.timedelta(days=MAX_TAGE_ZURUECK) or wert > jetzt + _dt.timedelta(
-			days=MAX_TAGE_VORAUS
-		):
-			raise ZeitKonflikt(
-				"ausserhalb_zeitraum",
-				_("Bookings are only possible within the last {0} days.").format(MAX_TAGE_ZURUECK),
-				{"zeitpunkt": _iso(wert), "max_tage_zurueck": MAX_TAGE_ZURUECK},
-			)
+		if jetzt - zurueck <= wert <= jetzt + voraus:
+			continue
+		zukunft = wert > jetzt
+		# angefangene Tage: 3,2 Tage voraus bei erlaubtem 1 Tag → „4 Tage“
+		abstand = -(-abs(wert - jetzt).total_seconds() // 86400)
+		erlaubt = _tage(voraus if zukunft else zurueck)
+		text = (
+			_("The time lies {0} days in the future; at most {1} are allowed.")
+			if zukunft
+			else _("The time lies {0} days in the past; at most {1} are allowed.")
+		)
+		raise ZeitKonflikt(
+			"ausserhalb_zeitraum",
+			text.format(int(abstand), erlaubt),
+			{
+				"zeitpunkt": _iso(wert),
+				"richtung": "zukunft" if zukunft else "vergangenheit",
+				"abstand_tage": int(abstand),
+				"erlaubt_zurueck_tage": _tage(zurueck),
+				"erlaubt_voraus_tage": _tage(voraus),
+				# bis #108 das einzige Detail, für ältere Apps beibehalten
+				"max_tage_zurueck": _tage(zurueck),
+			},
+		)
 	if bis is not None and (bis - von) > _dt.timedelta(hours=MAX_DAUER_STUNDEN):
 		raise ZeitKonflikt(
 			"zu_lang",
@@ -282,13 +315,17 @@ def zeit_buchen(
 	bis,
 	idempotency_key: str | None = None,
 	notiz: str | None = None,
+	*,
+	zurueck: _dt.timedelta | None = None,
+	voraus: _dt.timedelta | None = None,
 ) -> dict:
 	"""Buchung als Zeile(n) im Timesheet des Tages; Rückgabe ``timesheet``, ``zeilen``, ``duplikat``.
 
 	``von``/``bis``: ``datetime`` oder ISO-Text in Site-Zeit, ``bis`` > ``von``. Über Mitternacht
 	eine Zeile je Tag. ERPNext prüft Überlappung, Task ↔ Projekt, abgebrochene Tasks und
 	deaktivierte Activity Types; Überlappung → ``ZeitKonflikt("ueberlappung")``, sonst
-	``frappe.ValidationError``. Gespeichert wird mit ``ignore_permissions`` - die Rechte
+	``frappe.ValidationError``. ``zurueck``/``voraus``: Zeitfenster des Kerns (``zeitraum_pruefen``).
+	Gespeichert wird mit ``ignore_permissions`` - die Rechte
 	(eigener Employee bzw. Meister/Büro) prüft der Kern vor dem Aufruf.
 	"""
 	from erpnext.projects.doctype.timesheet.timesheet import OverlapError
@@ -302,7 +339,7 @@ def zeit_buchen(
 	if bis <= von:
 		raise ZeitKonflikt("ungueltig", _("End time must be after start time."), {"von": _iso(von)})
 	# vor jeder Schleife: höchstens 24 h, also höchstens zwei Tagesteile
-	zeitraum_pruefen(von, bis)
+	zeitraum_pruefen(von, bis, zurueck, voraus)
 	if activity_type not in ACTIVITY_TYPES:
 		raise frappe.ValidationError(_("Unknown activity type {0}.").format(activity_type))
 	if not frappe.db.exists("Activity Type", activity_type):
@@ -376,10 +413,14 @@ def lauf_starten(
 	von,
 	idempotency_key: str | None = None,
 	notiz: str | None = None,
+	*,
+	zurueck: _dt.timedelta | None = None,
+	voraus: _dt.timedelta | None = None,
 ) -> dict:
 	"""Laufende Buchung anlegen. Läuft schon eine (anderer Key) → ``ZeitKonflikt("laeuft_bereits")``.
 
-	Den Wechsel (laufende stoppen, neue starten) steuert der Kern.
+	Den Wechsel (laufende stoppen, neue starten) steuert der Kern; ``zurueck``/``voraus`` wie bei
+	``zeit_buchen``.
 	"""
 	if activity_type not in ACTIVITY_TYPES:
 		raise frappe.ValidationError(_("Unknown activity type {0}.").format(activity_type))
@@ -390,7 +431,7 @@ def lauf_starten(
 		raise ZeitKonflikt("laeuft_bereits", _("A booking is already running."), {"laufend": vorhanden})
 	if not mitarbeiter(employee):
 		raise frappe.DoesNotExistError(_("Employee {0} not found.").format(employee))
-	zeitraum_pruefen(_zeit(von))
+	zeitraum_pruefen(_zeit(von), zurueck=zurueck, voraus=voraus)
 	doc = frappe.get_doc(
 		{
 			"doctype": LAUF_DOCTYPE,

@@ -6,6 +6,18 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Zeitfenster der Zeiterfassung (Handwerker#108)
+
+- `zeiterfassung.zeitraum_pruefen`, `zeit_buchen` und `lauf_starten` nehmen optional `zurueck`/`voraus`
+  (`timedelta`, nur als Schlüsselwort) entgegen: das Fenster des Kerns, in der Vorführung 365 Tage für eigene
+  Buchungen. Es erweitert das Standardfenster (31 Tage zurück, 1 Tag voraus), verengt es aber nicht; ohne
+  Angabe (Desk) gilt der Standard. Vorher lehnte der Adapter Zeitpunkte der Vorführungsuhr ab, die mehr als
+  einen Tag voraus standen.
+- Fehlertext von `ausserhalb_zeitraum` je Richtung („Der Zeitpunkt liegt 4 Tage in der Zukunft; erlaubt ist
+  höchstens 1.“ bzw. „… in der Vergangenheit …“) statt immer „nur für die letzten 31 Tage“; `details` mit
+  `richtung` (`zukunft`/`vergangenheit`), `abstand_tage`, `erlaubt_zurueck_tage`, `erlaubt_voraus_tage`,
+  `max_tage_zurueck` bleibt.
+
 ### Phase 3 P3.7 Lohn und Material getrennt ausweisen (Handwerker#105)
 
 - Felder `cv_materialanteil`/`cv_lohnanteil` je Position an Quotation Item (Spiegel Sales Order Item) und
