@@ -519,3 +519,29 @@ Re-order Qty,Nachbestellmenge
 Request for,Für Lager
 Check in (group),Prüfen in (Lagergruppe)
 Reorder level based on Warehouse,Mindestbestand je Lager
+Customer Portal,Kundenportal
+Confirmed by Customer,Vom Kunden bestätigt
+Set when the customer confirms the appointment in the customer portal,"Wird gesetzt, wenn der Kunde den Termin im Kundenportal bestätigt"
+Customer Access,Kundenzugang
+Accepted by Customer,Vom Kunden angenommen
+Set when the customer accepts the quotation with signature in the customer portal,"Wird gesetzt, wenn der Kunde das Angebot im Kundenportal mit Unterschrift annimmt"
+Customer Signature,Unterschrift des Kunden
+Visible to Customer,Für den Kunden sichtbar
+Customer portal: the customer can download this file,Kundenportal: Der Kunde kann diese Datei herunterladen
+Customer portal access by link (token); the plain token is shown once and stored only as a hash (Corevatis P2.7),Zugang zum Kundenportal per Link (Token); der Klartext wird einmal angezeigt und nur als Hash gespeichert (Corevatis P2.7)
+Record Type,Belegart
+Record,Beleg
+Case Type,Vorgangsart
+Case,Vorgang
+Inquiry (Lead) or project the portal page is built from; set automatically,"Anfrage oder Projekt, aus dem die Kundenseite aufgebaut wird; wird automatisch gesetzt"
+Validity and Use,Gültigkeit und Nutzung
+Revoked,Widerrufen
+Revoked On,Widerrufen am
+Page Views,Aufrufe
+Last Used,Letzte Nutzung
+Uploads,Hochgeladene Fotos
+Photos uploaded by the customer through this access,"Fotos, die der Kunde über diesen Zugang hochgeladen hat"
+Technical,Technik
+Token Hash,Token-Hash
+SHA-256 of the link token; the token itself is never stored,SHA-256 des Link-Tokens; das Token selbst wird nie gespeichert
+Kundenzugänge,Kundenzugänge

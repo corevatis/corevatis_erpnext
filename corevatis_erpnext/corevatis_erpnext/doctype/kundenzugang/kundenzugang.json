@@ -1,0 +1,197 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:KZ-{YYYY}-{#####}",
+ "creation": "2026-11-01 12:00:00.000000",
+ "description": "Customer portal access by link (token); the plain token is shown once and stored only as a hash (Corevatis P2.7)",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "vorgang_doctype",
+  "vorgang",
+  "kunde_name",
+  "column_break_anker",
+  "anker_doctype",
+  "anker",
+  "section_gueltigkeit",
+  "gueltig_bis",
+  "widerrufen",
+  "widerrufen_am",
+  "column_break_nutzung",
+  "aufrufe",
+  "letzte_nutzung",
+  "uploads",
+  "section_technik",
+  "token_hash"
+ ],
+ "fields": [
+  {
+   "fieldname": "vorgang_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Record Type",
+   "options": "DocType",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "vorgang",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Record",
+   "options": "vorgang_doctype",
+   "reqd": 1,
+   "search_index": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "kunde_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Customer Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_anker",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Inquiry (Lead) or project the portal page is built from; set automatically",
+   "fieldname": "anker_doctype",
+   "fieldtype": "Link",
+   "label": "Case Type",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "anker",
+   "fieldtype": "Dynamic Link",
+   "in_standard_filter": 1,
+   "label": "Case",
+   "options": "anker_doctype",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "section_gueltigkeit",
+   "fieldtype": "Section Break",
+   "label": "Validity and Use"
+  },
+  {
+   "fieldname": "gueltig_bis",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Valid Until",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "widerrufen",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Revoked"
+  },
+  {
+   "depends_on": "widerrufen",
+   "fieldname": "widerrufen_am",
+   "fieldtype": "Datetime",
+   "label": "Revoked On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_nutzung",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "aufrufe",
+   "fieldtype": "Int",
+   "label": "Page Views",
+   "read_only": 1
+  },
+  {
+   "fieldname": "letzte_nutzung",
+   "fieldtype": "Datetime",
+   "label": "Last Used",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Photos uploaded by the customer through this access",
+   "fieldname": "uploads",
+   "fieldtype": "Int",
+   "label": "Uploads",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_technik",
+   "fieldtype": "Section Break",
+   "label": "Technical"
+  },
+  {
+   "description": "SHA-256 of the link token; the token itself is never stored",
+   "fieldname": "token_hash",
+   "fieldtype": "Data",
+   "label": "Token Hash",
+   "length": 64,
+   "no_copy": 1,
+   "read_only": 1,
+   "unique": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-11-01 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Kundenzugang",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "export": 1,
+   "print": 0,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 1,
+   "role": "Büro",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 1,
+   "role": "Meister",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "kunde_name",
+ "track_changes": 1
+}

@@ -6,6 +6,48 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt (Kundenportal, Phase 2 P2.7, Handwerker#91)
+
+- **Kundenseite `/kunde/<token>`** ohne Anmeldung: Der Kunde sieht seinen Vorgang (Objekt, Anfrage), den
+  Besichtigungstermin mit „Termin bestätigen“, das freigegebene Angebot (Netto, Brutto, Gültigkeit, PDF) mit
+  „Angebot verbindlich annehmen“ (Unterschrift im Canvas, Pflichthaken zu den Bedingungen), den Stand der
+  Ausführung, seine Rechnungen (Art, Datum, Betrag, Fälligkeit, Zahlstand, PDF), freigegebene Dokumente der
+  Mappe und kann Fotos hochladen (JPEG/PNG/HEIC bis 10 MB, höchstens 30 je Zugang). Deutsch, Sie-Form, mobil
+  brauchbar, ohne externe Skripte; Fußzeile verlinkt den Platzhalter `/datenschutz` (1.2).
+- **Doctype „Kundenzugang“** (`corevatis_erpnext.kundenportal.zugang`): Zufallstoken (`secrets.token_urlsafe(32)`),
+  gespeichert nur als SHA-256 (`token_hash`, unique), gültig 90 Tage (einstellbar bis 365), Widerruf mit
+  Zeitpunkt, Zähler Aufrufe/Uploads, letzte Nutzung. Anker ist die Anfrage, sonst Projekt, Angebot oder Auftrag
+  (`anker_fuer`, über `prozess.kette.lead_von`). Ein neuer Link widerruft die aktiven Zugänge des Vorgangs.
+  Rechte: System Manager voll, Büro lesen/schreiben/anlegen, Meister lesen.
+- **Desk**: Knopf „Kundenzugang“ an Anfrage, Kunde, Projekt und Angebot (`public/js/kundenzugang.js`):
+  Dialog mit den Zugängen des Vorgangs (gültig bis, Aufrufe, Fotos, Widerrufen) und „Neuen Link erzeugen“ -
+  Link und QR-Code (`pyqrcode`, serverseitig) erscheinen genau einmal zum Kopieren; Leiste „Betrieb“ → Belege
+  → „Kundenzugänge“ (`betrieb.json`, `modified` 2026-11-03 10:00); Formular des Zugangs mit „Neuen Link
+  erzeugen“ und „Widerrufen“. Direktes Anlegen im Formular erzeugt das Token und zeigt den Link einmalig.
+- **Felder** (`kundenportal.felder`): `Event.cv_kunde_bestaetigt`/`cv_kundenzugang`, `Quotation.cv_kunde_angenommen_am`/
+  `cv_kunde_unterschrift`, `File.cv_kunde_sichtbar` („Für den Kunden sichtbar“, Standard aus). Prozessleiste:
+  Schritt Termin zeigt „· vom Kunden bestätigt“.
+- **Aktionen** (`kundenportal.aktionen`, Gast-Endpunkte, nur POST außer Download): Terminbestätigung setzt die
+  Felder am Termin und kommentiert Termin und Anfrage; die Annahme ruft die vorhandene Annahme 4.4
+  (`angebot.annahme.angebot_annehmen`: Kunde, Auftrag eingereicht, Projekt, Anfrage „Gewonnen“) im
+  Administrator-Kontext nach eigener Token-Prüfung auf, legt die Unterschrift als private PNG-Datei am Angebot
+  ab (Mappe 03 Angebot, Dokumentart „Unterschrift Kunde“), schreibt Zeitpunkt und Datei ans Angebot und
+  kommentiert Angebot und Auftrag mit gekürztem Absender-Hash; Kundenfotos landen als private Dateien an der
+  Anfrage (sonst Projekt), Mappenregel Herkunft Webform → Ordner 01 Anfrage „Kundenfoto“, für den Kunden
+  sichtbar; Downloads liefern die Mappendatei (über den Kern, S3-fähig), sonst den frischen Druck.
+- **Textbaustein-Art „Kundenportal“** (P2.6): Begleittext der Seite mit Platzhaltern `[[Anrede]]`, `[[Firma]]`,
+  `[[Objekt]]` …; Baustein „Kundenportal Begrüßung“ wird einmal angelegt (`ensure_setup`).
+- **Sicherheit**: Token-Vergleich mit `hmac.compare_digest` auf dem Hash; unbekannt, abgelaufen und widerrufen
+  antworten gleich (404); Rate-Limit im Redis-Cache je IP (120 Seitenaufrufe, 20 Fehlversuche je 10 min) und je
+  Zugang (40 Aktionen je 10 min); kein frei wählbarer Belegname in den Aktionen (alles aus dem Zugang
+  abgeleitet); Frappe prüft bei Gästen kein CSRF - Schutz ist das geheime Token im Anfragekörper; Unterschrift
+  nur als PNG (Magic Bytes, 300 B bis 500 KB), Fotos nur JPEG/PNG/HEIC (Magic Bytes, `filetype`), Dateiname
+  vom Server, immer privat; Kundendaten in der Vorlage HTML-maskiert, Begrüßung ist der (von Frappe beim
+  Speichern bereinigte) Textbaustein des Büros; Fehler an den Kunden nur als Klartext, Details im Error Log.
+- Tests `tests/test_kundenportal.py`: Felder und Einrichtung, Zugang anlegen/prüfen/widerrufen/ablaufen/ersetzen,
+  Rechte, Seite (Kontext, 404), Terminbestätigung, Annahme mit Unterschrift (Auftrag, Projekt, Datei, Felder,
+  Kommentar, Gast-Kontext), Fotoupload (Typ, Größe, Höchstzahl, Zähler), Dokumente und Download (Freigabe,
+  ersetzte Versionen, fremde Datei 404), Rechnungsliste, Rate-Limit.
 ### Hinzugefügt (Materialwirtschaft, Phase 2 P2.2, Handwerker#90)
 
 - Modul `corevatis_erpnext.materialwirtschaft`: ERPNext Einkauf und Lager in der Reihenfolge des Betriebs, Belege

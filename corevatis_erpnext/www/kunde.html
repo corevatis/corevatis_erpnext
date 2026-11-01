@@ -1,0 +1,366 @@
+{% extends "templates/web.html" %}
+
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block page_sidebar %}{% endblock %}
+
+{% block style %}
+<style>
+	.cv-kp { max-width: 820px; margin: 0 auto; padding: 16px 16px 48px; font-size: 16px; line-height: 1.45; color: #222; }
+	.cv-kp h1 { font-size: 1.5rem; margin: 8px 0 4px; }
+	.cv-kp h2 { font-size: 1.15rem; margin: 0 0 10px; }
+	.cv-kp .cv-kopf { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-bottom: 2px solid #e2e6ea; padding-bottom: 12px; margin-bottom: 16px; }
+	.cv-kp .cv-firma { font-weight: 700; font-size: 1.1rem; }
+	.cv-kp .cv-firma small { display: block; font-weight: 400; color: #555; }
+	.cv-kp .cv-karte { border: 1px solid #dde2e6; border-radius: 10px; padding: 14px 16px; margin: 0 0 14px; background: #fff; }
+	.cv-kp .cv-karte.cv-aktiv { border-color: #2490ef; box-shadow: 0 0 0 1px #2490ef inset; }
+	.cv-kp .cv-pille { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; background: #eef1f4; color: #444; }
+	.cv-kp .cv-pille.gruen { background: #e4f5e9; color: #16794c; }
+	.cv-kp .cv-pille.gelb { background: #fff4d6; color: #8a5a00; }
+	.cv-kp .cv-pille.rot { background: #fde8e8; color: #b42318; }
+	.cv-kp .cv-pille.blau { background: #e8f2fd; color: #1366ae; }
+	.cv-kp .cv-zeile { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 6px 0; border-top: 1px solid #eef1f4; }
+	.cv-kp .cv-zeile:first-of-type { border-top: 0; }
+	.cv-kp .cv-knopf { display: inline-block; border: 0; border-radius: 8px; padding: 10px 18px; font-size: 1rem; font-weight: 600; cursor: pointer; background: #2490ef; color: #fff; text-decoration: none; }
+	.cv-kp .cv-knopf.cv-zweit { background: #eef1f4; color: #222; }
+	.cv-kp .cv-knopf:disabled { opacity: 0.5; cursor: default; }
+	.cv-kp .cv-meldung { margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: #e8f2fd; color: #1366ae; display: none; }
+	.cv-kp .cv-meldung.cv-fehler { background: #fde8e8; color: #b42318; }
+	.cv-kp .cv-meldung.cv-ok { background: #e4f5e9; color: #16794c; }
+	.cv-kp .cv-meldung.cv-sichtbar { display: block; }
+	.cv-kp canvas.cv-unterschrift { width: 100%; max-width: 600px; height: 180px; border: 1px dashed #98a1a9; border-radius: 8px; background: #fff; touch-action: none; display: block; }
+	.cv-kp .cv-klein { font-size: 0.9rem; color: #555; }
+	.cv-kp .cv-fuss { margin-top: 28px; padding-top: 12px; border-top: 1px solid #e2e6ea; font-size: 0.85rem; color: #666; }
+	.cv-kp .cv-fuss a { color: #666; }
+	.cv-kp table.cv-tab { width: 100%; border-collapse: collapse; }
+	.cv-kp table.cv-tab th, .cv-kp table.cv-tab td { text-align: left; padding: 6px 4px; border-top: 1px solid #eef1f4; vertical-align: top; }
+	.cv-kp table.cv-tab th { font-size: 0.85rem; color: #555; border-top: 0; }
+	.cv-kp table.cv-tab td.cv-r, .cv-kp table.cv-tab th.cv-r { text-align: right; white-space: nowrap; }
+	.cv-kp .cv-begruessung p { margin: 0 0 8px; }
+	.cv-kp label.cv-haken { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0; }
+	.cv-kp .cv-fortschritt { height: 8px; background: #eef1f4; border-radius: 4px; overflow: hidden; margin-top: 6px; }
+	.cv-kp .cv-fortschritt span { display: block; height: 100%; background: #2490ef; }
+	@media (max-width: 600px) { .cv-kp { font-size: 15px; } .cv-kp .cv-zeile { flex-direction: column; gap: 2px; } }
+</style>
+{% endblock %}
+
+{% block page_content %}
+{# Frappes Jinja-Umgebung maskiert nicht von selbst: hier ausdrücklich, Begrüßung ist der bereinigte Textbaustein #}
+{% autoescape true %}
+{% set d = daten %}
+<div class="cv-kp" id="cv-kp" data-token="{{ token }}" data-api="{{ api }}">
+	<div class="cv-kopf">
+		<div class="cv-firma">
+			{{ d.firma.anzeige }}
+			<small>
+				{% if d.firma.telefon %}{{ _("Telefon") }} {{ d.firma.telefon }}{% endif %}
+				{% if d.firma.telefon and d.firma.email %} · {% endif %}
+				{% if d.firma.email %}{{ d.firma.email }}{% endif %}
+			</small>
+		</div>
+		<div class="cv-klein">{{ _("Ihr Zugang ist gültig bis") }} {{ d.gueltig_bis }}</div>
+	</div>
+
+	<h1>{{ _("Ihr Vorgang") }}{% if d.objekt %}: {{ d.objekt }}{% endif %}</h1>
+	<p class="cv-klein">{{ d.kunde }}{% if d.anfrage %} · {{ _("Anfrage") }} {{ d.anfrage }}{% endif %}</p>
+
+	{% if d.begruessung %}
+	<div class="cv-karte cv-begruessung">{{ d.begruessung | safe }}</div>
+	{% endif %}
+
+	{# --- Termin --- #}
+	<div class="cv-karte {% if d.termin and d.termin.bestaetigbar %}cv-aktiv{% endif %}" id="cv-termin">
+		<h2>{{ _("Termin") }}</h2>
+		{% if d.termin %}
+			<p><strong>{{ d.termin.text }}</strong>{% if d.termin.ende %} – {{ d.termin.ende }} Uhr{% endif %}
+			{% if d.termin.meister %}<br><span class="cv-klein">{{ _("Vor Ort für Sie") }}: {{ d.termin.meister }}</span>{% endif %}</p>
+			{% if d.termin.bestaetigt %}
+				<span class="cv-pille gruen">{{ _("Von Ihnen bestätigt am") }} {{ d.termin.bestaetigt_text }}</span>
+			{% elif d.termin.erledigt or d.termin.vorbei %}
+				<span class="cv-pille">{{ _("Termin hat stattgefunden") }}</span>
+			{% elif d.termin.bestaetigbar %}
+				<p class="cv-klein">{{ _("Passt der Termin? Dann bestätigen Sie ihn bitte mit einem Klick. Wenn nicht, rufen Sie uns an.") }}</p>
+				<button type="button" class="cv-knopf" id="cv-termin-knopf">{{ _("Termin bestätigen") }}</button>
+			{% endif %}
+			<div class="cv-meldung" id="cv-termin-meldung"></div>
+		{% else %}
+			<p class="cv-klein">{{ _("Es ist noch kein Termin vereinbart. Wir melden uns bei Ihnen.") }}</p>
+		{% endif %}
+	</div>
+
+	{# --- Angebot --- #}
+	<div class="cv-karte {% if d.angebot and d.angebot.annehmbar %}cv-aktiv{% endif %}" id="cv-angebot">
+		<h2>{{ _("Angebot") }}</h2>
+		{% if d.angebot %}
+			{% set a = d.angebot %}
+			<div class="cv-zeile"><span>{{ _("Angebot") }} {{ a.name }}{% if a.titel %} · {{ a.titel }}{% endif %}</span><span>{{ _("vom") }} {{ a.datum }}</span></div>
+			<div class="cv-zeile"><span>{{ _("Netto") }}</span><span>{{ a.netto }}</span></div>
+			<div class="cv-zeile"><span><strong>{{ _("Gesamtbetrag (brutto)") }}</strong></span><span><strong>{{ a.brutto }}</strong></span></div>
+			{% if a.gueltig_bis %}<div class="cv-zeile"><span>{{ _("Gültig bis") }}</span><span>{{ a.gueltig_bis }}</span></div>{% endif %}
+			<p style="margin-top:10px">
+				<a class="cv-knopf cv-zweit" href="{{ api }}datei?token={{ token }}&beleg=angebot" target="_blank" rel="noopener">{{ _("Angebot als PDF öffnen") }}</a>
+			</p>
+			{% if a.status == "angenommen" %}
+				<span class="cv-pille gruen">{{ _("Angenommen") }}{% if a.angenommen_am %} · {{ a.angenommen_am }}{% endif %}</span>
+				{% if d.auftrag %}<p class="cv-klein" style="margin-top:8px">{{ _("Ihre Auftragsbestätigung") }}: <a href="{{ api }}datei?token={{ token }}&beleg=auftrag" target="_blank" rel="noopener">{{ d.auftrag.name }}</a> {{ _("vom") }} {{ d.auftrag.datum }}</p>{% endif %}
+			{% elif a.status == "abgelehnt" %}
+				<span class="cv-pille">{{ _("Abgelehnt") }}</span>
+			{% elif a.status == "abgelaufen" %}
+				<span class="cv-pille gelb">{{ _("Gültigkeit abgelaufen – bitte sprechen Sie uns an") }}</span>
+			{% elif a.annehmbar %}
+				<div id="cv-annahme">
+					<h2 style="margin-top:14px">{{ _("Angebot annehmen") }}</h2>
+					<p class="cv-klein">{{ _("Bitte unterschreiben Sie mit dem Finger oder der Maus im Feld. Mit Ihrer Unterschrift beauftragen Sie uns verbindlich zu den Bedingungen des Angebots.") }}</p>
+					<canvas class="cv-unterschrift" id="cv-canvas" width="600" height="180" aria-label="{{ _('Unterschriftsfeld') }}"></canvas>
+					<p style="margin:6px 0"><button type="button" class="cv-knopf cv-zweit" id="cv-canvas-loeschen">{{ _("Unterschrift löschen") }}</button></p>
+					<label class="cv-haken"><input type="checkbox" id="cv-kenntnis"> <span>{{ _("Ich habe das Angebot und die darin genannten Bedingungen (Zahlungsbedingungen, Gewährleistung) gelesen und nehme das Angebot an.") }}</span></label>
+					<button type="button" class="cv-knopf" id="cv-annahme-knopf">{{ _("Angebot verbindlich annehmen") }}</button>
+					<div class="cv-meldung" id="cv-annahme-meldung"></div>
+				</div>
+			{% endif %}
+		{% else %}
+			<p class="cv-klein">{{ _("Noch kein Angebot. Nach der Besichtigung erstellen wir es für Sie.") }}</p>
+		{% endif %}
+	</div>
+
+	{# --- Ausführung --- #}
+	{% if d.projekt %}
+	<div class="cv-karte" id="cv-projekt">
+		<h2>{{ _("Ausführung") }}</h2>
+		<div class="cv-zeile"><span>{{ _("Stand") }}</span><span class="cv-pille blau">{{ d.projekt.status }}{% if d.projekt.abgenommen %} · {{ _("abgenommen") }}{% endif %}</span></div>
+		{% if d.projekt.start or d.projekt.ende %}<div class="cv-zeile"><span>{{ _("Geplant") }}</span><span>{{ d.projekt.start }}{% if d.projekt.ende %} – {{ d.projekt.ende }}{% endif %}</span></div>{% endif %}
+		<div class="cv-fortschritt" title="{{ d.projekt.fortschritt }} %"><span style="width: {{ d.projekt.fortschritt }}%"></span></div>
+		<p class="cv-klein" style="margin:4px 0 0">{{ _("Fortschritt") }} {{ d.projekt.fortschritt }} %</p>
+	</div>
+	{% endif %}
+
+	{# --- Rechnungen --- #}
+	<div class="cv-karte" id="cv-rechnungen">
+		<h2>{{ _("Rechnungen") }}</h2>
+		{% if d.rechnungen %}
+		<table class="cv-tab">
+			<thead><tr><th>{{ _("Rechnung") }}</th><th>{{ _("Datum") }}</th><th class="cv-r">{{ _("Betrag") }}</th><th>{{ _("Stand") }}</th><th></th></tr></thead>
+			<tbody>
+			{% for r in d.rechnungen %}
+			<tr>
+				<td>{{ r.art }}<br><span class="cv-klein">{{ r.name }}</span></td>
+				<td>{{ r.datum }}{% if r.faellig and r.stand != _("bezahlt") %}<br><span class="cv-klein">{{ _("fällig") }} {{ r.faellig }}</span>{% endif %}</td>
+				<td class="cv-r">{{ r.brutto }}{% if r.stand == _("teilweise bezahlt") %}<br><span class="cv-klein">{{ _("offen") }} {{ r.offen }}</span>{% endif %}</td>
+				<td><span class="cv-pille {{ r.farbe }}">{{ r.stand }}</span></td>
+				<td class="cv-r"><a href="{{ api }}datei?token={{ token }}&beleg={{ r.name | urlencode }}" target="_blank" rel="noopener">PDF</a></td>
+			</tr>
+			{% endfor %}
+			</tbody>
+		</table>
+		{% else %}
+		<p class="cv-klein">{{ _("Noch keine Rechnung.") }}</p>
+		{% endif %}
+	</div>
+
+	{# --- Dokumente --- #}
+	<div class="cv-karte" id="cv-dokumente">
+		<h2>{{ _("Dokumente") }}</h2>
+		{% if d.dokumente %}
+		<table class="cv-tab">
+			<tbody>
+			{% for f in d.dokumente %}
+			<tr>
+				<td><a href="{{ api }}datei?token={{ token }}&datei={{ f.name | urlencode }}" target="_blank" rel="noopener">{{ f.titel }}</a><br><span class="cv-klein">{{ f.art }}{% if f.beleg %} · {{ f.beleg }}{% endif %}</span></td>
+				<td class="cv-r">{{ f.datum }}<br><span class="cv-klein">{{ f.groesse }}</span></td>
+			</tr>
+			{% endfor %}
+			</tbody>
+		</table>
+		{% else %}
+		<p class="cv-klein">{{ _("Freigegebene Unterlagen erscheinen hier.") }}</p>
+		{% endif %}
+	</div>
+
+	{# --- Fotos --- #}
+	<div class="cv-karte" id="cv-fotos">
+		<h2>{{ _("Fotos an uns schicken") }}</h2>
+		<p class="cv-klein">{{ _("Zum Beispiel vom Schaden, vom Keller oder von der Baustelle. JPEG, PNG oder HEIC bis 10 MB je Foto.") }}
+			{% if d.uploads %}{{ _("Bisher hochgeladen") }}: <span id="cv-upload-zahl">{{ d.uploads }}</span>.{% endif %}</p>
+		{% if d.uploads_frei > 0 %}
+		<input type="file" id="cv-foto-datei" accept="image/jpeg,image/png,image/heic,image/heif,.heic,.heif" multiple style="margin-bottom:8px">
+		<div><button type="button" class="cv-knopf" id="cv-foto-knopf">{{ _("Fotos hochladen") }}</button></div>
+		{% else %}
+		<p class="cv-klein">{{ _("Die Höchstzahl an Fotos für diesen Zugang ist erreicht. Bitte melden Sie sich bei uns.") }}</p>
+		{% endif %}
+		<div class="cv-meldung" id="cv-foto-meldung"></div>
+	</div>
+
+	<div class="cv-fuss">
+		{{ _("Diese Seite ist nur über Ihren persönlichen Link erreichbar. Geben Sie den Link nicht weiter.") }}
+		· <a href="{{ datenschutz_url }}" target="_blank" rel="noopener">{{ _("Datenschutz") }}</a>
+	</div>
+</div>
+{% endautoescape %}
+{% endblock %}
+
+{% block script %}
+<script>
+(function () {
+	var wurzel = document.getElementById("cv-kp");
+	if (!wurzel) return;
+	var token = wurzel.getAttribute("data-token");
+	var api = wurzel.getAttribute("data-api");
+	var ALLGEMEIN = {{ _("Das hat gerade nicht geklappt. Bitte versuchen Sie es später noch einmal oder melden Sie sich bei uns.") | tojson }};
+
+	function meldung(id, text, art) {
+		var el = document.getElementById(id);
+		if (!el) return;
+		el.textContent = text || "";
+		el.className = "cv-meldung cv-sichtbar " + (art || "");
+	}
+
+	function senden(methode, daten) {
+		daten = daten || {};
+		daten.token = token;
+		return fetch(api + methode, {
+			method: "POST",
+			headers: { "Content-Type": "application/json", Accept: "application/json" },
+			credentials: "same-origin",
+			body: JSON.stringify(daten)
+		}).then(function (antwort) {
+			return antwort.json().catch(function () { return {}; }).then(function (json) {
+				var m = (json && json.message) || {};
+				if (typeof m !== "object") m = {};
+				if (!m.ok && !m.meldung) m.meldung = ALLGEMEIN;
+				return m;
+			});
+		}).catch(function () { return { ok: false, meldung: ALLGEMEIN }; });
+	}
+
+	// Termin bestätigen
+	var terminKnopf = document.getElementById("cv-termin-knopf");
+	if (terminKnopf) {
+		terminKnopf.addEventListener("click", function () {
+			terminKnopf.disabled = true;
+			senden("termin_bestaetigen").then(function (m) {
+				if (m.ok) {
+					meldung("cv-termin-meldung", {{ _("Vielen Dank, Ihr Termin ist bestätigt") | tojson }} + (m.bestaetigt_text ? " (" + m.bestaetigt_text + ")." : "."), "cv-ok");
+					terminKnopf.style.display = "none";
+				} else {
+					meldung("cv-termin-meldung", m.meldung, "cv-fehler");
+					terminKnopf.disabled = false;
+				}
+			});
+		});
+	}
+
+	// Unterschrift
+	var canvas = document.getElementById("cv-canvas");
+	var striche = 0;
+	if (canvas) {
+		var ctx = canvas.getContext("2d");
+		ctx.lineWidth = 2.2;
+		ctx.lineCap = "round";
+		ctx.lineJoin = "round";
+		ctx.strokeStyle = "#102a43";
+		var zeichnet = false;
+		function punkt(e) {
+			var r = canvas.getBoundingClientRect();
+			return { x: (e.clientX - r.left) * (canvas.width / r.width), y: (e.clientY - r.top) * (canvas.height / r.height) };
+		}
+		canvas.addEventListener("pointerdown", function (e) {
+			zeichnet = true;
+			canvas.setPointerCapture(e.pointerId);
+			var p = punkt(e);
+			ctx.beginPath();
+			ctx.moveTo(p.x, p.y);
+			ctx.lineTo(p.x + 0.1, p.y + 0.1);
+			ctx.stroke();
+			striche++;
+			e.preventDefault();
+		});
+		canvas.addEventListener("pointermove", function (e) {
+			if (!zeichnet) return;
+			var p = punkt(e);
+			ctx.lineTo(p.x, p.y);
+			ctx.stroke();
+			e.preventDefault();
+		});
+		function ende() { zeichnet = false; }
+		canvas.addEventListener("pointerup", ende);
+		canvas.addEventListener("pointercancel", ende);
+		canvas.addEventListener("pointerleave", ende);
+		document.getElementById("cv-canvas-loeschen").addEventListener("click", function () {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			striche = 0;
+		});
+		var annahmeKnopf = document.getElementById("cv-annahme-knopf");
+		annahmeKnopf.addEventListener("click", function () {
+			if (!document.getElementById("cv-kenntnis").checked) {
+				meldung("cv-annahme-meldung", {{ _("Bitte bestätigen Sie, dass Sie das Angebot und die Bedingungen gelesen haben.") | tojson }}, "cv-fehler");
+				return;
+			}
+			if (striche < 2) {
+				meldung("cv-annahme-meldung", {{ _("Bitte unterschreiben Sie im Feld.") | tojson }}, "cv-fehler");
+				return;
+			}
+			annahmeKnopf.disabled = true;
+			meldung("cv-annahme-meldung", {{ _("Ihre Annahme wird übertragen …") | tojson }}, "");
+			senden("angebot_annehmen", { unterschrift: canvas.toDataURL("image/png"), kenntnis: 1 }).then(function (m) {
+				if (m.ok) {
+					meldung("cv-annahme-meldung", {{ _("Vielen Dank! Wir haben Ihre Annahme erhalten") | tojson }} + (m.auftrag ? " (" + {{ _("Auftrag") | tojson }} + " " + m.auftrag + ")." : "."), "cv-ok");
+					setTimeout(function () { window.location.reload(); }, 2500);
+				} else {
+					meldung("cv-annahme-meldung", m.meldung, "cv-fehler");
+					annahmeKnopf.disabled = false;
+				}
+			});
+		});
+	}
+
+	// Fotos
+	var fotoKnopf = document.getElementById("cv-foto-knopf");
+	if (fotoKnopf) {
+		fotoKnopf.addEventListener("click", function () {
+			var eingabe = document.getElementById("cv-foto-datei");
+			var dateien = Array.prototype.slice.call(eingabe.files || []);
+			if (!dateien.length) {
+				meldung("cv-foto-meldung", {{ _("Bitte zuerst ein Foto auswählen.") | tojson }}, "cv-fehler");
+				return;
+			}
+			fotoKnopf.disabled = true;
+			var fertig = 0, fehler = [];
+			function weiter() {
+				if (!dateien.length) {
+					fotoKnopf.disabled = false;
+					eingabe.value = "";
+					var text = fertig + " " + {{ _("Foto(s) übertragen.") | tojson }};
+					if (fehler.length) text += " " + fehler.join(" ");
+					meldung("cv-foto-meldung", text, fehler.length ? "cv-fehler" : "cv-ok");
+					return;
+				}
+				var datei = dateien.shift();
+				if (datei.size > 10 * 1024 * 1024) {
+					fehler.push(datei.name + ": " + {{ _("größer als 10 MB.") | tojson }});
+					weiter();
+					return;
+				}
+				meldung("cv-foto-meldung", {{ _("Übertrage") | tojson }} + " " + datei.name + " …", "");
+				var leser = new FileReader();
+				leser.onload = function () {
+					senden("foto_hochladen", { datei_b64: leser.result }).then(function (m) {
+						if (m.ok) {
+							fertig++;
+							var zahl = document.getElementById("cv-upload-zahl");
+							if (zahl && m.uploads) zahl.textContent = m.uploads;
+						} else {
+							fehler.push(datei.name + ": " + m.meldung);
+						}
+						weiter();
+					});
+				};
+				leser.onerror = function () { fehler.push(datei.name); weiter(); };
+				leser.readAsDataURL(datei);
+			}
+			weiter();
+		});
+	}
+})();
+</script>
+{% endblock %}

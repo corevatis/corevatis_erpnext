@@ -468,6 +468,9 @@ def _zeilen(doctype: str, namen: list[str], felder) -> list[frappe._dict]:
 
 def _termin(lead: frappe._dict) -> frappe._dict | None:
 	felder = ["name", "starts_on", "status"]
+	# Kundenportal (P2.7): vom Kunden bestätigt
+	if spalte_da("Event", "cv_kunde_bestaetigt"):
+		felder.append("cv_kunde_bestaetigt")
 	name = lead.get("cv_termin")
 	if name:
 		termin = frappe.db.get_value("Event", name, felder, as_dict=True)
@@ -599,6 +602,9 @@ def schritte(k: frappe._dict, einst=None) -> list[dict]:
 			if k.meister:
 				# D14: „Termin am 04.11.2026 09:30 mit Martin Meister“
 				text += " " + _("mit {0}").format(frappe.utils.get_fullname(k.meister) or k.meister)
+			if termin.get("cv_kunde_bestaetigt"):
+				# Kundenportal (P2.7)
+				text += " \u00b7 " + _("vom Kunden bestätigt")
 		ergebnis.append(_schritt("termin", status, text, [_beleg("Event", termin.name)], termin.starts_on))
 	else:
 		text = _("Noch kein Termin")

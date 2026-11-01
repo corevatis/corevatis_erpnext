@@ -69,6 +69,7 @@ def after_install() -> None:
 	ensure_mappe()
 	ensure_abrechnung()
 	ensure_datev()
+	ensure_kundenportal()
 
 
 def after_migrate() -> None:
@@ -134,6 +135,15 @@ def after_migrate() -> None:
 	ensure_abrechnung()
 	# DATEV (7.4): Markierung an Rechnung/Zahlung (hängt sich hinter die Abrechnungsfelder), DATEV Settings
 	ensure_datev()
+	# Kundenportal (P2.7): Felder an Termin, Angebot, Datei; Textbaustein „Kundenportal Begrüßung“
+	ensure_kundenportal()
+
+
+def ensure_kundenportal() -> None:
+	"""Kundenportal (P2.7): Felder an Event, Quotation, File; Textbaustein der Art „Kundenportal“."""
+	from corevatis_erpnext.kundenportal import ensure_setup as ensure_kundenportal_setup
+
+	ensure_kundenportal_setup()
 
 
 def ensure_mitarbeiter() -> None:

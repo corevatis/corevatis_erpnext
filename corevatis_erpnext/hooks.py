@@ -66,6 +66,8 @@ before_app_uninstall = "corevatis_erpnext.vor_ort.lead_objekt.before_app_uninsta
 _PROZESSLEISTE = "public/js/prozessleiste.js"
 # Materialwirtschaft (P2.2): Dialoge Bestellen, Lieferung buchen, Fahrzeug beladen, Mindestbestand
 _MATERIAL = "public/js/materialwirtschaft.js"
+# Kundenportal (P2.7): Knopf „Kundenzugang“ (Link mit Token) an Anfrage, Kunde, Projekt, Angebot
+_KUNDENZUGANG = "public/js/kundenzugang.js"
 # Textbausteine (P2.6): Platzhalter-Hilfe und Vorschau am Baustein (Terms and Conditions)
 doctype_js = {
 	"Terms and Conditions": "public/js/textbaustein.js",
@@ -76,6 +78,7 @@ doctype_js = {
 		"public/js/lead_termin.bundle.js",
 		_PROZESSLEISTE,
 		"public/js/prozess_lead.js",
+		_KUNDENZUGANG,
 	],
 	# Angebot annehmen/ablehnen (4.4), Nachfassen (4.5); Mappenprüfung übersteuern (Epic D)
 	"Quotation": [
@@ -83,7 +86,10 @@ doctype_js = {
 		"public/js/quotation_annahme.js",
 		_PROZESSLEISTE,
 		"public/js/mappe_uebersteuern.js",
+		_KUNDENZUGANG,
 	],
+	"Customer": [_KUNDENZUGANG],
+	"Kundenzugang": [_KUNDENZUGANG],
 	# Angebot aus dem Aufmaß (4.1): Doctype Aufmass aus corevatis, ohne Kern lädt es nie
 	"Aufmass": ["public/js/aufmass_angebot.js", _PROZESSLEISTE],
 	# Foto-Galerie am Befund (3.7): Fotos der App; Doctype aus corevatis, ohne Kern lädt es nie
@@ -98,7 +104,7 @@ doctype_js = {
 		_PROZESSLEISTE,
 	],
 	# Materialwirtschaft (P2.2): „Material bestellen“ am Projekt, Bestellung und Lieferung in Handwerkersprache
-	"Project": ["public/js/planung.js", "public/js/abrechnung.js", _PROZESSLEISTE, _MATERIAL],
+	"Project": ["public/js/planung.js", "public/js/abrechnung.js", _PROZESSLEISTE, _MATERIAL, _KUNDENZUGANG],
 	"Material Request": [_MATERIAL],
 	"Purchase Order": [_MATERIAL],
 	"Purchase Receipt": [_MATERIAL],
@@ -297,6 +303,9 @@ permission_query_conditions = {
 has_permission = {
 	"Abwesenheit": "corevatis_erpnext.planung.abwesenheit.has_permission",
 }
+
+# Kundenportal (P2.7): /kunde/<token> → www/kunde.py (Token in frappe.form_dict.token)
+website_route_rules = [{"from_route": "/kunde/<token>", "to_route": "kunde"}]
 
 # Web Form „Kostenlose Einschätzung“ (1.2): Honeypot, Datenschutz, Rate-Limit und private
 # Fotos. Andere Web Forms reicht die Funktion unverändert an Frappe weiter.
