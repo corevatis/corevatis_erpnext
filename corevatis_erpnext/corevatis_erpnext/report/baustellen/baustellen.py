@@ -95,7 +95,7 @@ def summary(daten: dict) -> list[dict]:
 			"indicator": "Orange" if GELB in farben else "Green",
 		},
 		{"value": farben.count(GRUEN), "label": _("grün"), "datatype": "Int", "indicator": "Green"},
-		{"value": flt(sum(z["ist_h"] for z in zeilen), 1), "label": _("Ist h gesamt"), "datatype": "Float"},
+		{"value": frappe.format_value(flt(sum(z["ist_h"] for z in zeilen)), {"fieldtype": "Float", "precision": 1}), "label": _("Ist h gesamt"), "datatype": "Data"},
 	]
 	if daten.get("zeitraum"):
 		ergebnis.append(
