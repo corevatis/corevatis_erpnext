@@ -168,8 +168,8 @@ def erzeugen(doctype: str, name: str, gueltig_tage: int | None = None) -> dict:
 		DOCTYPE, filters={"anker_doctype": anker_doctype, "anker": anker, "widerrufen": 0}, pluck="name"
 	):
 		widerrufen(alt, _("Ersetzt durch einen neuen Link."))
-	token = token_neu()
-	# Anker, Kundenname und Hash setzt der Controller (``validate``) selbst - nie aus Eingaben
+	# Anker, Kundenname, Rechteprüfung und Token übernimmt der Controller (``validate``) - nie aus Eingaben.
+	# Den Klartext gibt es nur einmal: im nicht gespeicherten Attribut ``_token_klar`` nach dem Anlegen.
 	doc = frappe.get_doc(
 		{
 			"doctype": DOCTYPE,
@@ -178,10 +178,10 @@ def erzeugen(doctype: str, name: str, gueltig_tage: int | None = None) -> dict:
 			"gueltig_bis": add_days(today(), tage),
 		}
 	)
-	doc.flags.cv_token_klar = token
-	doc.flags.cv_geprueft = True  # Leserecht am Vorgang oben geprüft
-	doc.flags.cv_stumm = True
+	doc.flags.cv_stumm = True  # Link zeigt der Dialog, nicht die Meldung
 	doc.insert(ignore_permissions=True)
+	token = doc._token_klar
+	del doc._token_klar
 	anker_doctype, anker = doc.anker_doctype, doc.anker
 	try:
 		frappe.get_doc(anker_doctype, anker).add_comment(

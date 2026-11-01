@@ -249,16 +249,31 @@ class TestKundenportal(IntegrationTestCase):
 					"anker": fremd.name,
 					"kunde_name": "Gefälscht",
 					"token_hash": "a" * 64,
+					"_token_klar": "fremder-klartext-1",
 					"aufrufe": 99,
 					"uploads": 99,
 				}
 			)
+			# auch Flags von außen (frühere Umgehung) dürfen nichts bewirken
+			doc.flags.cv_token_klar = "fremder-klartext-2"
+			doc.flags.cv_geprueft = True
 			doc.insert()
 			self.assertEqual((doc.anker_doctype, doc.anker), ("Lead", self.lead.name))
 			self.assertEqual(doc.kunde_name, self.lead.lead_name)
-			self.assertNotEqual(doc.token_hash, "a" * 64)
+			self.assertNotIn(
+				doc.token_hash,
+				{"a" * 64, zugang.token_hash("fremder-klartext-1"), zugang.token_hash("fremder-klartext-2")},
+			)
+			self.assertEqual(doc.token_hash, zugang.token_hash(doc._token_klar))
+			self.assertEqual(zugang.pruefen(doc._token_klar).name, doc.name)
+			self.assertIsNone(zugang.pruefen("fremder-klartext-1"))
 			self.assertEqual((doc.aufrufe, doc.uploads, doc.letzte_nutzung), (0, 0, None))
 			self.assertIsNone(frappe.db.exists("Kundenzugang", {"token_hash": "a" * 64}))
+			# der Klartext steht nirgends in der Datenbank
+			self.assertEqual(
+				frappe.db.get_value("Kundenzugang", doc.name, "token_hash"),
+				zugang.token_hash(doc._token_klar),
+			)
 			frappe.clear_messages()
 			# nachträglich: Anker, Vorgang und Hash sind fest
 			for aenderung in (
@@ -289,12 +304,14 @@ class TestKundenportal(IntegrationTestCase):
 				).insert()
 		finally:
 			frappe.set_user("Administrator")
-		# Leserecht am Vorgang: Büro ohne Recht am Beleg (Rechnung) kommt nicht durch
+		# Leserecht am Vorgang ist Pflicht - ohne Umgehung über Flags oder ignore_permissions
 		with patch("frappe.has_permission", side_effect=frappe.PermissionError("kein Recht")):
+			d3 = frappe.get_doc(
+				{"doctype": "Kundenzugang", "vorgang_doctype": "Lead", "vorgang": self.lead.name}
+			)
+			d3.flags.cv_geprueft = True
 			with self.assertRaises(frappe.PermissionError):
-				frappe.get_doc(
-					{"doctype": "Kundenzugang", "vorgang_doctype": "Lead", "vorgang": self.lead.name}
-				).insert(ignore_permissions=True)
+				d3.insert(ignore_permissions=True)
 
 	def test_anker_kunde_und_projekt(self):
 		auftrag, projekt = _abrechnung_vorgang(self)

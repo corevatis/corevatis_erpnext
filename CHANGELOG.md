@@ -48,7 +48,10 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   verwirft mitgeschickte Werte (REST mit Schreibrecht konnte sonst einen fremden Vorgang als Anker oder einen
   eigenen Hash setzen), verlangt Leserecht am Vorgang für den anlegenden Benutzer, nullt die Zähler, begrenzt
   die Gültigkeit auf 365 Tage und lässt Vorgang, Anker und Hash nach dem Anlegen nicht mehr ändern
-  (`set_only_once` plus Prüfung in `validate`). Test `test_zugang_manipulation_abgewiesen`.
+  (`set_only_once` plus Prüfung in `validate`). Zweiter Nachtrag: keine Sicherheitsentscheidung hängt mehr an
+  Dokument-Flags - die Rechteprüfung läuft immer, das Token erzeugt `validate` stets selbst und reicht den
+  Klartext nur über das nicht gespeicherte Attribut `_token_klar` an `zugang.erzeugen` zurück.
+  Test `test_zugang_manipulation_abgewiesen`.
 - Tests `tests/test_kundenportal.py`: Felder und Einrichtung, Zugang anlegen/prüfen/widerrufen/ablaufen/ersetzen,
   Rechte, Seite (Kontext, 404), Terminbestätigung, Annahme mit Unterschrift (Auftrag, Projekt, Datei, Felder,
   Kommentar, Gast-Kontext), Fotoupload (Typ, Größe, Höchstzahl, Zähler), Dokumente und Download (Freigabe,

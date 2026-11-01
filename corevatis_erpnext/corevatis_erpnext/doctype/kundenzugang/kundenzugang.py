@@ -7,8 +7,10 @@ als Meldung.
 
 Security-Review: Anker, Kundenname und Token-Hash bestimmt **immer** der Server - mitgeschickte Werte werden
 verworfen (sonst könnte ein Benutzer mit Schreibrecht per REST einen fremden Vorgang als Anker oder einen
-selbst gewählten Hash setzen). Der anlegende Benutzer braucht Leserecht am Vorgang; nach dem Anlegen sind
-Vorgang, Anker und Hash unveränderlich, die Zähler werden beim Anlegen genullt.
+selbst gewählten Hash setzen). Der anlegende Benutzer braucht Leserecht am Vorgang - ohne Ausnahme, auch
+nicht über Dokument-Flags. Das Token erzeugt ``validate`` selbst (``zugang.token_neu``); der Klartext liegt
+nur im nicht gespeicherten Attribut ``_token_klar`` des Objekts, das ``zugang.erzeugen`` nach ``insert()``
+einmalig ausliest. Nach dem Anlegen sind Vorgang, Anker und Hash unveränderlich, die Zähler starten bei 0.
 """
 
 from __future__ import annotations
@@ -54,13 +56,12 @@ class Kundenzugang(Document):
 
 	def _neu(self) -> None:
 		"""Anlegen: Leserecht am Vorgang, Anker und Kundenname vom Server, Token nur serverseitig, Zähler 0."""
-		if not self.flags.get("cv_geprueft"):
-			frappe.has_permission(self.vorgang_doctype, "read", self.vorgang, throw=True)
+		frappe.has_permission(self.vorgang_doctype, "read", self.vorgang, throw=True)
 		self.anker_doctype, self.anker = zugang.anker_fuer(self.vorgang_doctype, self.vorgang)
 		self.kunde_name = zugang.kunden_name(self.anker_doctype, self.anker)
-		token = self.flags.pop("cv_token_klar", None) or zugang.token_neu()
-		self.token_hash = zugang.token_hash(token)
-		self.flags.cv_token = token
+		# Klartext nie von außen (weder Feld noch Flag noch Attribut): immer frisch erzeugen, nur Hash speichern
+		self._token_klar = zugang.token_neu()
+		self.token_hash = zugang.token_hash(self._token_klar)
 		self.aufrufe = 0
 		self.uploads = 0
 		self.letzte_nutzung = None
@@ -77,7 +78,7 @@ class Kundenzugang(Document):
 				)
 
 	def after_insert(self):
-		token = self.flags.pop("cv_token", None)
+		token = getattr(self, "_token_klar", None)
 		if token and not self.flags.get("cv_stumm"):
 			link = zugang.url(token)
 			frappe.msgprint(
