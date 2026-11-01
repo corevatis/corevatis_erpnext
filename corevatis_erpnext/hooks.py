@@ -105,7 +105,15 @@ doctype_js = {
 		_PROZESSLEISTE,
 	],
 	# Materialwirtschaft (P2.2): „Material bestellen“ am Projekt, Bestellung und Lieferung in Handwerkersprache
-	"Project": ["public/js/planung.js", "public/js/abrechnung.js", _PROZESSLEISTE, _MATERIAL, _KUNDENZUGANG],
+	"Project": [
+		"public/js/planung.js",
+		"public/js/abrechnung.js",
+		_PROZESSLEISTE,
+		_MATERIAL,
+		_KUNDENZUGANG,
+		# Bautagebuch (P3.2): Knopf „Bautagebuch“ mit Dialog Zeitraum (Kern corevatis.bautagebuch)
+		"public/js/bautagebuch.js",
+	],
 	"Material Request": [_MATERIAL],
 	"Purchase Order": [_MATERIAL],
 	"Purchase Receipt": [_MATERIAL],
@@ -146,6 +154,10 @@ corevatis_woche_adapter = "corevatis_erpnext.planung.woche"
 # Stundenkonto in der App (Phase 2 P2.5): Monat, Saldo Jahr und Urlaubskonto des Benutzers
 # (Kern-Endpunkt corevatis.api.v1.mein_stundenkonto ruft fuer_benutzer(user, jahr, monat))
 corevatis_stundenkonto_adapter = "corevatis_erpnext.mitarbeiter"
+# Bautagebuch (Phase 3 P3.2): Anwesenheit aus den Timesheets und Koordinaten des Objekts für das Wetter
+# (Kern corevatis.bautagebuch ruft anwesenheit/projekte_mit_zeiten bzw. koordinaten)
+corevatis_anwesenheit_adapter = "corevatis_erpnext.bautagebuch"
+corevatis_koordinaten_adapter = "corevatis_erpnext.bautagebuch"
 
 # Termin aus der Anfrage in der App (Durchstich A10): Sync-Entität des Kerns (corevatis.api.sync_schema,
 # Hook corevatis_sync_handlers) - legt den Besichtigungstermin wie „Termin anlegen“ im Desk an
