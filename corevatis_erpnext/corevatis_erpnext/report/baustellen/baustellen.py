@@ -95,14 +95,22 @@ def summary(daten: dict) -> list[dict]:
 			"indicator": "Orange" if GELB in farben else "Green",
 		},
 		{"value": farben.count(GRUEN), "label": _("grün"), "datatype": "Int", "indicator": "Green"},
-		{"value": frappe.format_value(flt(sum(z["ist_h"] for z in zeilen)), {"fieldtype": "Float", "precision": 1}), "label": _("Ist h gesamt"), "datatype": "Data"},
+		{
+			"value": frappe.format_value(
+				flt(sum(z["ist_h"] for z in zeilen)), {"fieldtype": "Float", "precision": 1}
+			),
+			"label": _("Ist h gesamt"),
+			"datatype": "Data",
+		},
 	]
 	if daten.get("zeitraum"):
 		ergebnis.append(
 			{
-				"value": flt(sum(flt(z["ist_zeitraum"]) for z in zeilen), 1),
+				"value": frappe.format_value(
+					flt(sum(flt(z["ist_zeitraum"]) for z in zeilen)), {"fieldtype": "Float", "precision": 1}
+				),
 				"label": _("Ist h im Zeitraum"),
-				"datatype": "Float",
+				"datatype": "Data",
 			}
 		)
 	ergebnis.append(
