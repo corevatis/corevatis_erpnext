@@ -8,9 +8,14 @@ frappe.query_reports["Nachbestellen"] = {
 		{ fieldname: "nur_unter", label: __("Nur unter Mindestbestand"), fieldtype: "Check", default: 1 },
 	],
 	onload(report) {
-		report.page.add_inner_button(__("Bedarf anlegen"), () => corevatis_erpnext.materialwirtschaft.nachbestellen_dialog(report));
+		// Dialoge aus materialwirtschaft.bundle.js: auf Berichtsseiten nicht vorgeladen, daher nachladen
+		report.page.add_inner_button(__("Bedarf anlegen"), () =>
+			frappe.require("materialwirtschaft.bundle.js", () => corevatis_erpnext.materialwirtschaft.nachbestellen_dialog(report))
+		);
 		report.page.add_inner_button(__("Mindestbestand setzen"), () =>
-			corevatis_erpnext.materialwirtschaft.mindestbestand_dialog(() => report.refresh())
+			frappe.require("materialwirtschaft.bundle.js", () =>
+				corevatis_erpnext.materialwirtschaft.mindestbestand_dialog(() => report.refresh())
+			)
 		);
 		report.page.add_inner_button(__("Fahrzeuglager"), () => frappe.set_route("query-report", "Fahrzeuglager"));
 	},

@@ -1,7 +1,8 @@
 // Corevatis – Materialwirtschaft (Phase 2, P2.2): Material bestellen (Materialanforderung → Bestellung),
 // Lieferung buchen (Bestellung → Wareneingang), Fahrzeug beladen (Umlagerung), Mindestbestand.
-// Server: corevatis_erpnext.materialwirtschaft (Rollen Büro/Meister). Die Datei steht in doctype_js
-// mehrerer Doctypes und in den Berichten „Nachbestellen“/„Fahrzeuglager“; sie richtet sich einmal ein.
+// Server: corevatis_erpnext.materialwirtschaft (Rollen Büro/Meister). Als Bundle in doctype_js mehrerer
+// Doctypes; die Berichte „Nachbestellen“/„Fahrzeuglager“ laden es per frappe.require nach (Abnahme Build 35:
+// doctype_js gilt nicht auf Berichtsseiten, der Knopf lief ins Leere). Richtet sich einmal ein.
 frappe.provide("corevatis_erpnext.materialwirtschaft");
 
 (function () {

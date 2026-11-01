@@ -23,6 +23,11 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 - **Bestellung**: Zustandstext nach Teillieferung zählt Positionen („1 von 8 Positionen geliefert“) statt des
   mengengewichteten ERPNext-Prozentwerts („0 % geliefert“ bei 0,74 m³ von 1.100 Einheiten); vollständig
   gelieferte Bestellungen zeigen das auch im Status „To Bill“ (grün, kein Hauptknopf).
+- **Berichte „Fahrzeuglager“ und „Nachbestellen“** (Nachprüfung Build 35): die Knöpfe „Fahrzeug beladen“, „Bedarf
+  anlegen“ und „Mindestbestand setzen“ liefen für alle Rollen ins Leere (Konsole: `Cannot read properties of
+  undefined (reading 'beladen_dialog')`), weil `materialwirtschaft.js` nur über `doctype_js` an den Formularen
+  geladen wird, nicht auf Berichtsseiten. Die Datei ist jetzt `materialwirtschaft.bundle.js`; die Berichte laden sie
+  per `frappe.require` nach, die Formulare bekommen sie weiter über `doctype_js`.
 - **Meister liest Mitarbeiter** (Nachprüfung Build 34): ohne Leserecht auf Employee verwarf jedes Link-Feld auf
   Employee - Berichtsfilter „Fahrzeuglager“ und „Stundenkonto“, Dialoge - seinen Wert mit „Unzureichende
   Berechtigung für Employee“. `mitarbeiter.ensure_rechte` gibt dem Meister Lesen und Bericht am Employee; die
