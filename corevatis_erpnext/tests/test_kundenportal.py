@@ -235,6 +235,67 @@ class TestKundenportal(IntegrationTestCase):
 		self.assertTrue(any("/kunde/" in str(m) for m in frappe.get_message_log()), frappe.get_message_log())
 		frappe.clear_messages()
 
+	def test_zugang_manipulation_abgewiesen(self):
+		"""Security-Review: Anker und Token-Hash kommen nie vom Client, Leserecht am Vorgang, danach unveränderlich."""
+		fremd = td.lead_mit_angebot_status()
+		frappe.set_user(BUERO)
+		try:
+			doc = frappe.get_doc(
+				{
+					"doctype": "Kundenzugang",
+					"vorgang_doctype": "Lead",
+					"vorgang": self.lead.name,
+					"anker_doctype": "Lead",
+					"anker": fremd.name,
+					"kunde_name": "Gefälscht",
+					"token_hash": "a" * 64,
+					"aufrufe": 99,
+					"uploads": 99,
+				}
+			)
+			doc.insert()
+			self.assertEqual((doc.anker_doctype, doc.anker), ("Lead", self.lead.name))
+			self.assertEqual(doc.kunde_name, self.lead.lead_name)
+			self.assertNotEqual(doc.token_hash, "a" * 64)
+			self.assertEqual((doc.aufrufe, doc.uploads, doc.letzte_nutzung), (0, 0, None))
+			self.assertIsNone(frappe.db.exists("Kundenzugang", {"token_hash": "a" * 64}))
+			frappe.clear_messages()
+			# nachträglich: Anker, Vorgang und Hash sind fest
+			for aenderung in (
+				{"anker": fremd.name},
+				{"vorgang": fremd.name},
+				{"token_hash": "b" * 64},
+				{"vorgang_doctype": "Quotation", "vorgang": self.angebot.name},
+			):
+				d2 = frappe.get_doc("Kundenzugang", doc.name)
+				d2.update(aenderung)
+				with self.assertRaises(frappe.ValidationError, msg=str(aenderung)):
+					d2.save()
+			# Gültigkeit und Widerruf bleiben änderbar, aber begrenzt
+			d2 = frappe.get_doc("Kundenzugang", doc.name)
+			d2.gueltig_bis = add_days(today(), 30)
+			d2.save()
+			d2.gueltig_bis = add_days(today(), zugang.GUELTIG_TAGE_MAX + 1)
+			with self.assertRaises(zugang.ZugangFehler):
+				d2.save()
+		finally:
+			frappe.set_user("Administrator")
+		# ohne Schreibrecht am Zugang (Monteur) kein Anlegen
+		frappe.set_user(MONTEUR)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				frappe.get_doc(
+					{"doctype": "Kundenzugang", "vorgang_doctype": "Lead", "vorgang": self.lead.name}
+				).insert()
+		finally:
+			frappe.set_user("Administrator")
+		# Leserecht am Vorgang: Büro ohne Recht am Beleg (Rechnung) kommt nicht durch
+		with patch("frappe.has_permission", side_effect=frappe.PermissionError("kein Recht")):
+			with self.assertRaises(frappe.PermissionError):
+				frappe.get_doc(
+					{"doctype": "Kundenzugang", "vorgang_doctype": "Lead", "vorgang": self.lead.name}
+				).insert(ignore_permissions=True)
+
 	def test_anker_kunde_und_projekt(self):
 		auftrag, projekt = _abrechnung_vorgang(self)
 		kunde = frappe.db.get_value("Project", projekt, "customer")

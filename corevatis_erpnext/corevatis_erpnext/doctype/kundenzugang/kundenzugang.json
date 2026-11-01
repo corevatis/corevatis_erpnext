@@ -63,7 +63,8 @@
    "fieldtype": "Link",
    "label": "Case Type",
    "options": "DocType",
-   "read_only": 1
+   "read_only": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "anker",
@@ -72,7 +73,8 @@
    "label": "Case",
    "options": "anker_doctype",
    "read_only": 1,
-   "search_index": 1
+   "search_index": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "section_gueltigkeit",
@@ -140,12 +142,13 @@
    "length": 64,
    "no_copy": 1,
    "read_only": 1,
-   "unique": 1
+   "unique": 1,
+   "set_only_once": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-01 12:00:00.000000",
+ "modified": "2026-11-01 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Corevatis ERPNext",
  "name": "Kundenzugang",
