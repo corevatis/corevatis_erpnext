@@ -289,6 +289,10 @@ doc_events = {
 		"on_update": "corevatis_erpnext.vor_ort.lead_objekt.objekt_an_lead",
 	},
 	# Durchstich D1: Benutzer mit Fachrolle sehen im Dock nur die Leiste „Betrieb“
+	# Meister ohne automatische User Permission auf den eigenen Employee (prozess.mitarbeiter)
+	"Employee": {
+		"validate": "corevatis_erpnext.prozess.mitarbeiter.employee_validate",
+	},
 	"User": {
 		"validate": "corevatis_erpnext.prozess.desk.user_validate",
 		# Durchstich A2: Monteur/Meister bekommen automatisch einen Mitarbeiter (Employee)

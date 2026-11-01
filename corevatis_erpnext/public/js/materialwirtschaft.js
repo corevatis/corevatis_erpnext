@@ -521,10 +521,19 @@ frappe.provide("corevatis_erpnext.materialwirtschaft");
 				frm.set_intro(esc(__("Bestellung (Entwurf) bei {0}: Preise und Liefertermin prüfen, dann „Freigeben“ und an den Lieferanten geben.", [frm.doc.supplier_name || frm.doc.supplier])), "blue");
 			} else if (frm.doc.docstatus === 1 && !["Closed", "Completed", "Delivered"].includes(frm.doc.status)) {
 				const prozent = flt(frm.doc.per_received);
+				// nach Positionen zählen: der ERPNext-Prozentwert ist mengengewichtet (0,7 m³ von 1.100 Einheiten = 0 %)
+				const positionen = frm.doc.items || [];
+				const voll = positionen.filter((z) => flt(z.qty) > 0 && flt(z.received_qty) >= flt(z.qty)).length;
+				const teil = positionen.filter((z) => flt(z.received_qty) > 0 && flt(z.received_qty) < flt(z.qty)).length;
 				frm.set_intro(
 					esc(
-						prozent > 0
-							? __("Bestellung bei {0} freigegeben, {1} % geliefert. Weitere Lieferung über „Lieferung buchen“.", [frm.doc.supplier_name || frm.doc.supplier, Math.round(prozent)])
+						voll + teil > 0
+							? __("Bestellung bei {0} freigegeben, {1} von {2} Positionen geliefert{3}. Weitere Lieferung über „Lieferung buchen“.", [
+									frm.doc.supplier_name || frm.doc.supplier,
+									voll,
+									positionen.length,
+									teil ? __(" ({0} teilweise)", [teil]) : "",
+								])
 							: __("Bestellung bei {0} freigegeben. Kommt die Ware: „Lieferung buchen“ (Lieferschein abgleichen, Lager wählen).", [frm.doc.supplier_name || frm.doc.supplier])
 					),
 					"blue"

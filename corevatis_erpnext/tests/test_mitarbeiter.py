@@ -145,6 +145,32 @@ class TestMitarbeiter(IntegrationTestCase):
 
 	# --- Rechnen -----------------------------------------------------------------------------------
 
+	def test_meister_ohne_benutzerberechtigung(self):
+		# ERPNexts User Permission auf den eigenen Employee sperrt dem Meister Team-Listen, Berichte und
+		# Buchungen für andere (Abnahme Build 33): Bestand bereinigen, Flag am Employee aus, validate hält es
+		from frappe.permissions import add_user_permission
+
+		from corevatis_erpnext.prozess import mitarbeiter as pm
+
+		frappe.db.set_value("Employee", self.emp_meister, "create_user_permission", 1, update_modified=False)
+		add_user_permission("Employee", self.emp_meister, MEISTER, ignore_permissions=True)
+		self.assertTrue(frappe.db.exists("User Permission", {"user": MEISTER, "allow": "Employee"}))
+		entfernt = pm.ensure_meister_ohne_benutzerberechtigung()
+		self.assertTrue(entfernt)
+		self.assertFalse(frappe.db.exists("User Permission", {"user": MEISTER, "allow": "Employee"}))
+		self.assertEqual(frappe.db.get_value("Employee", self.emp_meister, "create_user_permission"), 0)
+		# Speichern mit gesetztem Haken: validate schaltet ihn ab, ERPNext legt keine Berechtigung an
+		emp = frappe.get_doc("Employee", self.emp_meister)
+		emp.create_user_permission = 1
+		emp.save(ignore_permissions=True)
+		self.assertEqual(frappe.db.get_value("Employee", self.emp_meister, "create_user_permission"), 0)
+		self.assertFalse(frappe.db.exists("User Permission", {"user": MEISTER, "allow": "Employee"}))
+		# Monteur behält seine (nur eigene Belege im Desk)
+		add_user_permission("Employee", self.emp, MONTEUR, ignore_permissions=True)
+		pm.ensure_meister_ohne_benutzerberechtigung()
+		self.assertTrue(frappe.db.exists("User Permission", {"user": MONTEUR, "allow": "Employee"}))
+		frappe.db.delete("User Permission", {"user": MONTEUR, "allow": "Employee"})
+
 	def test_felder_am_employee(self):
 		meta = frappe.get_meta("Employee")
 		for feld in (sk.FELD_ANSPRUCH, sk.FELD_UEBERTRAG, sk.FELD_SALDO):

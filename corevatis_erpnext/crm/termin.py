@@ -712,7 +712,13 @@ def _alten_termin_absagen(doc, neu: str) -> str | None:
 	# Über save(): Rechteprüfung, Version, modified und die Event-Hooks (u. a. Google-Sync
 	# ``update_event_in_google_calendar``) laufen - der alte Termin verschwindet auch dort (E-3)
 	event = frappe.get_doc("Event", alt)
-	event.check_permission("write")
+	if not event.has_permission("write"):
+		# Frappe gibt private Termine nur dem Eigentümer und per Freigabe frei. Hat ein anderer Benutzer den
+		# alten Termin angelegt (zweiter Büro-Platz, Vertretung), darf ihn absagen, wer Termine schreiben und
+		# die Anfrage bearbeiten darf - es ist der Termin dieser Anfrage (``gehoert_zum_lead``).
+		frappe.has_permission("Event", "write", throw=True)
+		doc.check_permission("write")
+		event.flags.ignore_permissions = True
 	event.status = "Cancelled"
 	event.save()
 	from frappe.desk.form.assign_to import clear

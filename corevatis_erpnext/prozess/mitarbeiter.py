@@ -22,6 +22,8 @@ def user_on_update(doc, method=None) -> None:
 	if not rollen & set(ROLLEN_MITARBEITER):
 		return
 	ensure_mitarbeiter(doc.name)
+	if "Meister" in rollen:
+		meister_benutzerberechtigung_entfernen(doc.name)
 
 
 def ensure_mitarbeiter(user: str) -> str | None:
@@ -61,6 +63,46 @@ def _gender_platzhalter() -> str | None:
 		if frappe.db.exists("Gender", name):
 			return name
 	return None
+
+
+def _benutzer_mit_rolle(rolle: str) -> list[str]:
+	namen = frappe.get_all(
+		"Has Role", filters={"parenttype": "User", "role": rolle}, pluck="parent", distinct=True
+	)
+	return sorted(n for n in set(namen) if n not in ("Administrator", "Guest"))
+
+
+def meister_benutzerberechtigung_entfernen(user: str) -> list[str]:
+	"""ERPNext legt beim Employee mit Benutzer eine User Permission auf diesen Employee an
+	(``Employee.create_user_permission``, für alle Doctypes). Für den Meister, der das Team plant, sperrt
+	sie Listen, Berichte und Buchungen für andere Mitarbeiter (Abnahme Build 33: Bericht „Fahrzeuglager“
+	ohne Zeilen, „Fahrzeug beladen“ 403, Abwesenheiten-Liste, Stundenkonto). Sie wird entfernt und am
+	Employee abgeschaltet; Monteure behalten sie (nur eigene Belege im Desk)."""
+	entfernt: list[str] = []
+	for emp in frappe.get_all(
+		"Employee", filters={"user_id": user, "create_user_permission": 1}, pluck="name"
+	):
+		frappe.db.set_value("Employee", emp, "create_user_permission", 0, update_modified=False)
+	for up in frappe.get_all("User Permission", filters={"user": user, "allow": "Employee"}, pluck="name"):
+		frappe.delete_doc("User Permission", up, ignore_permissions=True, force=True)
+		entfernt.append(up)
+	if entfernt:
+		frappe.clear_cache(user=user)
+	return entfernt
+
+
+def ensure_meister_ohne_benutzerberechtigung() -> list[str]:
+	"""Bestand: alle Benutzer mit Rolle Meister (``after_migrate``)."""
+	entfernt: list[str] = []
+	for user in _benutzer_mit_rolle("Meister"):
+		entfernt += meister_benutzerberechtigung_entfernen(user)
+	return entfernt
+
+
+def employee_validate(doc, method=None) -> None:
+	"""Employee eines Meisters ohne automatische User Permission (``meister_benutzerberechtigung_entfernen``)."""
+	if doc.user_id and doc.get("create_user_permission") and "Meister" in frappe.get_roles(doc.user_id):
+		doc.create_user_permission = 0
 
 
 def ensure_mitarbeiter_bestand() -> None:

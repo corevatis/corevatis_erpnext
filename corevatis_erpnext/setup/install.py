@@ -203,11 +203,14 @@ def ensure_prozess() -> None:
 	ensure_desk()
 	# Durchstich A2: Benutzer mit Rolle Monteur/Meister bekommen automatisch einen Mitarbeiter
 	from corevatis_erpnext.prozess.mitarbeiter import (
+		ensure_meister_ohne_benutzerberechtigung,
 		ensure_mitarbeiter_bestand,
 		ensure_mitarbeiter_felder_geschuetzt,
 	)
 
 	ensure_mitarbeiter_bestand()
+	# Abnahme Build 33: der Meister plant für das Team, ERPNexts User Permission auf den eigenen Employee stört
+	ensure_meister_ohne_benutzerberechtigung()
 	# Issue #72: persönliche Mitarbeiterfelder nur für System Manager und HR Manager
 	ensure_mitarbeiter_felder_geschuetzt()
 
