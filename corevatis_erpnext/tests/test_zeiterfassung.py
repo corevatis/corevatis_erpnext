@@ -283,3 +283,62 @@ class TestZeiterfassung(IntegrationTestCase):
 		# genau 24 h sind erlaubt (zwei Tagesteile)
 		r = self.buchen(ts(tag, "06:00"), ts(tag + dt.timedelta(days=1), "06:00"))
 		self.assertEqual([zl["stunden"] for zl in r["zeilen"]], [18.0, 6.0])
+
+	def test_zeitfenster_des_kerns(self):
+		"""Handwerker#108: Das Fenster des Kerns (Vorführung ±365 Tage) erweitert die Prüfung; ohne
+		Angabe (Desk) gelten 31 Tage zurück und 1 Tag voraus. Fehlertext und Details je Richtung."""
+		from frappe import _
+		from frappe.utils import now_datetime
+
+		jahr = dt.timedelta(days=365)
+		zukunft = now_datetime() + dt.timedelta(days=4, hours=-1)
+		alt = now_datetime() - dt.timedelta(days=40, hours=-1)
+		# Standard: +4 Tage abgelehnt, Richtung Zukunft
+		with self.assertRaises(z.ZeitKonflikt) as ctx:
+			z.zeitraum_pruefen(zukunft)
+		self.assertEqual(ctx.exception.grund, "ausserhalb_zeitraum")
+		d = ctx.exception.details
+		self.assertEqual(
+			(d["richtung"], d["abstand_tage"], d["erlaubt_voraus_tage"], d["erlaubt_zurueck_tage"]),
+			("zukunft", 4, z.MAX_TAGE_VORAUS, z.MAX_TAGE_ZURUECK),
+		)
+		self.assertEqual(d["max_tage_zurueck"], z.MAX_TAGE_ZURUECK)
+		self.assertEqual(
+			str(ctx.exception),
+			_("The time lies {0} days in the future; at most {1} are allowed.").format(4, 1),
+		)
+		# Standard: 40 Tage zurück abgelehnt, Richtung Vergangenheit
+		with self.assertRaises(z.ZeitKonflikt) as ctx:
+			z.zeitraum_pruefen(alt)
+		d = ctx.exception.details
+		self.assertEqual(
+			(d["richtung"], d["abstand_tage"], d["erlaubt_zurueck_tage"]), ("vergangenheit", 40, 31)
+		)
+		self.assertEqual(
+			str(ctx.exception),
+			_("The time lies {0} days in the past; at most {1} are allowed.").format(40, 31),
+		)
+		# übergebenes Fenster (Vorführung): beides erlaubt
+		z.zeitraum_pruefen(zukunft, zurueck=jahr, voraus=jahr)
+		z.zeitraum_pruefen(alt, zurueck=jahr, voraus=jahr)
+		# ein engeres Fenster (Kern normal: 7 Tage/5 Minuten) verengt den Standard nicht
+		z.zeitraum_pruefen(
+			now_datetime() - dt.timedelta(days=10),
+			zurueck=dt.timedelta(days=7),
+			voraus=dt.timedelta(minutes=5),
+		)
+		# über 365 Tage hinaus auch mit Fenster abgelehnt, erlaubt steht in den Details
+		with self.assertRaises(z.ZeitKonflikt) as ctx:
+			z.zeitraum_pruefen(now_datetime() + dt.timedelta(days=400), zurueck=jahr, voraus=jahr)
+		self.assertEqual(
+			(ctx.exception.details["richtung"], ctx.exception.details["erlaubt_voraus_tage"]),
+			("zukunft", 365),
+		)
+		# Start der laufenden Buchung 4 Tage voraus: ohne Fenster abgelehnt, mit Fenster angelegt
+		with self.assertRaises(z.ZeitKonflikt):
+			z.lauf_starten(self.employee, None, None, z.FAHRZEIT, zukunft, "k-108")
+		lauf = z.lauf_starten(
+			self.employee, None, None, z.FAHRZEIT, zukunft, "k-108", zurueck=jahr, voraus=jahr
+		)
+		self.assertEqual(lauf["von"], zukunft.replace(microsecond=0).isoformat())
+		z.lauf_beenden(self.employee)

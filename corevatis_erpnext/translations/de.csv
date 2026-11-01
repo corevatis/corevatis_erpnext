@@ -114,7 +114,8 @@ Unknown activity type {0}.,Unbekannte Tätigkeitsart {0}.
 Employee {0} not found.,Mitarbeiter {0} nicht gefunden.
 A booking is already running.,Es läuft bereits eine Buchung.
 This booking key is already used.,Dieser Buchungsschlüssel ist bereits vergeben.
-Bookings are only possible within the last {0} days.,Buchungen sind nur für die letzten {0} Tage möglich.
+The time lies {0} days in the future; at most {1} are allowed.,Der Zeitpunkt liegt {0} Tage in der Zukunft; erlaubt ist höchstens {1}.
+The time lies {0} days in the past; at most {1} are allowed.,Der Zeitpunkt liegt {0} Tage in der Vergangenheit; erlaubt sind höchstens {1}.
 A booking may last at most {0} hours.,Eine Buchung darf höchstens {0} Stunden dauern.
 Corevatis Planung Einstellungen,Corevatis Planung Einstellungen
 Settings for work packages and material requirements from sales orders (Corevatis),Einstellungen für Arbeitspakete und Materialbedarf aus Aufträgen (Corevatis)
