@@ -6,6 +6,23 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Behoben (Phase 2, Abnahme Build 33 auf mvp-test)
+
+- **Meister ohne Benutzerberechtigung auf den eigenen Employee**: ERPNext legt beim Employee mit Benutzer eine User
+  Permission auf diesen Employee an (für alle Doctypes). Dem Meister, der das Team plant, sperrte sie den Bericht
+  „Fahrzeuglager“ (Filter auf einen Monteur wurde verworfen), „Fahrzeug beladen“ (403 beim Anlegen der Umlagerung
+  mit `cv_mitarbeiter`), zuvor Stundenkonto und Abwesenheiten. `prozess.mitarbeiter.ensure_meister_ohne_benutzerberechtigung`
+  (nach `migrate`) entfernt sie für Benutzer mit Rolle Meister und schaltet `create_user_permission` am Employee ab;
+  `Employee.validate` hält das; `User.on_update` räumt beim Vergeben der Rolle auf. Monteure behalten ihre.
+- **Kundenportal, Unterschrift**: eine durchgezogene Unterschrift (ein Strich) wurde mit „Bitte unterschreiben Sie im
+  Feld“ abgelehnt, weil zwei Striche verlangt waren; jetzt zählt ein Strich mit Bewegung, ein bloßer Tipper nicht.
+- **Termin anlegen**: Legt ein zweiter Büro-Benutzer (oder eine Vertretung) einen neuen Besichtigungstermin an,
+  scheiterte das Absagen des alten privaten Termins eines anderen Benutzers mit 403 (Frappe gibt private Termine nur
+  dem Eigentümer und per Freigabe frei). Wer Termine schreiben und die Anfrage bearbeiten darf, darf den alten
+  Termin dieser Anfrage absagen.
+- **Bestellung**: Zustandstext nach Teillieferung zählt Positionen („1 von 8 Positionen geliefert“) statt des
+  mengengewichteten ERPNext-Prozentwerts („0 % geliefert“ bei 0,74 m³ von 1.100 Einheiten).
+
 ### Hinzugefügt (Kundenportal, Phase 2 P2.7, Handwerker#91)
 
 - **Kundenseite `/kunde/<token>`** ohne Anmeldung: Der Kunde sieht seinen Vorgang (Objekt, Anfrage), den

@@ -253,6 +253,7 @@
 	// Unterschrift
 	var canvas = document.getElementById("cv-canvas");
 	var striche = 0;
+	var punkte = 0;
 	if (canvas) {
 		var ctx = canvas.getContext("2d");
 		ctx.lineWidth = 2.2;
@@ -280,6 +281,7 @@
 			var p = punkt(e);
 			ctx.lineTo(p.x, p.y);
 			ctx.stroke();
+			punkte++;
 			e.preventDefault();
 		});
 		function ende() { zeichnet = false; }
@@ -289,6 +291,7 @@
 		document.getElementById("cv-canvas-loeschen").addEventListener("click", function () {
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 			striche = 0;
+			punkte = 0;
 		});
 		var annahmeKnopf = document.getElementById("cv-annahme-knopf");
 		annahmeKnopf.addEventListener("click", function () {
@@ -296,7 +299,8 @@
 				meldung("cv-annahme-meldung", {{ _("Bitte bestätigen Sie, dass Sie das Angebot und die Bedingungen gelesen haben.") | tojson }}, "cv-fehler");
 				return;
 			}
-			if (striche < 2) {
+			// ein Strich mit Bewegung reicht (eine durchgezogene Unterschrift); ein bloßer Tipper nicht
+			if (striche < 1 || punkte < 6) {
 				meldung("cv-annahme-meldung", {{ _("Bitte unterschreiben Sie im Feld.") | tojson }}, "cv-fehler");
 				return;
 			}

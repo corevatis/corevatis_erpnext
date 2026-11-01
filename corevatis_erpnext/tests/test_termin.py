@@ -284,6 +284,20 @@ class TestTermin(IntegrationTestCase):
 		lead.save()  # andere Änderungen bleiben möglich
 		self.assertEqual(frappe.db.get_value("Lead", self.lead.name, "cv_termin"), eigener)
 
+	def test_zweiter_buero_benutzer_sagt_alten_termin_ab(self):
+		# Abnahme Build 33: der alte private Termin gehört einem anderen Benutzer und ist dem späteren
+		# Büro-Benutzer nicht freigegeben - wer Termine schreiben und die Anfrage bearbeiten darf, sagt ihn ab
+		erster = self._anlegen()
+		frappe.set_user("Administrator")
+		spaeter = make_user("cv-test-buero3@example.com", "Bernd", ["Sales User"], "Später")
+		frappe.get_doc("User", spaeter).add_roles("Büro")  # erst nach dem ersten Termin Büro
+		frappe.set_user(spaeter)
+		self.assertFalse(frappe.get_doc("Event", erster["event"]).has_permission("write"))
+		zweiter = self._anlegen(user=spaeter, beginn="2030-03-13 10:00:00")
+		self.assertEqual(zweiter["abgesagt"], erster["event"])
+		self.assertEqual(frappe.db.get_value("Event", erster["event"], "status"), "Cancelled")
+		self.assertEqual(frappe.db.get_value("Lead", self.lead.name, "cv_termin"), zweiter["event"])
+
 	def test_anzeigen_ohne_event_recht(self):
 		self._anlegen()
 		frappe.set_user("Administrator")
