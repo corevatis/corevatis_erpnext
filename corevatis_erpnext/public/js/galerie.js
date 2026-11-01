@@ -6,7 +6,8 @@
 // Vor/Zurück (Tasten ←/→, Wischen), Esc/Klick daneben schließt.
 //
 // Ziel ist das HTML-Feld `fieldname` (Standard cv_galerie); fehlt es, erscheint die
-// Galerie als Abschnitt im Formular-Dashboard. Für andere Doctypes (z. B. Objekt aus 2.1)
+// Galerie als Abschnitt im Formular-Dashboard. Fotos mit Markierung aus der App (Befund Foto,
+// `markiert`, P3.1) tragen das Kennzeichen „markiert“. Für andere Doctypes (z. B. Objekt aus 2.1)
 // diese Datei zusätzlich in hooks.doctype_js eintragen und im refresh aufrufen.
 frappe.provide("corevatis_erpnext");
 
@@ -22,6 +23,8 @@ frappe.provide("corevatis_erpnext");
 .cv-galerie-thumb span { position: absolute; left: 0; right: 0; bottom: 0; padding: 2px 6px; font-size: 11px; color: #fff;
 	background: linear-gradient(transparent, rgba(0,0,0,.65)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
 .cv-galerie-thumb:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.cv-galerie-thumb .cv-galerie-markiert { position: absolute; top: 4px; left: 4px; right: auto; bottom: auto; padding: 1px 6px;
+	border-radius: 9px; background: #d93025; color: #fff; font-size: 10px; font-weight: 600; line-height: 16px; }
 .cv-lightbox { position: fixed; inset: 0; z-index: 1060; background: rgba(0,0,0,.92); display: flex; flex-direction: column;
 	height: 100vh; height: 100dvh; touch-action: pan-y; user-select: none; }
 .cv-lightbox-bild { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 8px 56px; }
@@ -90,7 +93,9 @@ frappe.provide("corevatis_erpnext");
 	}
 
 	function unterschrift(bild) {
-		return [bild.file_name, datum(bild), bild.quelle].filter(Boolean).join(" · ");
+		return [bild.file_name, datum(bild), bild.quelle, bild.markiert ? __("markiert") : ""]
+			.filter(Boolean)
+			.join(" · ");
 	}
 
 	function ziel(frm, fieldname, label) {
@@ -188,6 +193,8 @@ frappe.provide("corevatis_erpnext");
 			const knopf = el("button", { type: "button", class: "cv-galerie-thumb", title: unterschrift(bild) });
 			const img = el("img", { src: bild.thumbnail_url || bild.file_url, alt: bild.file_name || "", loading: "lazy" });
 			knopf.append(img, el("span", {}, datum(bild)));
+			// P3.1: Foto aus der App mit Markierung (Kreis, Pfeil, Maß, Text, Pins) - das Bild enthält sie schon
+			if (bild.markiert) knopf.appendChild(el("span", { class: "cv-galerie-markiert" }, __("markiert")));
 			knopf.addEventListener("click", () => lightbox(bilder, i));
 			grid.appendChild(knopf);
 		});

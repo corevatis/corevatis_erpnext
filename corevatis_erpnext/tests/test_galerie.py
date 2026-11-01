@@ -224,3 +224,53 @@ class TestGalerie(IntegrationTestCase):
 		self.assertIn('new Set(["jpg", "jpeg", "png", "gif", "webp", "heic"])', js)
 		self.assertIn("return BILD_ENDUNGEN.has(endung_ziel(bild.file_url));", js)
 		self.assertEqual(galerie.BILD_ENDUNGEN, {"jpg", "jpeg", "png", "gif", "webp", "heic"})
+
+	def test_markiert_aus_fotozeile(self):
+		"""P3.1: Fotozeilen mit ``markiert`` (Befund Foto aus corevatis) kennzeichnen das Bild;
+		die CI-Site hat kein corevatis - Meta der Kindtabelle als Attrappe."""
+		from types import SimpleNamespace as NS
+		from unittest.mock import patch
+
+		def feld(fieldname, fieldtype, permlevel=0, options=None, label=None):
+			return NS(
+				fieldname=fieldname, fieldtype=fieldtype, permlevel=permlevel, options=options, label=label
+			)
+
+		kind = NS(fields=[feld("foto", "Attach Image"), feld("markiert", "Check")])
+		zeilen = [
+			frappe._dict(idx=1, foto="/private/files/a.jpg", markiert=1),
+			frappe._dict(idx=2, foto="/private/files/b.jpg", markiert=0),
+		]
+		doc = NS(
+			meta=NS(
+				get_permlevel_access=lambda _p: [0],
+				fields=[
+					feld("image", "Attach Image"),
+					feld("fotos", "Table", options="Befund Foto", label="Fotos"),
+				],
+			),
+			get=lambda f: {"image": "/private/files/c.jpg", "fotos": zeilen}.get(f),
+		)
+		with patch.object(galerie.frappe, "get_meta", return_value=kind):
+			werte = galerie._feldwerte(doc)
+		self.assertEqual(
+			[(u, m) for u, _q, m in werte],
+			[
+				("/private/files/c.jpg", False),
+				("/private/files/a.jpg", True),
+				("/private/files/b.jpg", False),
+			],
+		)
+		# ohne Leserecht auf das Feld markiert (permlevel): kein Kennzeichen
+		kind.fields[1].permlevel = 7
+		with patch.object(galerie.frappe, "get_meta", return_value=kind):
+			self.assertFalse(any(m for _u, _q, m in galerie._feldwerte(doc)))
+		# Eintrag: Anhang zuerst gelistet, Feldwert mit markiert setzt das Kennzeichen
+		bilder: dict = {}
+		datei = frappe._dict(name="F1", file_name="a.jpg", thumbnail_url=None, is_private=1, creation=None)
+		galerie._eintrag(bilder, "/private/files/a.jpg", datei, quelle=frappe._("Anhang"))
+		self.assertFalse(bilder["/private/files/a.jpg"]["markiert"])
+		galerie._eintrag(bilder, "/private/files/a.jpg", datei, quelle="Fotos 1", markiert=True)
+		self.assertTrue(bilder["/private/files/a.jpg"]["markiert"])
+		# Lead-Bilder ohne Fotozeile: nicht markiert
+		self.assertFalse(any(b["markiert"] for b in galerie.get_bilder("Lead", self.lead.name)))
