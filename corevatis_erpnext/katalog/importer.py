@@ -19,10 +19,13 @@ Regeln:
   Preislisten und Preise gelten site-weit.
 - Artikelgruppen ohne übergeordnete Gruppe kommen unter die Wurzel des Baums (wie beim
   Data Import, wo ERPNext die leere Gruppe an die Wurzel hängt).
+- Positionsgenaue Leistungsregeln (``10_leistungsregel_position.csv``, Handwerker#71) kommen nach
+  den Artikeln; ``parameter`` (JSON) wird inhaltlich verglichen.
 """
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -52,6 +55,12 @@ DATEIEN = (
 # und löscht nichts. Fehlt die Datei, entfällt der Schritt (ältere Pakete).
 BARCODE_DATEI = "09_barcode.csv"
 
+# Optionale Zusatzdatei (Handwerker#71): positionsgenaue Leistungsregeln (Verfahren + Leistungsposition +
+# Parameter), die der Angebotsgenerator (4.1) für Aufmaßzeilen mit nur einem Verfahren wählt. Eigene Datei
+# neben ``00_leistungsregel.csv``: Die allgemeinen Regeln dort tragen keine Parameter (Vertragstest im Kern),
+# und die Regeln hier nennen Artikel, kommen also nach ``06_item.csv``. Nur mit dem Doctype (corevatis).
+POSITIONSREGEL_DATEI = "10_leistungsregel_position.csv"
+
 # Doctypes aus der Kern-App corevatis (nur per Name, kein Import - Lizenzgrenze): die Vorlage
 # wird nur eingespielt, wenn der Doctype auf der Site existiert. Ist corevatis installiert,
 # prüft Item.validate (2.2), dass cv_leistungsregel eine vorhandene Leistungsregel nennt.
@@ -76,6 +85,9 @@ NICHT_VERGLEICHEN = {
 	"Operation": {"description"},
 	"Item Price": {"reference", "note"},
 }
+
+# JSON-Felder: inhaltlich vergleichen (der Kern speichert ``parameter`` neu formatiert, eingerückt)
+JSON_FELDER = {"Leistungsregel": {"parameter"}}
 
 # Kostenkomponenten der Workstation: Doctype ohne „Allow Import“ (kein Data Import möglich),
 # deshalb legt die App sie selbst an (after_install/after_migrate und vor jedem Import)
@@ -148,6 +160,15 @@ def lese_paket(paket: str, warnings: list[str] | None = None) -> dict[str, list[
 		header, rows = lese_csv(verzeichnis / datei)
 		out[doctype] = zu_datensaetzen(doctype, header, rows, warnings)
 	return out
+
+
+def lese_positionsregeln(paket: str, warnings: list[str] | None = None) -> list[dict]:
+	"""Positionsgenaue Leistungsregeln (``10_leistungsregel_position.csv``); leer ohne Datei oder Doctype."""
+	pfad = paket_dir(paket) / POSITIONSREGEL_DATEI
+	if not pfad.is_file() or not frappe.db.exists("DocType", "Leistungsregel"):
+		return []
+	header, rows = lese_csv(pfad)
+	return zu_datensaetzen("Leistungsregel", header, rows, warnings)
 
 
 def zu_datensaetzen(doctype: str, header: list[str], rows: list[list], warnings=None) -> list[dict]:
@@ -226,8 +247,10 @@ def importieren(firma=None, paket="abdichtung", force=False, commit=True) -> dic
 
 	bericht.optional = [
 		f"{doctype} ({datei}): Doctype nicht installiert"
-		for doctype, datei in DATEIEN
-		if doctype in OPTIONAL and not frappe.db.exists("DocType", doctype)
+		for doctype, datei in (*DATEIEN, ("Leistungsregel", POSITIONSREGEL_DATEI))
+		if doctype in OPTIONAL
+		and not frappe.db.exists("DocType", doctype)
+		and (datei != POSITIONSREGEL_DATEI or (paket_dir(paket) / datei).is_file())
 	]
 	bericht.changes.extend(ensure_grundlagen())
 	_fehlende_einheiten(daten, bericht)
@@ -240,6 +263,7 @@ def importieren(firma=None, paket="abdichtung", force=False, commit=True) -> dic
 			_einfach(doctype, daten[doctype], bericht)
 		if doctype == "Item":
 			_barcodes(paket, bericht)
+			_einfach("Leistungsregel", lese_positionsregeln(paket, bericht.warnings), bericht)
 		if commit:
 			frappe.db.commit()
 
@@ -250,6 +274,32 @@ def importieren(firma=None, paket="abdichtung", force=False, commit=True) -> dic
 	bericht.changes.extend(standard_preislisten(daten))
 	if commit:
 		frappe.db.commit()
+	return bericht.as_dict()
+
+
+def nachziehen(firma: str, item_codes, paket: str = "abdichtung") -> dict:
+	"""Neue Katalogpositionen auf einer Site mit vorhandenem Katalog ergänzen (Patches).
+
+	Legt für ``item_codes`` Artikel, Verkaufs-/Einkaufspreise und Stückliste an, falls sie fehlen, dazu
+	fehlende positionsgenaue Leistungsregeln. Vorhandenes bleibt unverändert (Abweichungen unter
+	``skipped``), anderes aus dem Paket fasst der Lauf nicht an - anders als ``importieren`` legt er
+	z. B. keine im Desk gelöschten Preise anderer Artikel neu an. Kein Commit (der Patch committet).
+	"""
+	codes = set(item_codes)
+	warnings: list[str] = []
+	daten = lese_paket(paket, warnings)
+	bericht = Bericht(paket, firma, False)
+	bericht.warnings.extend(warnings)
+	_einfach("Item", [i for i in daten["Item"] if i["item_code"] in codes], bericht)
+	_einfach("Leistungsregel", lese_positionsregeln(paket, bericht.warnings), bericht)
+	_einfach(
+		"Item Price",
+		[p for p in daten["Item Price"] if p["item_code"] in codes],
+		bericht,
+		finde=_finde_preis,
+		label=_label_preis,
+	)
+	_boms([b for b in daten["BOM"] if b["item"] in codes], bericht)
 	return bericht.as_dict()
 
 
@@ -355,10 +405,25 @@ def _label_preis(doctype: str, daten: dict) -> str:
 	return f"Item Price {daten['item_code']} ({daten['price_list']}, {daten['uom']})"
 
 
-def _abweichungen(doc, daten: dict, ignorieren=()) -> list[str]:
+def _json_wert(wert):
+	if wert is None or (isinstance(wert, str) and not wert.strip()):
+		return None
+	if isinstance(wert, str):
+		try:
+			wert = json.loads(wert)
+		except ValueError:
+			return wert.strip()
+	return wert or None  # {} und [] wie leer (Kern speichert leere Parameter als None)
+
+
+def _abweichungen(doc, daten: dict, ignorieren=(), json_felder=()) -> list[str]:
 	felder = []
 	for feld, soll in daten.items():
 		if feld in ignorieren or feld in ("doctype", "name"):
+			continue
+		if feld in json_felder:
+			if _json_wert(doc.get(feld)) != _json_wert(soll):
+				felder.append(feld)
 			continue
 		if isinstance(soll, list):
 			spalten = sorted({k for zeile in soll for k in zeile})
@@ -385,7 +450,7 @@ def _einfach(doctype: str, datensaetze: list[dict], bericht: Bericht, finde=_fin
 			continue
 
 		doc = frappe.get_doc(doctype, name)
-		felder = _abweichungen(doc, daten, ignorieren)
+		felder = _abweichungen(doc, daten, ignorieren, JSON_FELDER.get(doctype, ()))
 		if not felder:
 			bericht.unveraendert += 1
 			continue
