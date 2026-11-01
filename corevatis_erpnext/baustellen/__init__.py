@@ -191,7 +191,8 @@ def _meldungen(projekte: list[str], mangel_tasks: set[str]) -> dict[str, int]:
 
 
 def _termine(projekte: list[str]) -> dict[str, list[frappe._dict]]:
-	"""Künftige offene Termine (Event mit dem Projekt als Teilnehmer)."""
+	"""Künftige offene Termine (Event mit dem Projekt als Teilnehmer). Den Betreff gibt es nur für Events,
+	die der Benutzer lesen darf (private Events anderer Benutzer erscheinen als „Termin“ ohne Betreff)."""
 	teilnehmer = frappe.get_all(
 		"Event Participants",
 		filters={
@@ -203,18 +204,18 @@ def _termine(projekte: list[str]) -> dict[str, list[frappe._dict]]:
 	)
 	if not teilnehmer:
 		return {}
-	events = {
-		e.name: e
-		for e in frappe.get_all(
-			"Event",
-			filters={
-				"name": ["in", list({t.parent for t in teilnehmer})],
-				"status": "Open",
-				"starts_on": [">=", now_datetime()],
-			},
-			fields=["name", "subject", "starts_on"],
-		)
-	}
+	events = {}
+	for e in frappe.get_all(
+		"Event",
+		filters={
+			"name": ["in", list({t.parent for t in teilnehmer})],
+			"status": "Open",
+			"starts_on": [">=", now_datetime()],
+		},
+		fields=["name", "starts_on"],
+	):
+		e.subject = frappe.db.get_value("Event", e.name, "subject") if kette.lesbar("Event", e.name) else None
+		events[e.name] = e
 	je: dict[str, list[frappe._dict]] = {}
 	for t in teilnehmer:
 		if t.parent in events:
@@ -280,7 +281,8 @@ def _naechster_termin(
 		elif _datum(t.exp_end_date) and _datum(t.exp_end_date) >= heute:
 			kandidaten.append((get_datetime(t.exp_end_date), _("Ende: {0}").format(t.subject)))
 	for e in termine:
-		kandidaten.append((get_datetime(e.starts_on), _("Termin: {0}").format(e.subject or e.name)))
+		text = _("Termin: {0}").format(e.subject) if e.subject else _("Termin")
+		kandidaten.append((get_datetime(e.starts_on), text))
 	if _datum(p.expected_end_date) and _datum(p.expected_end_date) >= heute:
 		kandidaten.append((get_datetime(p.expected_end_date), _("Geplantes Ende")))
 	if not kandidaten:

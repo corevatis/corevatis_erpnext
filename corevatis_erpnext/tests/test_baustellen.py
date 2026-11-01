@@ -227,6 +227,31 @@ class TestBaustellen(IntegrationTestCase):
 		self.assertEqual(getdate(r["naechster_termin"]), add_days(HEUTE, 30))
 		self.assertEqual(r["termin_text"], "Geplantes Ende")
 
+	def test_privater_termin_ohne_betreff(self):
+		"""Privates Event eines anderen Benutzers: Datum ja, Betreff nur für Berechtigte (Review)."""
+		frappe.db.set_value(
+			"Task", self.task, {"exp_start_date": add_days(HEUTE, 3), "exp_end_date": add_days(HEUTE, 4)}
+		)
+		event = frappe.get_doc(
+			{
+				"doctype": "Event",
+				"subject": "Privat 5.9 Arzttermin",
+				"event_type": "Private",
+				"starts_on": dt.datetime.combine(add_days(HEUTE, 1), dt.time(10, 0)),
+				"event_participants": [{"reference_doctype": "Project", "reference_docname": self.projekt}],
+			}
+		).insert(ignore_permissions=True)
+		frappe.db.set_value("Event", event.name, "owner", MEISTER, update_modified=False)
+		r = self.zeile()
+		self.assertEqual(getdate(r["naechster_termin"]), add_days(HEUTE, 1))
+		self.assertEqual(r["termin_text"], "Termin")
+		self.assertNotIn("Privat", r["termin_text"])
+		r = self.zeile(user=MEISTER)
+		self.assertEqual(r["termin_text"], "Termin: Privat 5.9 Arzttermin")
+		# öffentlicher Termin: Betreff für alle mit Leserecht
+		frappe.db.set_value("Event", event.name, "event_type", "Public", update_modified=False)
+		self.assertEqual(self.zeile()["termin_text"], "Termin: Privat 5.9 Arzttermin")
+
 	# --- Rechte, Bericht, Meisterfilter, Kennzahlen -----------------------------------------------
 
 	def test_rechte_bericht_meister_und_kennzahlen(self):
