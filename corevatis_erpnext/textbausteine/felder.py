@@ -18,6 +18,8 @@ ART_GEWAEHRLEISTUNG = "Gewährleistung"
 ART_SCHLUSSTEXT = "Schlusstext"
 ART_MAHNTEXT = "Mahntext"
 ART_ANSCHREIBEN = "Anschreiben"
+# Kundenportal (P2.7): Begleittext der Kundenseite
+ART_KUNDENPORTAL = "Kundenportal"
 ART_SONSTIGES = "Sonstiges"
 ARTEN = (
 	ART_VORBEMERKUNG,
@@ -26,6 +28,7 @@ ARTEN = (
 	ART_SCHLUSSTEXT,
 	ART_MAHNTEXT,
 	ART_ANSCHREIBEN,
+	ART_KUNDENPORTAL,
 	ART_SONSTIGES,
 )
 
