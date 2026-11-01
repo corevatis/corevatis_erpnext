@@ -137,6 +137,10 @@ def after_migrate() -> None:
 	ensure_datev()
 	# Kundenportal (P2.7): Felder an Termin, Angebot, Datei; Textbaustein „Kundenportal Begrüßung“
 	ensure_kundenportal()
+	# Stundensatz (Handwerker#104): Workstation „Montage“ aus dem Standard-Kalkulationsschema
+	from corevatis_erpnext.angebot.stundensatz import ensure_abgleich
+
+	ensure_abgleich()
 
 
 def ensure_kundenportal() -> None:

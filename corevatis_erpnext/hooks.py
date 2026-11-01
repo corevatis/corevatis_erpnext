@@ -320,6 +320,10 @@ doc_events = {
 		"after_insert": "corevatis_erpnext.vor_ort.lead_objekt.objekt_an_lead",
 		"on_update": "corevatis_erpnext.vor_ort.lead_objekt.objekt_an_lead",
 	},
+	# Handwerker#104: Stundensatz des Standardschemas (Kern) auch in die Workstation „Montage“
+	"Kalkulationsschema": {
+		"on_update": "corevatis_erpnext.angebot.stundensatz.schema_gespeichert",
+	},
 	# Durchstich D1: Benutzer mit Fachrolle sehen im Dock nur die Leiste „Betrieb“
 	# Meister ohne automatische User Permission auf den eigenen Employee (prozess.mitarbeiter)
 	"Employee": {

@@ -1,5 +1,6 @@
 """Script Report „Nachkalkulation“ (Phase 2, P2.1): je Projekt eine Summenzeile, darunter die Verfahren
-(Arbeitspakete) mit Soll- und Ist-Stunden, Material, Lohn, Erlös, Marge und Ampel.
+(Arbeitspakete) mit Soll- und Ist-Stunden, Sollstunden der Arbeitspakete, Material, Lohn, Erlös, Marge
+und Ampel.
 Daten: ``corevatis_erpnext.nachkalkulation.uebersicht`` (Rolle Büro/Meister, Leserecht am Projekt)."""
 
 import frappe
@@ -35,6 +36,14 @@ def columns() -> list[dict]:
 		{"fieldname": "status", "label": _("Status"), "fieldtype": "Data", "width": 90},
 		{"fieldname": "ampel", "label": _("Ampel"), "fieldtype": "Data", "width": 70},
 		{"fieldname": "soll_h", "label": _("Soll h"), "fieldtype": "Float", "precision": 2, "width": 75},
+		# Sollstunden der Arbeitspakete (Task.cv_sollstunden); Abweichung über 5 % steht im Hinweis (#104)
+		{
+			"fieldname": "soll_h_pakete",
+			"label": _("Soll h Pakete"),
+			"fieldtype": "Float",
+			"precision": 2,
+			"width": 90,
+		},
 		{"fieldname": "ist_h", "label": _("Ist h"), "fieldtype": "Float", "precision": 2, "width": 75},
 		{
 			"fieldname": "fahrt_h",

@@ -133,10 +133,14 @@ class TestPlanung(IntegrationTestCase):
 			clear_document_cache(doctype)
 		frappe.clear_cache(doctype=EINSTELLUNGEN)
 
-	def auftrag(self, liefertage: int = 14) -> dict:
-		"""Testaufmaß → Angebot (eingereicht) → annehmen: Auftrag eingereicht, Projekt, Hook gelaufen."""
+	def auftrag(self, liefertage: int = 14, vorher=None) -> dict:
+		"""Testaufmaß → Angebot (eingereicht) → annehmen: Auftrag eingereicht, Projekt, Hook gelaufen.
+
+		``vorher(angebot)`` läuft vor dem Einreichen (z. B. Kalkulation ändern)."""
 		frappe.set_user("Administrator")
 		name = generator.erzeuge_angebot(self.aufmass.name)["angebot"]
+		if vorher:
+			vorher(name)
 		frappe.get_doc("Quotation", name).submit()
 		frappe.set_user(BUERO)
 		r = annahme.angebot_annehmen(
@@ -290,6 +294,15 @@ class TestPlanung(IntegrationTestCase):
 		self.assertAlmostEqual(ia05["sollstunden"], 365.42 / 60, places=3)
 		self.assertIn("IA-05", tasks[3].description)
 		self.assertIn(auftrag, tasks[3].description)
+		# Die Kalkulation des Stellvertreters trägt keine Minuten: Rückfall Stückliste mit Protokollhinweis (#104)
+		self.assertEqual(ia05["minuten_quelle"], "stueckliste")
+		info = frappe.get_all(
+			"Comment",
+			filters={"reference_doctype": "Task", "reference_name": tasks[3].name, "comment_type": "Info"},
+			pluck="content",
+		)
+		self.assertTrue(any("aus der Stückliste" in c and "IA-05" in c for c in info), info)
+		self.assertIn("aus der Stückliste", tasks[3].description)
 		aussen = [p["item_code"] for p in json.loads(tasks[1].cv_positionen)]
 		self.assertEqual(aussen, ["AA-01", "AA-09", "AA-13"])  # Erdarbeiten vor Abdichtung
 
@@ -320,6 +333,105 @@ class TestPlanung(IntegrationTestCase):
 				),
 				namen,
 			)
+
+	def test_sollstunden_aus_angebotskalkulation(self):
+		"""Handwerker#104: Arbeitspakete und Nachkalkulation lesen die Minuten aus der Kalkulation des
+		Angebots. IA-05 steht dort mit 33 statt 22 min (Stückliste nach dem Angebot geändert)."""
+		from corevatis_erpnext import nachkalkulation as nk
+
+		je_einheit = {
+			"AL-01": 180,
+			"AA-01": 25,
+			"AA-09": 28,
+			"AA-13": 120,
+			"HS-02": 20,
+			"IA-05": 33,
+			"IA-08": 15,
+		}
+
+		def minuten_einfrieren(angebot: str) -> None:
+			daten = json.loads(frappe.db.get_value("Quotation", angebot, "cv_kalkulation_json"))
+			for p in daten["positionen"]:
+				p["kalkulation"]["minuten"] = str(je_einheit[p["item_code"]])
+			daten["schema"] = {"name": "Hülshoff 2026", "stundensatz": "48"}
+			frappe.db.set_value("Quotation", angebot, "cv_kalkulation_json", json.dumps(daten))
+
+		r = self.auftrag(vorher=minuten_einfrieren)
+		tasks = self.tasks(r["auftrag"])
+		# Innenabdichtung: IA-05 33 x 16,61 = 548,13 + IA-08 15 x 26,80 = 402 → 950,13 min = 15,84 h
+		self.assertEqual(
+			[(t.cv_verfahren, flt(t.cv_sollstunden)) for t in tasks],
+			[(v, h) for v, _t, h in PAKETE[:3]] + [("Innenabdichtung", 15.84)],
+		)
+		ia05 = json.loads(tasks[3].cv_positionen)[0]
+		self.assertEqual((ia05["minuten_je_einheit"], ia05["minuten_quelle"]), (33.0, "kalkulation"))
+		self.assertFalse(
+			frappe.get_all(
+				"Comment",
+				filters={
+					"reference_doctype": "Task",
+					"reference_name": ["in", [t.name for t in tasks]],
+					"comment_type": "Info",
+					"content": ["like", "%Stückliste%"],
+				},
+				pluck="content",
+			)
+		)
+		self.assertNotIn("aus der Stückliste", tasks[3].description)
+		# Materialbedarf bleibt bei der Stückliste
+		mr = frappe.get_doc("Material Request", {"cv_auftrag": r["auftrag"]})
+		self.assertEqual({z.item_code: flt(z.qty) for z in mr.items}["MAT-DICHTSCHL"], 191.05)
+
+		# Nachkalkulation: dasselbe Soll, 48 €/h aus der Kalkulation, kein Abweichungshinweis
+		a = nk.projekt_auswerten(r["projekt"])
+		innen = next(z for z in a["zeilen"] if z["verfahren"] == "Innenabdichtung")
+		self.assertEqual((innen["soll_h"], innen["soll_h_pakete"]), (15.84, 15.84))
+		self.assertEqual(a["stundensatz"], 48.0)
+		self.assertEqual(a["summe"]["soll_h_pakete"], a["summe"]["soll_h"])
+		self.assertFalse([h for h in a["hinweise"] if "Arbeitspakete" in h], a["hinweise"])
+
+		# Arbeitspaket von Hand auf 20 h: Summe 48,01 statt 43,85 h (+9 %) → Hinweis
+		frappe.db.set_value("Task", tasks[3].name, "cv_sollstunden", 20)
+		a = nk.projekt_auswerten(r["projekt"])
+		self.assertEqual((a["summe"]["soll_h"], a["summe"]["soll_h_pakete"]), (43.85, 48.01))
+		self.assertTrue(a["hinweise"][0].startswith("Sollstunden der Arbeitspakete"), a["hinweise"])
+		self.assertIn("9 %", a["hinweise"][0])
+
+	def test_stundensatz_aus_schema_in_workstation(self):
+		"""Handwerker#104: Die Workstation „Montage“ wird aus dem Standard-Kalkulationsschema gepflegt."""
+		from frappe.model.document import clear_document_cache
+
+		from corevatis_erpnext.angebot import stundensatz
+
+		for doctype in ("Workstation", "BOM"):
+			self.addCleanup(clear_document_cache, doctype)
+		self.assertEqual(
+			frappe.get_hooks("doc_events")["Kalkulationsschema"]["on_update"],
+			["corevatis_erpnext.angebot.stundensatz.schema_gespeichert"],
+		)
+		self.assertIn("Montage", stundensatz.workstations())
+		bom = frappe.db.get_value("BOM", {"item": "IA-05", "is_default": 1, "docstatus": 1})
+		# nur das aktive Standardschema zählt
+		stundensatz.schema_gespeichert(
+			frappe._dict(name="Nebenschema", ist_standard=0, aktiv=1, stundensatz=60)
+		)
+		self.assertEqual(flt(frappe.db.get_value("Workstation", "Montage", "hour_rate")), 48.0)
+
+		stundensatz.schema_gespeichert(
+			frappe._dict(name="Hülshoff 2026", ist_standard=1, aktiv=1, stundensatz=52)
+		)
+		self.assertEqual(flt(frappe.db.get_value("Workstation", "Montage", "hour_rate")), 52.0)
+		op = frappe.get_all("BOM Operation", filters={"parent": bom}, fields=["hour_rate", "operating_cost"])[
+			0
+		]
+		self.assertEqual(flt(op.hour_rate), 52.0)
+		self.assertAlmostEqual(flt(op.operating_cost), 22 * 52 / 60, places=2)
+		# gleicher Satz: nichts zu tun
+		self.assertEqual(stundensatz.abgleichen(52, "Hülshoff 2026")["geaendert"], [])
+		# ohne Kern (CI-Bench) kein Standardschema: kein Abgleich, keine Meldung
+		if not frappe.db.exists("DocType", stundensatz.SCHEMA_DOCTYPE):
+			self.assertEqual(stundensatz.abgleichen()["geaendert"], [])
+			self.assertEqual(stundensatz.pruefen(), [])
 
 	def test_materialbedarf_nachgerechnet(self):
 		r = self.auftrag()
@@ -388,7 +500,8 @@ class TestPlanung(IntegrationTestCase):
 
 	def test_schreibrechte_fuer_buttons(self):
 		"""Security-Review: Buttons/Whitelist legen mit den Rechten des Benutzers an - Rolle Büro ohne
-		Task-Anlegerecht → 403, ohne Material-Request-Recht (kein Stock User) → 403."""
+		Task-Anlegerecht → 403, ohne Material-Request-Anlegerecht → 403. Seit P2.2 (Materialwirtschaft)
+		hat Büro selbst volle Rechte an Material Request; der Test nimmt sie wie bei Task weg."""
 		frappe.db.set_single_value(
 			EINSTELLUNGEN, {"arbeitspakete_automatisch": 0, "materialbedarf_automatisch": 0}
 		)
@@ -397,10 +510,16 @@ class TestPlanung(IntegrationTestCase):
 			"Custom DocPerm", filters={"parent": "Task", "role": "Büro", "permlevel": 0}, pluck="name"
 		)
 		self.assertTrue(rechte, "Site-Template: Büro hat Rechte an Task")
+		rechte += frappe.get_all(
+			"Custom DocPerm",
+			filters={"parent": "Material Request", "role": "Büro", "permlevel": 0},
+			pluck="name",
+		)
 		for name in rechte:
 			frappe.db.set_value("Custom DocPerm", name, "create", 0)
-		frappe.clear_cache(doctype="Task")
-		self.addCleanup(frappe.clear_cache, doctype="Task")
+		for doctype in ("Task", "Material Request"):
+			frappe.clear_cache(doctype=doctype)
+			self.addCleanup(frappe.clear_cache, doctype=doctype)
 		frappe.set_user(BUERO_NUR)
 		for methode in (planung.tasks_erzeugen, planung.materialbedarf_erzeugen):
 			with self.subTest(methode=methode.__name__), self.assertRaises(frappe.PermissionError):
