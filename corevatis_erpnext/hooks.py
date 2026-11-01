@@ -64,8 +64,9 @@ before_app_uninstall = "corevatis_erpnext.vor_ort.lead_objekt.before_app_uninsta
 # Prozessleiste (prozessleiste.js) im Formularkopf aller Belege der Kette; prozess_lead.js räumt
 # das Lead-Formular auf (Befunde mvp-test Nr. 21)
 _PROZESSLEISTE = "public/js/prozessleiste.js"
-# Materialwirtschaft (P2.2): Dialoge Bestellen, Lieferung buchen, Fahrzeug beladen, Mindestbestand
-_MATERIAL = "public/js/materialwirtschaft.js"
+# Materialwirtschaft (P2.2): Dialoge Bestellen, Lieferung buchen, Fahrzeug beladen, Mindestbestand - als Bundle,
+# weil die Berichte „Fahrzeuglager“ und „Nachbestellen“ es per frappe.require nachladen (doctype_js gilt dort nicht)
+_MATERIAL = "public/js/materialwirtschaft.bundle.js"
 # Kundenportal (P2.7): Knopf „Kundenzugang“ (Link mit Token) an Anfrage, Kunde, Projekt, Angebot
 _KUNDENZUGANG = "public/js/kundenzugang.js"
 # Textbausteine (P2.6): Platzhalter-Hilfe und Vorschau am Baustein (Terms and Conditions)

@@ -13,9 +13,12 @@ frappe.query_reports["Fahrzeuglager"] = {
 		{ fieldname: "bis", label: __("Baustellen bis"), fieldtype: "Date", default: frappe.datetime.add_days(frappe.datetime.get_today(), 7) },
 	],
 	onload(report) {
+		// Dialog aus materialwirtschaft.bundle.js: auf Berichtsseiten nicht vorgeladen, daher nachladen
 		report.page.add_inner_button(__("Fahrzeug beladen"), () => {
 			const f = report.get_values ? report.get_values() : {};
-			corevatis_erpnext.materialwirtschaft.beladen_dialog(f.mitarbeiter, f.von, f.bis, () => report.refresh());
+			frappe.require("materialwirtschaft.bundle.js", () =>
+				corevatis_erpnext.materialwirtschaft.beladen_dialog(f.mitarbeiter, f.von, f.bis, () => report.refresh())
+			);
 		});
 		report.page.add_inner_button(__("Nachbestellen"), () => frappe.set_route("query-report", "Nachbestellen"));
 	},
