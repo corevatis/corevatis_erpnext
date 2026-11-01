@@ -11,6 +11,7 @@ Katalog bleibt auf der Testsite stehen (der CI-Schritt nach den Tests prüft ihn
 from __future__ import annotations
 
 import contextlib
+import json
 import re
 from decimal import ROUND_HALF_UP, Decimal
 from unittest.mock import patch
@@ -24,10 +25,13 @@ from corevatis_erpnext.katalog import importieren, list_pakete, uebersicht
 from corevatis_erpnext.katalog.importer import (
 	BARCODE_DATEI,
 	DATEIEN,
+	POSITIONSREGEL_DATEI,
 	Bericht,
+	_abweichungen,
 	_barcodes,
 	lese_barcodes,
 	lese_csv,
+	nachziehen,
 	paket_dir,
 	standard_preislisten,
 )
@@ -126,10 +130,10 @@ class TestKatalogVorlagen(UnitTestCase):
 	def test_umfang(self):
 		leistungen = [c for c, z in self.items.items() if z["is_sales_item"] == "1"]
 		material = [c for c, z in self.items.items() if z["is_stock_item"] == "1"]
+		# Plan 2.3: ca. 30-50 Leistungen; seit Handwerker#71 51 (IA-10 Innenwand)
 		self.assertGreaterEqual(len(self.boms), 30)
-		self.assertLessEqual(len(leistungen), 50)
-		self.assertEqual(len(leistungen), 50)
-		self.assertEqual(len(self.boms), 48)
+		self.assertEqual(len(leistungen), 51)
+		self.assertEqual(len(self.boms), 49)
 		self.assertEqual(len(material), 32)
 		# jedes Verfahren aus 2.2 hat Leistungspositionen mit Stückliste („Sonstiges“: Allgemeines)
 		verfahren = {self.items[c]["cv_verfahren"] for c in self.boms}
@@ -180,6 +184,59 @@ class TestKatalogVorlagen(UnitTestCase):
 		for code in boden:
 			self.assertEqual(self.items[code]["stock_uom"], "m²", code)
 			self.assertIn(code, self.boms, code)
+
+	def test_positionsgenaue_regeln(self):
+		"""Handwerker#71: Regeln der Innenabdichtung je Wandtyp - eine Leistung je Wand, keine Lücke für
+		Innenwände, keine doppelte Dichtschlämme; jede Regel nennt eine Katalogleistung mit Stückliste."""
+		allgemein = {z["regel_name"] for z in zeilen("00_leistungsregel.csv")}
+		regeln = zeilen(POSITIONSREGEL_DATEI)
+		self.assertEqual(
+			list(regeln[0]),
+			[
+				"regel_name",
+				"aktiv",
+				"gewerk",
+				"verfahren",
+				"regelart",
+				"item_code",
+				"parameter",
+				"beschreibung",
+			],
+		)
+		erlaubt = {  # Parameter der Engine (corevatis.engine.regeln.PARAMETER), die der Katalog nutzt
+			"Wandfläche netto bis Höhe": {"wandtyp", "max_hoehe_m"},
+			"Bodenfläche": set(),
+		}
+		je_item = {}
+		for z in regeln:
+			code = z["item_code"]
+			self.assertNotIn(z["regel_name"], allgemein)
+			self.assertEqual(z["aktiv"], "1")
+			self.assertIn(code, self.boms, f"{code}: Stückliste fehlt")
+			self.assertEqual(z["verfahren"], self.items[code]["cv_verfahren"], code)
+			self.assertEqual(z["gewerk"], self.items[code]["cv_gewerk"], code)
+			self.assertEqual(self.items[code]["stock_uom"], "m²", code)
+			params = json.loads(z["parameter"]) if z["parameter"] else {}
+			self.assertLessEqual(set(params), erlaubt[z["regelart"]], z["regel_name"])
+			self.assertNotIn(code, je_item, f"{code}: zwei Regeln - der Generator nimmt nur eine")
+			je_item[code] = params
+		self.assertEqual(sorted(je_item), ["IA-05", "IA-08", "IA-10"])
+		self.assertEqual(je_item["IA-05"], {"wandtyp": "aussen", "max_hoehe_m": 1.5})
+		self.assertEqual(je_item["IA-10"], {"wandtyp": "innen", "max_hoehe_m": 1.5})
+		self.assertEqual(je_item["IA-08"], {})
+		self.assertEqual(len({z["regel_name"] for z in regeln}), len(regeln))
+
+	def test_abweichungen_json_inhaltlich(self):
+		"""Der Kern speichert ``parameter`` eingerückt und sortiert: kein „weicht ab“ bei gleichem Inhalt."""
+		doc = frappe._dict(parameter='{\n "max_hoehe_m": 1.5,\n "wandtyp": "innen"\n}', item_code="IA-10")
+		soll = {"parameter": '{"wandtyp": "innen", "max_hoehe_m": 1.5}', "item_code": "IA-10"}
+		self.assertEqual(_abweichungen(doc, soll, json_felder={"parameter"}), [])
+		self.assertEqual(_abweichungen(doc, soll), ["parameter"])
+		soll["parameter"] = '{"wandtyp": "aussen", "max_hoehe_m": 1.5}'
+		self.assertEqual(_abweichungen(doc, soll, json_felder={"parameter"}), ["parameter"])
+		leer = frappe._dict(parameter=None)
+		self.assertEqual(_abweichungen(leer, {"parameter": None}, json_felder={"parameter"}), [])
+		self.assertEqual(_abweichungen(leer, {"parameter": "{}"}, json_felder={"parameter"}), [])
 
 	def test_stuecklisten_konsistent(self):
 		for item, bom in self.boms.items():
@@ -373,8 +430,8 @@ class TestKatalogImport(IntegrationTestCase):
 			self.assertEqual(ergebnis.status, "Success", f"{datei}: {ergebnis}")
 			self.assertFalse(ergebnis.fehler, datei)
 			self.assertIn(ergebnis.warnings or "", ("", "[]"), datei)
-		self.assertEqual(self.data_imports["08_bom.csv"].payload_count, 48)
-		self.assertEqual(self.data_imports["06_item.csv"].payload_count, 82)
+		self.assertEqual(self.data_imports["08_bom.csv"].payload_count, 49)
+		self.assertEqual(self.data_imports["06_item.csv"].payload_count, 83)
 
 	def test_vorlagen_spalten_wie_template_download(self):
 		"""Jede Spalte entspricht einer Spalte der Data-Import-Vorlage aus dem Desk (Exporter)."""
@@ -441,10 +498,11 @@ class TestKatalogImport(IntegrationTestCase):
 			self.assertEqual(ergebnis["skipped"], [])
 			self.assertEqual(ergebnis["warnings"], [])
 			if not frappe.db.exists("DocType", "Leistungsregel"):
-				self.assertEqual(len(ergebnis["optional_uebersprungen"]), 1)
+				# allgemeine (00_) und positionsgenaue Regeln (10_, Handwerker#71)
+				self.assertEqual(len(ergebnis["optional_uebersprungen"]), 2)
 			# 8 UOM + 9 Item Group + 2 Price List + 1 Workstation + 1 Operation
-			# + 82 Item + 82 Item Price + 48 BOM + 29 Barcodes (3.11)
-			self.assertEqual(ergebnis["unveraendert"], 262)
+			# + 83 Item + 83 Item Price + 49 BOM + 29 Barcodes (3.11)
+			self.assertEqual(ergebnis["unveraendert"], 265)
 
 	def test_barcodes(self):
 		"""3.11: EAN-13 je Material (interner GS1-Bereich 20…), gültige Prüfziffer, nur Lagerartikel."""
@@ -501,6 +559,44 @@ class TestKatalogImport(IntegrationTestCase):
 				flt(frappe.db.get_value("BOM", neue_bom, "total_cost")), BEISPIELE["HS-02"]["hk"]
 			)
 			self.assertEqual(importieren(firma=FIRMA, commit=False)["changes"], [])
+
+	def test_nachziehen_und_patch_innenwand(self):
+		"""Handwerker#71: Patch ergänzt IA-10 auf einer Site mit älterem Katalog, sonst nichts."""
+		from corevatis_erpnext.patches.v0_5 import katalog_innenwand
+
+		with self.savepoint():
+			self.assertEqual(nachziehen(FIRMA, ["IA-10"])["changes"], [])
+			bom = frappe.db.get_value("Item", "IA-10", "default_bom")
+			self.assertEqual(flt(frappe.db.get_value("BOM", bom, "total_cost")), 25.60)
+			# Stand vor #71: IA-10 ohne Preis und Stückliste, IA-05 mit altem Langtext; dazu ein im
+			# Desk gelöschter Preis eines anderen Artikels - den legt der Patch nicht neu an
+			frappe.get_doc("BOM", bom).cancel()
+			for code in ("IA-10", "IA-04"):
+				name = frappe.db.get_value("Item Price", {"price_list": VERKAUF, "item_code": code}, "name")
+				frappe.delete_doc("Item Price", name, ignore_permissions=True)
+			frappe.db.set_value("Item", "IA-05", "description", katalog_innenwand.IA05_ALT)
+
+			katalog_innenwand.execute()
+			self.assertEqual(
+				flt(
+					frappe.db.get_value(
+						"Item Price", {"price_list": VERKAUF, "item_code": "IA-10"}, "price_list_rate"
+					)
+				),
+				37.12,
+			)
+			self.assertFalse(frappe.db.exists("Item Price", {"price_list": VERKAUF, "item_code": "IA-04"}))
+			neu = frappe.db.get_value("Item", "IA-10", "default_bom")
+			self.assertNotEqual(neu, bom)
+			self.assertEqual(flt(frappe.db.get_value("BOM", neu, "total_cost")), 25.60)
+			self.assertIn(
+				"erdberührter Kelleraußenwände", frappe.db.get_value("Item", "IA-05", "description")
+			)
+			# zweiter Lauf: nichts mehr zu tun; im Desk geänderter Langtext bleibt
+			frappe.db.set_value("Item", "IA-05", "description", "Eigener Text")
+			katalog_innenwand.execute()
+			self.assertEqual(nachziehen(FIRMA, ["IA-10"])["changes"], [])
+			self.assertEqual(frappe.db.get_value("Item", "IA-05", "description"), "Eigener Text")
 
 	def test_kein_ueberschreiben_ohne_force(self):
 		with self.savepoint():
@@ -647,7 +743,9 @@ class TestKatalogImport(IntegrationTestCase):
 
 	def test_uebersicht(self):
 		zeilen_ = {z["item_code"]: z for z in uebersicht(firma=FIRMA)}
-		self.assertEqual(len(zeilen_), 50)
+		self.assertEqual(len(zeilen_), 51)
+		self.assertEqual(zeilen_["IA-10"]["herstellkosten"], 25.60)  # 4 kg * 1,60 + 24 min * 0,80
+		self.assertEqual(zeilen_["IA-10"]["verkaufspreis"], 37.12)
 		for item, soll in BEISPIELE.items():
 			self.assertEqual(zeilen_[item]["herstellkosten"], soll["hk"])
 			self.assertEqual(zeilen_[item]["verkaufspreis"], soll["vk"])

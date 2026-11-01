@@ -42,6 +42,21 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   Woche, Meldungen und Mängel offen; 60 s je Benutzer zwischengespeichert) und Verknüpfungen; Eintrag in der Leiste
   „Betrieb“ unter „Vorgänge“ (`modified` 2026-11-06 09:00). Die Karten legt `after_install`/`after_migrate` an
   (`setup.install.ensure_baustellen`); `prozess.setup.ensure_kennzahlen` nimmt dafür Kartensatz und Doctype entgegen.
+### Katalog Innenabdichtung: Innenwände und positionsgenaue Regeln (Handwerker#71)
+
+- Neue Leistung **IA-10** „Innenwand: Sockelabdichtung mineralische Dichtschlämme 2-lagig, bis 1,50 m Höhe“
+  (m², Stückliste 4 kg/m² Dichtschlämme, 24 min/m², Herstellkosten 25,60 €, Preisliste 37,12 €; Annahme 2.3).
+  Langtext IA-05 präzisiert: Innenseite erdberührter Kelleraußenwände.
+- Neue optionale Vorlage `10_leistungsregel_position.csv` (nur mit `corevatis`): positionsgenaue Regeln der
+  Innenabdichtung, die der Angebotsgenerator für Aufmaßzeilen mit nur einem Verfahren wählt -
+  „IA-05 Außenwand bis 1,50 m“ (Wandtyp Außenwand), „IA-10 Innenwand bis 1,50 m“ (Wandtyp Innenwand, nur
+  zu sanierende Wände, Sanierhöhe = Feuchtehorizont + 30 cm), „IA-08 Boden zu sanieren“. Vorher ergaben
+  feuchte Innenwände keine Position.
+- Importer: liest die Vorlage nach den Artikeln, vergleicht `parameter` (JSON) inhaltlich; neue Funktion
+  `katalog.importer.nachziehen` (nur genannte Artikel und fehlende Regeln, ohne Überschreiben).
+- Patch `v0_5.katalog_innenwand`: ergänzt IA-10 (Artikel, Preis, Stückliste) und die Regeln, präzisiert den
+  unveränderten Langtext von IA-05 und schaltet die Testregel zum Artikel IA-150 (Abnahme 2.2, ohne
+  Stückliste, deckt IA-05 und IA-10 doppelt ab) ab, statt sie zu löschen.
 
 ### Zeitfenster der Zeiterfassung (Handwerker#108)
 
