@@ -2,7 +2,8 @@
 
 - **Einrichtung** (``ensure_setup``, aus ``after_install``/``after_migrate``): Felder am Employee
   ``cv_urlaubsanspruch`` (Tage je Kalenderjahr, 0/leer = 30), ``cv_urlaub_uebertrag`` (Resturlaub aus dem
-  Vorjahr in Tagen), ``cv_saldo_uebertrag`` (Stundenkonto zum 1. Januar, Stunden mit Vorzeichen).
+  Vorjahr in Tagen), ``cv_saldo_uebertrag`` (Stundenkonto zum 1. Januar, Stunden mit Vorzeichen) auf
+  Feldrechtstufe 2 (Büro, System Manager); Rechte am Employee für Büro (pflegen) und Meister (lesen).
 - **Rechnen**: ``stundenkonto`` (Soll aus Tagesarbeitszeit, Feiertagen und Abwesenheiten, Ist aus
   Timesheets, Urlaubskonto).
 - **Desk**: Script Report „Stundenkonto“ (``report/stundenkonto``) mit Ansicht „Mitarbeiter“ (eine Zeile
@@ -24,6 +25,8 @@ from corevatis_erpnext.planung.einstellungen import einstellungen
 from corevatis_erpnext.zeiterfassung import employee_fuer_user
 
 MODULE = "Corevatis ERPNext"
+# Feldrechtstufe der Konto-Felder am Employee (Stufe 1 gehört den persönlichen ERPNext-Feldern, Issue #72)
+STUFE_KONTO = 2
 
 
 def custom_fields() -> dict[str, list[dict]]:
@@ -40,6 +43,7 @@ def custom_fields() -> dict[str, list[dict]]:
 			{
 				"fieldname": sk.FELD_ANSPRUCH,
 				"fieldtype": "Float",
+				"permlevel": STUFE_KONTO,
 				"label": "Urlaubsanspruch (Tage je Jahr)",
 				"insert_after": "cv_konto_section",
 				"default": "30",
@@ -50,6 +54,7 @@ def custom_fields() -> dict[str, list[dict]]:
 			{
 				"fieldname": sk.FELD_UEBERTRAG,
 				"fieldtype": "Float",
+				"permlevel": STUFE_KONTO,
 				"label": "Resturlaub Vorjahr (Tage)",
 				"insert_after": sk.FELD_ANSPRUCH,
 				"precision": "1",
@@ -65,6 +70,7 @@ def custom_fields() -> dict[str, list[dict]]:
 			{
 				"fieldname": sk.FELD_SALDO,
 				"fieldtype": "Float",
+				"permlevel": STUFE_KONTO,
 				"label": "Stundenkonto zum 1. Januar (Stunden)",
 				"insert_after": "cv_konto_column",
 				"precision": "2",
@@ -76,30 +82,38 @@ def custom_fields() -> dict[str, list[dict]]:
 	}
 
 
-RECHTE = {"Büro": {"Employee": ("read", "write", "create", "report")}}
+# Rechte am Employee: Büro pflegt Mitarbeiter; der Meister liest sie (Abnahme Build 34: ohne Leserecht verwirft
+# jedes Link-Feld auf Employee - Berichtsfilter Fahrzeuglager/Stundenkonto, Dialoge - seinen Wert mit
+# „Unzureichende Berechtigung für Employee“). Persönliche ERPNext-Felder liegen auf Stufe 1 (Issue #72,
+# nur System Manager/HR Manager); Urlaubsanspruch, Resturlaub und Stundenkonto-Übertrag auf Stufe 2: Büro und
+# System Manager, nicht der Meister (im Stundenkonto sieht er Urlaubsspalten ebenfalls nur für sich selbst).
+RECHTE = {
+	0: {"Büro": ("read", "write", "create", "report"), "Meister": ("read", "report")},
+	2: {"Büro": ("read", "write"), "System Manager": ("read", "write")},
+}
+DOCTYPE_RECHTE = "Employee"
 
 
 def ensure_setup() -> None:
-	"""Felder am Employee anlegen (idempotent), Büro darf Mitarbeiter pflegen."""
+	"""Felder am Employee anlegen (idempotent), Rechte setzen."""
 	create_custom_fields(custom_fields(), update=True)
 	ensure_rechte()
 
 
 def ensure_rechte() -> None:
-	"""Büro pflegt Urlaubsanspruch, Resturlaub und Übertrag am Employee (ERPNext gibt das nur HR-Rollen);
-	idempotent wie ``textbausteine.ensure_rechte``."""
+	"""Custom DocPerm am Employee je Stufe und Rolle (``RECHTE``), idempotent wie ``textbausteine.ensure_rechte``."""
 	from frappe.permissions import add_permission, update_permission_property
 
-	for rolle, je_doctype in RECHTE.items():
-		if not frappe.db.exists("Role", rolle):
-			continue
-		for doctype, rechte in je_doctype.items():
-			add_permission(doctype, rolle, 0)
+	for stufe, je_rolle in RECHTE.items():
+		for rolle, rechte in je_rolle.items():
+			if not frappe.db.exists("Role", rolle):
+				continue
+			add_permission(DOCTYPE_RECHTE, rolle, stufe)
 			for recht in rechte:
 				if not frappe.db.get_value(
-					"Custom DocPerm", {"parent": doctype, "role": rolle, "permlevel": 0}, recht
+					"Custom DocPerm", {"parent": DOCTYPE_RECHTE, "role": rolle, "permlevel": stufe}, recht
 				):
-					update_permission_property(doctype, rolle, 0, recht, 1, validate=False)
+					update_permission_property(DOCTYPE_RECHTE, rolle, stufe, recht, 1, validate=False)
 	frappe.clear_cache()
 
 

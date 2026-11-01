@@ -171,6 +171,35 @@ class TestMitarbeiter(IntegrationTestCase):
 		self.assertTrue(frappe.db.exists("User Permission", {"user": MONTEUR, "allow": "Employee"}))
 		frappe.db.delete("User Permission", {"user": MONTEUR, "allow": "Employee"})
 
+	def test_rechte_am_employee(self):
+		# Meister liest Mitarbeiter (Link-Filter in Berichten), sieht aber Urlaubsanspruch, Resturlaub und
+		# Stundenkonto-Übertrag nicht (Stufe 2: Büro, System Manager); persönliche Felder bleiben Stufe 1
+		from frappe.model import get_permitted_fields
+
+		self.assertTrue(frappe.has_permission("Employee", "read", user=MEISTER))
+		self.assertFalse(frappe.has_permission("Employee", "write", user=MEISTER))
+		self.assertTrue(frappe.has_permission("Employee", "write", user=BUERO))
+		konto = {sk.FELD_ANSPRUCH, sk.FELD_UEBERTRAG, sk.FELD_SALDO}
+		self.assertFalse(konto & set(get_permitted_fields("Employee", user=MEISTER)))
+		self.assertFalse({"date_of_birth", "iban"} & set(get_permitted_fields("Employee", user=MEISTER)))
+		self.assertEqual(konto & set(get_permitted_fields("Employee", user=BUERO)), konto)
+		self.assertFalse({"date_of_birth", "iban"} & set(get_permitted_fields("Employee", user=BUERO)))
+		frappe.set_user(MEISTER)
+		try:
+			doc = frappe.get_doc("Employee", self.emp)
+			doc.apply_fieldlevel_read_permissions()
+			self.assertIsNone(doc.get(sk.FELD_ANSPRUCH))
+			self.assertEqual(doc.employee_name, "Moritz Konto")
+		finally:
+			frappe.set_user("Administrator")
+		frappe.set_user(BUERO)
+		try:
+			doc = frappe.get_doc("Employee", self.emp)
+			doc.apply_fieldlevel_read_permissions()
+			self.assertEqual(doc.get(sk.FELD_ANSPRUCH), 28)
+		finally:
+			frappe.set_user("Administrator")
+
 	def test_felder_am_employee(self):
 		meta = frappe.get_meta("Employee")
 		for feld in (sk.FELD_ANSPRUCH, sk.FELD_UEBERTRAG, sk.FELD_SALDO):
