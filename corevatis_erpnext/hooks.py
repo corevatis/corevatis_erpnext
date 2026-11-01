@@ -72,6 +72,8 @@ _KUNDENZUGANG = "public/js/kundenzugang.js"
 # Aufgaben am Vorgang (P3.4): Knopf „Aufgabe“ an Anfrage, Auftrag und Projekt, „Erledigt“ am ToDo, Liste
 # „Aufgaben“ (ToDo-Liste in Handwerkersprache); Kern-Felder und -Methoden aus corevatis, ohne Kern inaktiv
 _AUFGABEN = "public/js/aufgaben.js"
+# Sprachnotiz (P3.5): Audio-Player für die Aufnahme der App an Befund, Baustellenmeldung und Aufgabe (ToDo)
+_SPRACHNOTIZ = "public/js/sprachnotiz.js"
 # Textbausteine (P2.6): Platzhalter-Hilfe und Vorschau am Baustein (Terms and Conditions)
 doctype_js = {
 	"Terms and Conditions": "public/js/textbaustein.js",
@@ -98,7 +100,9 @@ doctype_js = {
 	# Angebot aus dem Aufmaß (4.1): Doctype Aufmass aus corevatis, ohne Kern lädt es nie
 	"Aufmass": ["public/js/aufmass_angebot.js", _PROZESSLEISTE],
 	# Foto-Galerie am Befund (3.7): Fotos der App; Doctype aus corevatis, ohne Kern lädt es nie
-	"Befund": ["public/js/galerie.js", "public/js/befund_galerie.js", _PROZESSLEISTE],
+	"Befund": ["public/js/galerie.js", "public/js/befund_galerie.js", _PROZESSLEISTE, _SPRACHNOTIZ],
+	# Baustellenmeldung (3.12) aus corevatis: nur der Player der Sprachnotiz (P3.5)
+	"Baustellenmeldung": [_SPRACHNOTIZ],
 	# Arbeitspakete und Materialbedarf erzeugen (5.1), am Projekt Button „Wochenplan öffnen“
 	# (5.2; öffnet die Plantafel P1.4 mit Projektfilter)
 	# Abrechnung (7.1/7.2): „Abschlag stellen“, „Schlussrechnung erstellen“ an Auftrag und Projekt
@@ -142,7 +146,7 @@ doctype_js = {
 	"Dunning": ["public/js/mahnung_zahlung.bundle.js"],
 	# Abnahme (6.1): Doctype aus corevatis, ohne Kern lädt es nie; „Mangel-Aufgaben erzeugen“
 	"Abnahmeprotokoll": ["public/js/abnahme.js", _PROZESSLEISTE],
-	"ToDo": [_AUFGABEN],
+	"ToDo": [_AUFGABEN, _SPRACHNOTIZ],
 }
 
 # Verbindungen: Angebote am Objekt und am Aufmaß (Kern-Doctypes, Quotation.cv_objekt/cv_aufmass);
