@@ -410,6 +410,64 @@ class TestAngebotsdruck(AngebotsdruckBasis):
 		self.assertIn("Musterweg 3", texte[0])
 		self.assertIn("Angebot", texte[0])
 
+	def test_lohn_und_material(self):
+		"""#105: HS-02 13,26 lfm x 29,42 € aus der Kalkulation (mit Zuschlägen Lohn 261,41, Material
+		128,70) und Regiestunde 2 h x 69,60 € (100 % Lohn): davon Material 128,70 netto / 153,15 brutto,
+		davon Lohn 400,61 netto / 476,73 brutto; je Position „Material … · Lohn …“."""
+		from corevatis_erpnext.abrechnung.einstellungen import EINSTELLUNGEN
+		from corevatis_erpnext.tests._abrechnung import anteile_patch
+		from corevatis_erpnext.tests.test_rechnungsdruck import druck_mit_lohn_material
+
+		if not druck_mit_lohn_material():
+			self.skipTest("erpnext_druckformate ohne Ausweis Material/Lohn (#105)")
+		if "corevatis" not in frappe.get_installed_apps():
+			anteile_patch(self)
+		frappe.db.set_single_value(
+			EINSTELLUNGEN, {"lohnanteil_mit_zuschlaegen": 1, "lohn_material_je_position": 1}
+		)
+		from corevatis_erpnext.katalog.item_felder import ensure_item_fields
+
+		ensure_item_fields()  # Item.cv_verfahren: Regiestunde = „Sonstiges“ + Stunde
+		if frappe.db.has_column("Item", "cv_verfahren"):
+			frappe.db.set_value("Item", PRAEFIX + "AZ-01", "cv_verfahren", "Sonstiges", update_modified=False)
+		kalkulation = {
+			"material": "6.85",
+			"materialzuschlag": "1.0275",
+			"minuten": "20.00",
+			"lohn": "16.00",
+			"erschwernis": "0.00",
+			"einzelkosten": "23.8775",
+		}
+		doc = self.angebot(
+			[self.position("HS-02", 13.26, rate=29.42), self.position("AZ-01", 2)],
+			cv_kalkulation_json=frappe.as_json(
+				{"ok": True, "positionen": [{"item_code": PRAEFIX + "HS-02", "kalkulation": kalkulation}]}
+			),
+		)
+		self.assertEqual(
+			[(flt(z.cv_materialanteil), flt(z.cv_lohnanteil)) for z in doc.items],
+			[(128.7, 261.41), (0.0, 139.2)],
+		)
+		_seiten, texte, _pdf = self.pdf(doc, "lohn-material")
+		alles = "\n".join(texte)
+		flach = " ".join(alles.split())
+		self.assertIn("davon Materialkosten", flach)
+		self.assertIn("davon Lohnkosten", flach)
+		self.assertIn("Material", flach)
+		for feld in ("cv_material_netto", "cv_material_brutto", "cv_lohn_netto", "cv_lohn_brutto"):
+			self.assertIn(doc.get_formatted(feld), alles, feld)
+		self.assertEqual(
+			(
+				flt(doc.cv_material_netto),
+				flt(doc.cv_material_brutto),
+				flt(doc.cv_lohn_netto),
+				flt(doc.cv_lohn_brutto),
+			),
+			(128.7, 153.15, 400.61, 476.73),
+		)
+		for row in doc.items:
+			self.assertIn(row.get_formatted("cv_lohnanteil"), alles)
+
 	def positionen_mittel(self, anzahl: int) -> list[dict]:
 		"""Allgemeine Leistungen, ``anzahl`` Positionen Wand, zwei Boden, eine Eventualposition."""
 		wand, boden = ("Keller 1", "Außenwand innen"), ("Keller 2", "Boden")

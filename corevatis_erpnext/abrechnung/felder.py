@@ -7,6 +7,11 @@ Schlussrechnung, die Abschlagsübersicht (Tabelle ``cv_abschlaege``) und der Loh
 EStG (netto, Steuer, brutto; je Position ``cv_lohnanteil``). Die Felder setzt nur der Server
 (``read_only``); der Rechenweg steht in ``cv_abrechnung_json``.
 
+Material und Lohn (Handwerker#105) an jeder Rechnung: je Position ``cv_materialanteil`` neben
+``cv_lohnanteil`` (Material + Lohn = Betrag), am Kopf ``cv_material_netto``/``_brutto`` und
+``cv_lohn_netto``/``_brutto`` (gleiche Namen wie an Angebot und Auftrag); gesetzt von
+``abrechnung.lohn_material``. Der Lohn ist derselbe Wert wie der § 35a-Lohnanteil.
+
 Mahnwesen und Zahlungseingang (7.5): ``Dunning.cv_mahnstufe`` (0 Zahlungserinnerung, 1/2 Mahnung),
 ``cv_zahlungsfrist`` (zahlbar bis, Druck), ``cv_projekt`` (Vorgang); ``Dunning Type.cv_mahnstufe``;
 ``Bank Transaction.cv_ignoriert``/``cv_notiz`` (Buchung ohne Rechnungsbezug) und ``cv_import`` (Datei).
@@ -171,7 +176,7 @@ def rechnung_felder() -> list[dict]:
 			"fieldtype": "Section Break",
 			"label": "Labour Share (§ 35a EStG)",
 			"insert_after": "cv_abschlaege",
-			"depends_on": "eval:doc.cv_schlussrechnung || doc.cv_abschlag",
+			"depends_on": "eval:doc.cv_schlussrechnung || doc.cv_abschlag || doc.cv_lohnanteil_netto",
 		},
 		{
 			"fieldname": "cv_lohnanteil_netto",
@@ -212,6 +217,52 @@ def rechnung_felder() -> list[dict]:
 			"print_hide": 1,
 			"insert_after": "cv_lohnanteil_prozent",
 		},
+		# Material und Lohn (#105): an jeder Rechnung; Schlussrechnung: der Leistung vor den Abzügen
+		{
+			"fieldname": "cv_section_lohn_material",
+			"fieldtype": "Section Break",
+			"label": "Material and Labour",
+			"insert_after": "cv_abrechnung_json",
+		},
+		{
+			"fieldname": "cv_material_netto",
+			"fieldtype": "Currency",
+			"options": "currency",
+			"label": "Material Costs (Net)",
+			"description": "Material share of the invoiced services incl. its share of the surcharges",
+			"print_hide": 1,
+			"insert_after": "cv_section_lohn_material",
+		},
+		{
+			"fieldname": "cv_material_brutto",
+			"fieldtype": "Currency",
+			"options": "currency",
+			"label": "Material Costs (Gross)",
+			"print_hide": 1,
+			"insert_after": "cv_material_netto",
+		},
+		{
+			"fieldname": "cv_column_lohn_material",
+			"fieldtype": "Column Break",
+			"insert_after": "cv_material_brutto",
+		},
+		{
+			"fieldname": "cv_lohn_netto",
+			"fieldtype": "Currency",
+			"options": "currency",
+			"label": "Labour Costs (Net)",
+			"description": "Same value as the labour share (§ 35a EStG)",
+			"print_hide": 1,
+			"insert_after": "cv_column_lohn_material",
+		},
+		{
+			"fieldname": "cv_lohn_brutto",
+			"fieldtype": "Currency",
+			"options": "currency",
+			"label": "Labour Costs (Gross)",
+			"print_hide": 1,
+			"insert_after": "cv_lohn_netto",
+		},
 	]
 	return [
 		f if f["fieldtype"] in ("Section Break", "Column Break", "Table") else _nur_server(f) for f in felder
@@ -248,11 +299,20 @@ def rechnung_position_felder() -> list[dict]:
 		),
 		_nur_server(
 			{
+				"fieldname": "cv_materialanteil",
+				"fieldtype": "Currency",
+				"options": "currency",
+				"label": "Material Share (Net)",
+				"insert_after": "cv_lohnanteil",
+			}
+		),
+		_nur_server(
+			{
 				"fieldname": "cv_bezug",
 				"fieldtype": "Data",
 				"label": "Related Order Line",
 				"hidden": 1,
-				"insert_after": "cv_lohnanteil",
+				"insert_after": "cv_materialanteil",
 			}
 		),
 	]

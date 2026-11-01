@@ -14,6 +14,10 @@ Die Feldnamen sind verbindlich und dürfen nicht umbenannt werden.
 - ``cv_eventualposition``/``cv_alternativposition``: Kennzeichen für das Druckformat (4.3).
   ERPNext hat zusätzlich ``Quotation Item.is_alternative`` (Position zählt nicht zur Summe);
   der Generator setzt beide Kennzeichen nicht, das Büro pflegt sie im Desk.
+- ``cv_materialanteil``/``cv_lohnanteil`` je Position und ``cv_material_netto``/``_brutto``,
+  ``cv_lohn_netto``/``_brutto`` am Kopf (Handwerker#105): Material und Lohn getrennt ausweisen;
+  Material + Lohn = Netto. Setzt nur der Server (``abrechnung.lohn_material``), gedruckt vom
+  Druckformat; Feldrechte Ebene 0 (der Kunde sieht die Werte auf dem Angebot).
 
 **Feldrechte (Review Epic 4, G-1):** ``cv_kalkulation_json`` (Einkaufspreise, Montageminuten,
 Zuschläge, Deckungsbeitrag) und ``cv_einzelkosten`` (Herstellkosten je Einheit) liegen auf
@@ -49,6 +53,10 @@ QUOTATION_FELDER = (
 	"cv_garantiehinweis",
 	"cv_kalkulation_json",
 	"cv_erzeugt_aus_aufmass",
+	"cv_material_netto",
+	"cv_material_brutto",
+	"cv_lohn_netto",
+	"cv_lohn_brutto",
 )
 QUOTATION_ITEM_FELDER = (
 	"cv_raum",
@@ -60,7 +68,15 @@ QUOTATION_ITEM_FELDER = (
 	"cv_einzelkosten",
 	"cv_eventualposition",
 	"cv_alternativposition",
+	"cv_materialanteil",
+	"cv_lohnanteil",
 )
+
+
+def _nur_lesen(feld: dict) -> dict:
+	"""Material/Lohn (#105): Betrag in Belegwährung, setzt nur der Server, nicht im Standarddruck."""
+	feld.update(options="currency", read_only=1, no_copy=1, print_hide=1)
+	return feld
 
 
 def quotation_fields() -> list[dict]:
@@ -139,6 +155,52 @@ def quotation_fields() -> list[dict]:
 			"label": "Warranty Note",
 			"insert_after": "cv_vorbemerkung",
 		},
+		# Material und Lohn (#105): nach den Angebotstexten, nur lesen
+		{
+			"fieldname": "cv_section_lohn_material",
+			"fieldtype": "Section Break",
+			"label": "Material and Labour",
+			"insert_after": "cv_garantiehinweis",
+		},
+		_nur_lesen(
+			{
+				"fieldname": "cv_material_netto",
+				"fieldtype": "Currency",
+				"label": "Material Costs (Net)",
+				"description": "Material share of the net total incl. its share of the surcharges",
+				"insert_after": "cv_section_lohn_material",
+			}
+		),
+		_nur_lesen(
+			{
+				"fieldname": "cv_material_brutto",
+				"fieldtype": "Currency",
+				"label": "Material Costs (Gross)",
+				"insert_after": "cv_material_netto",
+			}
+		),
+		{
+			"fieldname": "cv_column_lohn_material",
+			"fieldtype": "Column Break",
+			"insert_after": "cv_material_brutto",
+		},
+		_nur_lesen(
+			{
+				"fieldname": "cv_lohn_netto",
+				"fieldtype": "Currency",
+				"label": "Labour Costs (Net)",
+				"description": "Labour share of the net total; the invoice shows it as § 35a EStG labour costs",
+				"insert_after": "cv_column_lohn_material",
+			}
+		),
+		_nur_lesen(
+			{
+				"fieldname": "cv_lohn_brutto",
+				"fieldtype": "Currency",
+				"label": "Labour Costs (Gross)",
+				"insert_after": "cv_lohn_netto",
+			}
+		),
 		# Weitere Informationen: Herleitung der Engine (lang, nur lesen)
 		{
 			"fieldname": "cv_section_kalkulation",
@@ -245,6 +307,24 @@ def quotation_item_fields() -> list[dict]:
 			"label": "Alternative Position",
 			"insert_after": "cv_eventualposition",
 		},
+		_nur_lesen(
+			{
+				"fieldname": "cv_materialanteil",
+				"fieldtype": "Currency",
+				"label": "Material Share (Net)",
+				"description": "Material of the position amount incl. its share of the surcharges",
+				"insert_after": "cv_alternativposition",
+			}
+		),
+		_nur_lesen(
+			{
+				"fieldname": "cv_lohnanteil",
+				"fieldtype": "Currency",
+				"label": "Labour Share (Net)",
+				"description": "Labour of the position amount; material + labour = amount",
+				"insert_after": "cv_materialanteil",
+			}
+		),
 	]
 	for field in fields:
 		field.setdefault("module", MODULE)

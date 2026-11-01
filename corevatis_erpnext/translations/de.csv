@@ -345,7 +345,6 @@ Net,Netto
 Net total of the sales order (refreshed by the server),Nettosumme des Auftrags (vom Server nachgeführt)
 No schedule for orders below this net total (0 = always),Kein Abschlagsplan für Aufträge unter dieser Nettosumme (0 = immer)
 No.,Nr.
-"On: labour share = minutes × hourly rate × (unit price ÷ unit cost), i.e. overheads and profit allocated to labour. Off: minutes × hourly rate only.","An: Lohnanteil = Minuten × Stundensatz × (Einzelpreis ÷ Einzelkosten), also Gemeinkosten und Gewinn anteilig auf den Lohn. Aus: nur Minuten × Stundensatz."
 Open Net,Offen netto
 Order,Auftrag
 Order Total (Net),Auftragssumme (netto)
@@ -545,3 +544,18 @@ Technical,Technik
 Token Hash,Token-Hash
 SHA-256 of the link token; the token itself is never stored,SHA-256 des Link-Tokens; das Token selbst wird nie gespeichert
 Kundenzugänge,Kundenzugänge
+"On (default): surcharges (overheads, profit) are allocated to material and labour by their cost shares, so material + labour = net price. Off: labour = (minutes × hourly rate + hardship) × quantity, material = remainder.","An (Standard): Zuschläge (Gemeinkosten, Gewinn) nach Kostenanteilen auf Material und Lohn verteilt, Material + Lohn = Nettopreis. Aus: Lohn = (Minuten × Stundensatz + Erschwernis) × Menge, Material = Rest."
+Show Material and Labour per Position,Lohn und Material je Position ausweisen
+"Quotation and invoice print a line ""Material … € · Labour … €"" under each position. The totals (thereof material, thereof labour) are always printed.","Angebot und Rechnung drucken unter jeder Position die Zeile „Material … € · Lohn … €“. Die Summen (davon Materialkosten, davon Lohnkosten) stehen immer im Druck."
+Material and Labour,Material und Lohn
+Material Costs (Net),Materialkosten (netto)
+Material Costs (Gross),Materialkosten (brutto)
+Labour Costs (Net),Lohnkosten (netto)
+Labour Costs (Gross),Lohnkosten (brutto)
+Material Share (Net),Materialanteil (netto)
+Material share of the net total incl. its share of the surcharges,Materialanteil am Nettobetrag einschließlich seines Anteils an den Zuschlägen
+Labour share of the net total; the invoice shows it as § 35a EStG labour costs,Lohnanteil am Nettobetrag; die Rechnung weist ihn als Lohnkosten nach § 35a EStG aus
+Material of the position amount incl. its share of the surcharges,Material am Positionsbetrag einschließlich seines Anteils an den Zuschlägen
+Labour of the position amount; material + labour = amount,Lohn am Positionsbetrag; Material + Lohn = Betrag
+Material share of the invoiced services incl. its share of the surcharges,Materialanteil der berechneten Leistung einschließlich seines Anteils an den Zuschlägen
+Same value as the labour share (§ 35a EStG),Derselbe Wert wie der Lohnanteil (§ 35a EStG)
