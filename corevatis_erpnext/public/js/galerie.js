@@ -224,6 +224,8 @@ frappe.provide("corevatis_erpnext");
 				if (frm.docname !== docname) return [];
 				const bilder = r.message || [];
 				zeichnen(container, bilder);
+				// Ergänzungen je Doctype (z. B. Pin-Nummern am Befund, P3.3)
+				if (opts.nachher) opts.nachher(container, bilder);
 				return bilder;
 			});
 	};
