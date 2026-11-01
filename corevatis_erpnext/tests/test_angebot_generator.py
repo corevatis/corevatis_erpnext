@@ -279,6 +279,24 @@ class TestAngebotGenerator(IntegrationTestCase):
 		self.assertEqual(next(z for z in q.items if z.item_code == "AL-01").cv_raum, None)
 		self.assertEqual(flt(next(z for z in q.items if z.item_code == "AA-09").cv_einzelkosten), 47.95)
 
+	def test_maschinenkosten_aus_der_stueckliste(self):
+		"""Handwerker#105: Minibagger-Miete (MAT-BAGGER, ``Item.cv_maschinenkosten`` aus dem Katalog) in
+		der Stückliste von AA-01 - 0,12 h x 38 € = 4,56 € der 5,06 € Material - geht als
+		``maschinen_je_einheit`` an den Kern (§ 35a: Arbeitskosten); ein älterer Kern bekommt nichts."""
+		self.assertEqual(frappe.db.get_value("Item", "MAT-BAGGER", "cv_maschinenkosten"), 1)
+		frappe.set_user(BUERO)
+		with patch.object(generator, "_kern_nimmt_maschinen", lambda: True):
+			self.erzeugen()
+		(aufruf,) = self.kern.aufrufe
+		maschinen = {
+			leistung["item_code"]: flt(leistung["maschinen_je_einheit"])
+			for leistung in aufruf["leistungen"]
+			if "maschinen_je_einheit" in leistung
+		}
+		self.assertEqual(maschinen, {"AA-01": 4.56})
+		if "corevatis" not in frappe.get_installed_apps():
+			self.assertFalse(generator._kern_nimmt_maschinen())
+
 	def test_idempotent_und_entwurf_ersetzen(self):
 		erstes = self.erzeugen()["angebot"]
 		zweites = self.erzeugen()

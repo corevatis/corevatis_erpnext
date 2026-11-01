@@ -1,5 +1,6 @@
 """Lohn und Material getrennt ausweisen (Handwerker#105): Einstellungen, Angebot → Auftrag → Rechnung
-(Spiegel, Teilmenge anteilig, § 35a = Lohn), Abschlags- und Schlussrechnung mit Regiestunde.
+(Spiegel, Teilmenge anteilig, § 35a = Lohn), Abschlags- und Schlussrechnung mit Regiestunde, Maschinen-
+und Fahrtkosten als Lohn (§ 35a Abs. 3 EStG).
 
 Die CI-Bench hat ``corevatis`` nicht: ``AnteileStellvertreter`` ersetzt ``corevatis.engine.anteile``,
 ``KernStellvertreter`` ``corevatis.engine.invoice`` (Rechenregeln: Kern-Tests ``test_engine_anteile``).
@@ -192,6 +193,26 @@ class TestLohnMaterial(IntegrationTestCase):
 		)
 		self.assertEqual(flt(si.cv_lohn_brutto), flt(si.cv_lohnanteil_brutto))
 		self.assertEqual(flt(si.cv_lohn_brutto + si.cv_material_brutto, 2), flt(si.cv_leistung_brutto))
+
+	def test_maschinen_und_fahrtkosten_sind_lohn(self):
+		"""§ 35a Abs. 3 EStG: Maschinen- und Fahrtkosten sind Arbeitskosten. Kalkulation mit 3,60 €
+		Maschinenkosten von 7,20 € Material: MA' = 3,60 x 8,28 ÷ 7,20 = 4,14; Lohn = 500 x (17,60 +
+		4,14) ÷ 25,88 = 420,02. Ein Artikel mit ``Item.cv_maschinenkosten`` als eigene Position: 100 %."""
+		daten = json.loads(KALKULATION)
+		daten["positionen"][0]["kalkulation"]["maschinen"] = "3.60"
+		lead = td.lead_mit_angebot_status()
+		angebot = td.angebot(lead.name, zusatz=False, cv_kalkulation_json=json.dumps(daten))
+		self.assertEqual(anteile(angebot.items), [(79.98, 420.02)])
+		kalkulationen = [p.get("kalkulation") for positionen, _o in self.anteile.aufrufe for p in positionen]
+		self.assertEqual(flt(kalkulationen[-1]["maschinen"]), 3.6)
+		# eigene Position mit Maschinen-/Fahrtkosten (z. B. Anfahrt, Gerätestunde): alles Lohn
+		frappe.db.set_value("Item", td.ARTIKEL, "cv_maschinenkosten", 1, update_modified=False)
+		self.addCleanup(
+			frappe.db.set_value, "Item", td.ARTIKEL, "cv_maschinenkosten", 0, update_modified=False
+		)
+		angebot = td.angebot(td.lead_mit_angebot_status().name, zusatz=False)
+		self.assertEqual(anteile(angebot.items), [(0.0, 500.0)])
+		self.assertTrue(lohn_material.ist_regie(td.ARTIKEL))
 
 	def test_nachtragen_ohne_engine(self):
 		"""Ohne Kern (``corevatis``) bleiben die Felder unverändert, Speichern geht."""

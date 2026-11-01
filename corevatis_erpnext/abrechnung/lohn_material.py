@@ -10,6 +10,12 @@ Quelle je Zeile (die Engine nimmt die erste passende):
 - **Angebot:** Kalkulation der Position aus ``cv_kalkulation_json`` (4.1, je Artikel), sonst
   Regiestunde (Artikel mit Verfahren „Sonstiges“ und Einheit Stunde: 100 % Lohn), sonst
   „Lohnanteil Standard (%)“. Verteilungsschlüssel aus der Einstellung „Lohnanteil mit Zuschlägen“.
+  Artikel mit ``Item.cv_maschinenkosten`` (Maschinen-, Geräte-, Fahrtkosten) als eigene Position:
+  100 % Lohn wie eine Regiestunde; in der Kalkulation zählt ``kalkulation.maschinen`` zum Lohn.
+
+„Lohn“ heißt hier: Arbeitskosten nach § 35a Abs. 3 EStG - Arbeitslohn einschließlich Maschinen- und
+Fahrtkosten (BMF-Schreiben vom 9.11.2016); Material einschließlich Verbrauchsmaterial ist nicht
+begünstigt. Gemeinkosten und Gewinn werden mit der Einstellung anteilig verteilt (Standard).
 - **Auftrag:** Spiegel der Angebotszeile (``quotation_item``) anteilig zum Betrag, sonst wie Angebot
   (``cv_kalkulation_json`` ist gespiegelt).
 - **Rechnung:** Spiegel der Auftragszeile (``so_detail``) anteilig - Teilmengen anteilig. Abschlags-
@@ -34,6 +40,7 @@ from corevatis_erpnext.abrechnung import kern
 from corevatis_erpnext.abrechnung.auftrag import steuersatz
 from corevatis_erpnext.abrechnung.einstellungen import einstellungen
 from corevatis_erpnext.abrechnung.felder import ART_ABZUG
+from corevatis_erpnext.katalog.item_felder import MASCHINENKOSTEN
 from corevatis_erpnext.planung.bauablauf import VERFAHREN_SONSTIGES
 from corevatis_erpnext.planung.positionen import EINHEITEN_STUNDEN
 
@@ -50,7 +57,7 @@ POSITION_SCHLUESSEL = (
 	"bezug",
 	"in_summe",
 )
-KALKULATION_SCHLUESSEL = ("material", "materialzuschlag", "lohn", "erschwernis", "einzelkosten")
+KALKULATION_SCHLUESSEL = ("material", "materialzuschlag", "lohn", "erschwernis", "einzelkosten", "maschinen")
 BEZUG_SCHLUESSEL = ("betrag", "lohn")
 OPTIONEN_SCHLUESSEL = ("mit_zuschlaegen", "lohnanteil_prozent_standard", "steuersatz", "netto", "rundung")
 
@@ -110,18 +117,31 @@ def _kalkulationen(doc) -> dict[str, dict]:
 	return ergebnis
 
 
-def _regie_artikel(zeilen) -> set[str]:
-	"""Regiestunden: Verfahren „Sonstiges“ (Katalog 2.1) und Einheit Stunde - 100 % Lohn."""
-	codes = sorted({z.item_code for z in zeilen if z.get("item_code")})
-	if not codes or not frappe.db.has_column("Item", "cv_verfahren"):
+def _maschinen_artikel(codes) -> set[str]:
+	"""Artikel mit ``Item.cv_maschinenkosten`` (Maschinen-, Geräte-, Fahrtkosten): § 35a Arbeitskosten."""
+	if not codes or not frappe.db.has_column("Item", MASCHINENKOSTEN):
 		return set()
+	return set(
+		frappe.get_all("Item", filters={"name": ["in", list(codes)], MASCHINENKOSTEN: 1}, pluck="name")
+	)
+
+
+def _regie_artikel(zeilen) -> set[str]:
+	"""100 % Lohn: Regiestunden (Verfahren „Sonstiges“, Katalog 2.1, und Einheit Stunde) und Artikel
+	mit Maschinen- oder Fahrtkosten (``Item.cv_maschinenkosten``, jede Einheit)."""
+	codes = sorted({z.item_code for z in zeilen if z.get("item_code")})
+	if not codes:
+		return set()
+	ergebnis = _maschinen_artikel(codes)
+	if not frappe.db.has_column("Item", "cv_verfahren"):
+		return ergebnis
 	artikel = frappe.get_all(
 		"Item",
 		filters={"name": ["in", codes], "cv_verfahren": VERFAHREN_SONSTIGES},
 		fields=["name", "stock_uom"],
 	)
 	stunden = {a.name for a in artikel if a.stock_uom in EINHEITEN_STUNDEN}
-	return {
+	return ergebnis | {
 		z.item_code
 		for z in zeilen
 		if z.get("item_code") in stunden and (z.get("uom") or z.get("stock_uom") or "h") in EINHEITEN_STUNDEN
@@ -129,8 +149,12 @@ def _regie_artikel(zeilen) -> set[str]:
 
 
 def ist_regie(item_code: str | None, uom: str | None = None) -> bool:
-	"""Einzelner Artikel (Nachtrag der Schlussrechnung): Regiestunde?"""
-	if not item_code or not frappe.db.has_column("Item", "cv_verfahren"):
+	"""Einzelner Artikel (Nachtrag der Schlussrechnung): Regiestunde oder Maschinen-/Fahrtkosten?"""
+	if not item_code:
+		return False
+	if _maschinen_artikel([item_code]):
+		return True
+	if not frappe.db.has_column("Item", "cv_verfahren"):
 		return False
 	artikel = frappe.db.get_value("Item", item_code, ["cv_verfahren", "stock_uom"], as_dict=True)
 	return bool(

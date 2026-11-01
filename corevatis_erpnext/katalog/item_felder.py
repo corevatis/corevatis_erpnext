@@ -1,4 +1,5 @@
-"""Aufgabe 2.2: Custom Fields am ERPNext-Doctype ``Item`` (Gewerk, Verfahren, Leistungsregel).
+"""Aufgabe 2.2: Custom Fields am ERPNext-Doctype ``Item`` (Gewerk, Verfahren, Leistungsregel,
+Maschinen- und Fahrtkosten).
 
 - ``cv_gewerk``, ``cv_verfahren``: Select. Die Werte sind deutsche Daten und müssen mit
   ``Leistungsregel.gewerk``/``Leistungsregel.verfahren`` in ``corevatis`` übereinstimmen
@@ -8,6 +9,10 @@
   hätte dann je nach Installationsreihenfolge ein anderes Schema, und auf Sites ohne Kern
   (CI dieses Repos) fehlte das Feld. Die Existenz prüft ``katalog.item.validate`` am Item,
   sobald ``corevatis`` installiert ist (nur per Doctype-Name, kein Import).
+- ``cv_maschinenkosten`` (Handwerker#105): Check. Die Kosten des Artikels sind Maschinen-, Geräte-
+  oder Fahrtkosten (z. B. Minibagger-Miete). Sie zählen nach § 35a Abs. 3 EStG zu den Arbeitskosten
+  (BMF-Schreiben vom 9.11.2016), nicht zum Material: in einer Stückliste als ``maschinen_je_einheit``
+  an die Kalkulation, als eigene Position 100 % Lohn (``abrechnung.lohn_material``).
 
 Labels sind englische Quelltexte, die deutsche Oberfläche kommt aus ``translations/de.csv``.
 """
@@ -16,6 +21,8 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 MODULE = "Corevatis ERPNext"
 LEISTUNGSREGEL_DOCTYPE = "Leistungsregel"
+# Handwerker#105: Maschinen-, Geräte- und Fahrtkosten (§ 35a: Arbeitskosten)
+MASCHINENKOSTEN = "cv_maschinenkosten"
 
 GEWERKE = ("Bauwerksabdichtung", "Sanierputz", "Injektion", "Drainage", "Sonstiges")
 VERFAHREN = (
@@ -67,6 +74,13 @@ def item_fields() -> list[dict]:
 			"label": "Quantity Rule",
 			"description": "Name of the Leistungsregel (Corevatis) that calculates the quantity from the measurement",
 			"insert_after": "cv_column_leistung",
+		},
+		{
+			"fieldname": MASCHINENKOSTEN,
+			"fieldtype": "Check",
+			"label": "Machine or Travel Costs (§ 35a EStG)",
+			"description": "Machine, equipment or travel costs (e.g. excavator hire): count as labour costs under § 35a EStG, not as material - in a BOM and as a position of its own",
+			"insert_after": "cv_leistungsregel",
 		},
 	]
 	for field in fields:
