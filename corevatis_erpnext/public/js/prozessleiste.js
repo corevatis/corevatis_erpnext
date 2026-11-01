@@ -237,6 +237,8 @@ frappe.provide("corevatis_erpnext.prozess");
 		const nachrichten = daten.nachrichten || null;
 		// Nachkalkulation (P2.1): Ampel-Pille „Nachkalkulation: 92 % der Sollstunden, Marge 31 %“ am Projekt
 		const nachkalkulation = daten.nachkalkulation || null;
+		// Materialwirtschaft (P2.2): Pille „Material: 2 offen, 1 bestellt, 3 geliefert“ am Projekt/Auftrag
+		const material = daten.material || null;
 		const nachrichten_text = nachrichten
 			? nachrichten.ungelesen
 				? __("Nachrichten: {0} ungelesen", [nachrichten.ungelesen])
@@ -269,6 +271,15 @@ frappe.provide("corevatis_erpnext.prozess");
 						: ""
 				}
 				${
+					material
+						? `<span class="indicator-pill ${AMPEL[material.ampel] || "gray"} cv-pl-material" title="${esc(
+								material.text || ""
+						  )}">${esc(material.text || __("Material"))}</span><button class="btn btn-xs btn-default cv-pl-material-knopf">${esc(
+								material.bestellbar ? __("Bestellen") : __("Material")
+						  )}</button>`
+						: ""
+				}
+				${
 					naechste
 						? `<button class="btn btn-xs btn-primary cv-pl-naechste">${esc(__("Nächster Schritt"))}: ${esc(
 								naechste.label
@@ -292,6 +303,13 @@ frappe.provide("corevatis_erpnext.prozess");
 		el.find(".cv-pl-nachrichten-knopf").on("click", () =>
 			frappe.set_route("nachrichten", { vorgang: nachrichten.vorgang })
 		);
+		el.find(".cv-pl-material-knopf").on("click", () => {
+			if (material.bestellbar && corevatis_erpnext.materialwirtschaft && corevatis_erpnext.materialwirtschaft.bestellen_dialog) {
+				corevatis_erpnext.materialwirtschaft.bestellen_dialog(material.bestellbar, () => frm.reload_doc());
+			} else {
+				frappe.set_route("Form", "Material Request", material.material_request);
+			}
+		});
 		el.find(".cv-pl-nachkalkulation-knopf").on("click", () => {
 			frappe.route_options = { projekt: nachkalkulation.projekt };
 			frappe.set_route("query-report", "Nachkalkulation");

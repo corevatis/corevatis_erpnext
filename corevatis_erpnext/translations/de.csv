@@ -503,3 +503,19 @@ Lower comes first when several text blocks match,Kleinere Zahl zuerst, wenn mehr
 Valid From,Gültig ab
 Valid Until,Gültig bis
 Placeholders,Platzhalter
+Supplier,Lieferant
+Suppliers,Lieferanten
+Supplier Name,Name des Lieferanten
+Supplier Group,Lieferantengruppe
+Purchase Order,Bestellung
+Purchase Orders,Bestellungen
+Purchase Receipt,Lieferung
+Purchase Receipts,Lieferungen
+Supplier Delivery Note,Lieferschein-Nr.
+Item Reorder,Mindestbestand
+Auto re-order,Mindestbestand und Nachbestellung
+Re-order Level,Mindestbestand
+Re-order Qty,Nachbestellmenge
+Request for,Für Lager
+Check in (group),Prüfen in (Lagergruppe)
+Reorder level based on Warehouse,Mindestbestand je Lager
