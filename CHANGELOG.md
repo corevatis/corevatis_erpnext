@@ -6,6 +6,19 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Neu (Phase 3 P3.2 Bautagebuch, Handwerker#94)
+
+- Modul `corevatis_erpnext.bautagebuch` für den Kern (`corevatis.bautagebuch`): Hook `corevatis_anwesenheit_adapter`
+  mit `anwesenheit(projekt, von, bis)` (Timesheet-Zeilen des Projekts je Mitarbeiter mit Benutzer) und
+  `projekte_mit_zeiten(von, bis)` (nächtlicher Job), Hook `corevatis_koordinaten_adapter` mit `koordinaten(projekt)`
+  (Objektanschrift bzw. Projektadresse über die Geokodierung, höchstens eine neue Anfrage je Aufruf; nur gefragt,
+  wenn im Kern „Wetter automatisch“ eingeschaltet ist).
+- Projekt: Knopf „Bautagebuch“ mit Dialog Zeitraum (erzeugen/aktualisieren, danach Liste gefiltert; „PDF in die
+  Mappe“ für den Zeitraum); Prozessleiste mit Pille „Bautagebuch: n Tage“ und Knopf zur Liste.
+- Leiste „Betrieb“: Eintrag „Bautagebuch“ unter „Meldungen“.
+- Rechte: Knopf und Pille nur für Büro, Meister und System Manager; der Monteur hat im Kern kein Recht am
+  Bautagebuch (Security-Review: Daten aller Monteure eines Tages), die Pille bleibt für ihn leer.
+
 ### Neu (Phase 3 P3.1 Foto-Markierung, Handwerker#93)
 
 - **Foto-Galerie**: Fotos aus Fototabellen mit gesetztem `markiert` (am Befund: `Befund Foto`, Markierung aus der

@@ -239,6 +239,8 @@ frappe.provide("corevatis_erpnext.prozess");
 		const nachkalkulation = daten.nachkalkulation || null;
 		// Materialwirtschaft (P2.2): Pille „Material: 2 offen, 1 bestellt, 3 geliefert“ am Projekt/Auftrag
 		const material = daten.material || null;
+		// Bautagebuch (P3.2): Pille „Bautagebuch: 12 Tage“ am Projekt mit Knopf zur Liste
+		const bautagebuch = daten.bautagebuch || null;
 		const nachrichten_text = nachrichten
 			? nachrichten.ungelesen
 				? __("Nachrichten: {0} ungelesen", [nachrichten.ungelesen])
@@ -280,6 +282,15 @@ frappe.provide("corevatis_erpnext.prozess");
 						: ""
 				}
 				${
+					bautagebuch
+						? `<span class="indicator-pill ${bautagebuch.tage ? "blue" : "gray"} cv-pl-bautagebuch" title="${esc(
+								bautagebuch.erster ? frappe.datetime.str_to_user(bautagebuch.erster) + " – " + frappe.datetime.str_to_user(bautagebuch.letzter) : ""
+						  )}">${esc(bautagebuch.text || __("Bautagebuch"))}</span><button class="btn btn-xs btn-default cv-pl-bautagebuch-knopf">${esc(
+								__("Bautagebuch")
+						  )}</button>`
+						: ""
+				}
+				${
 					naechste
 						? `<button class="btn btn-xs btn-primary cv-pl-naechste">${esc(__("Nächster Schritt"))}: ${esc(
 								naechste.label
@@ -308,6 +319,14 @@ frappe.provide("corevatis_erpnext.prozess");
 				corevatis_erpnext.materialwirtschaft.bestellen_dialog(material.bestellbar, () => frm.reload_doc());
 			} else {
 				frappe.set_route("Form", "Material Request", material.material_request);
+			}
+		});
+		el.find(".cv-pl-bautagebuch-knopf").on("click", () => {
+			if (!bautagebuch.tage && bautagebuch.darf_erzeugen && corevatis_erpnext.bautagebuch && corevatis_erpnext.bautagebuch.dialog) {
+				corevatis_erpnext.bautagebuch.dialog(frm);
+			} else {
+				frappe.route_options = { projekt: bautagebuch.projekt };
+				frappe.set_route("List", "Bautagebuch Tag");
 			}
 		});
 		el.find(".cv-pl-nachkalkulation-knopf").on("click", () => {

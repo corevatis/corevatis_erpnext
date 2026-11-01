@@ -1063,6 +1063,7 @@ def auswerten(k: frappe._dict, einst=None, mit_aktionen: bool = True) -> dict:
 		"nachrichten": _nachrichten(k, lead_lesbar),
 		"nachkalkulation": _nachkalkulation(k),
 		"material": _material(k),
+		"bautagebuch": _bautagebuch(k),
 	}
 
 
@@ -1138,6 +1139,21 @@ def _material(k: frappe._dict) -> dict | None:
 		return materialwirtschaft.stand(projekt.name)
 	except Exception:
 		frappe.log_error(title="Prozessleiste: Material")
+		return None
+
+
+def _bautagebuch(k: frappe._dict) -> dict | None:
+	"""Bautagebuch (P3.2): Pille „Bautagebuch: n Tage“ mit Knopf zur Liste - nur am Projekt, nur mit
+	Kern und Leserecht (``corevatis_erpnext.bautagebuch.stand``). Fehler halten die Leiste nicht auf."""
+	try:
+		start_doctype, start_name = k.get("start") or (None, None)
+		if start_doctype != "Project" or not start_name or not lesbar("Project", start_name):
+			return None
+		from corevatis_erpnext import bautagebuch
+
+		return bautagebuch.stand(start_name)
+	except Exception:
+		frappe.log_error(title="Prozessleiste: Bautagebuch")
 		return None
 
 
