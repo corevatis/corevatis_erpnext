@@ -60,7 +60,9 @@ ERWARTET = {
 			"Abnahmen",
 			"Mappen",
 			"Zeiten",
+			"Stundenkonto",
 			"Laufende Zeiten",
+			"Nachkalkulation",
 		],
 		"Material": [
 			"Materialbuchungen",
@@ -76,14 +78,12 @@ ERWARTET = {
 			"Offene Posten",
 			"Zahlungseingang",
 			"Mahnungen",
-			"Nachkalkulation",
 			"DATEV-Export",
 		],
 		"Stammdaten": [
 			"Kunden",
 			"Mitarbeiter",
 			"Abwesenheiten",
-			"Stundenkonto",
 			"Fahrzeuge",
 			"Katalog",
 			"Textbausteine",
@@ -107,11 +107,11 @@ ERWARTET["Meister"] = {
 	"Anfrage bis Auftrag": [x for x in ERWARTET["Büro"]["Anfrage bis Auftrag"] if x != "Kundenzugänge"],
 	"Ausführung": ERWARTET["Büro"]["Ausführung"],
 	"Material": ERWARTET["Büro"]["Material"],
-	"Stammdaten": ["Mitarbeiter", "Abwesenheiten", "Stundenkonto", "Katalog"],
+	"Stammdaten": ["Mitarbeiter", "Abwesenheiten", "Katalog"],
 }
 ERWARTET["Monteur"] = {
 	"": ["Baustellen", "Termine", "Aufgaben", "Nachrichten"],
-	"Ausführung": ["Zeiten"],
+	"Ausführung": ["Zeiten", "Stundenkonto"],
 }
 
 

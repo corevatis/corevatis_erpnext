@@ -64,7 +64,9 @@ SICHTBAR: dict[tuple[str, str], frozenset[str]] = {
 	("DocType", "Abnahmeprotokoll"): BM,
 	("Page", "mappe"): BM,
 	("DocType", "Timesheet"): BMM,
+	("Report", "Stundenkonto"): BMM,  # Monteur: eigene Zeile (P2.5)
 	("DocType", "Zeitbuchung Lauf"): BM,
+	("Report", "Nachkalkulation"): BM,
 	# Material
 	("DocType", "Stock Entry"): BM,
 	("DocType", "Material Request"): BM,
@@ -78,13 +80,11 @@ SICHTBAR: dict[tuple[str, str], frozenset[str]] = {
 	("Report", "Offene Posten"): B,
 	("Report", "Zahlungseingang"): B,
 	("DocType", "Dunning"): B,
-	("Report", "Nachkalkulation"): B,
 	("DocType", "DATEV Export"): B,
 	# Stammdaten
 	("DocType", "Customer"): B,
 	("DocType", "Employee"): BM,
 	("DocType", "Abwesenheit"): BM,
-	("Report", "Stundenkonto"): BM,
 	("DocType", "Fahrzeug"): B,
 	("DocType", "Item"): BM,
 	("DocType", "Terms and Conditions"): B,

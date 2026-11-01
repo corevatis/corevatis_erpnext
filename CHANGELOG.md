@@ -8,7 +8,7 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ### Desk: Navigation „Betrieb“ neu strukturiert
 
-- Leiste `sidebar/betrieb/betrieb.json` neu geordnet (`modified` 2026-11-07 09:00, `migrate` übernimmt sie):
+- Leiste `sidebar/betrieb/betrieb.json` neu geordnet (`modified` 2026-11-07 10:00, `migrate` übernimmt sie):
   oben ohne Abschnitt Vorgänge, Baustellen, Plantafel, Termine, Aufgaben, Nachrichten (immer offen), darunter
   sechs klappbare Gruppen mit Symbol: Anfrage bis Auftrag, Ausführung, Material, Abrechnung, Stammdaten,
   Einstellungen. Frappe v16 kann das nativ (Abschnitt mit `indent`, `collapsible`, `keep_closed`, Einträge mit
@@ -21,7 +21,8 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   weg. Die Einträge bleiben in `frappe.boot.module_sidebars`, damit geöffnete Belege in der Shell „Betrieb“
   bleiben. Büro und System Manager sehen alles; Meister ohne Abrechnung, Einstellungen, Kundenzugänge und
   ohne Kunden/Fahrzeuge/Textbausteine/Lager/Lieferanten; Monteur: Baustellen („Meine Baustellen“), Termine,
-  Aufgaben, Nachrichten, Zeiten. Rechte bleiben an den Doctypes.
+  Aufgaben, Nachrichten, Zeiten, Stundenkonto. Stundenkonto und Nachkalkulation stehen unter Ausführung
+  (Meister behält die Nachkalkulation, Monteur das Stundenkonto aus P2.5). Rechte bleiben an den Doctypes.
 - Neuer Test `test_sidebar` (Gruppen, keine doppelten Links, Ziele vorhanden, Symbole, Sicht je Rolle,
   Schlüssel passend zu Frappes Payload); `test_plaene_desk`, `test_bautagebuch_adapter` an die neue
   Reihenfolge angepasst.
