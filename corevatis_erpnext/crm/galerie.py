@@ -12,6 +12,10 @@ Feldwert ohne passenden Anhang erscheint mit Namen aus der URL und dem Datum des
 Datensatzes. Nur Datei-URLs der Site werden geliefert (``/files/``, ``/private/files/``,
 ``/api/method/frappe_s3_attachment.``), externe URLs nicht.
 
+Fotozeilen mit ``markiert`` (``Befund Foto`` aus corevatis, Markierung im Foto 3.4/P3.1) liefern
+``markiert: true``; die Galerie zeigt daran ein Kennzeichen „markiert“ (das Bild selbst enthält
+die Markierung schon).
+
 Doppelte URLs (Feldwert und zugehöriger Anhang) erscheinen einmal. Die URLs werden
 unverändert durchgereicht: ``/files/...`` (öffentlich), ``/private/files/...`` und
 ``/api/method/frappe_s3_attachment.controller.generate_file?...`` (S3) laden über die
@@ -33,6 +37,8 @@ ANHANG_FELDTYPEN = ("Attach", "Attach Image")
 # den Fotos der App ab 3.7)
 GALERIE_DOCTYPES = ("Lead", "Objekt", "Befund")
 ERLAUBTE_PRAEFIXE = ("/files/", "/private/files/", "/api/method/frappe_s3_attachment.")
+# Check-Feld der Fotozeile: Bild enthält die Markierung aus der App (Befund Foto, P3.1)
+MARKIERT_FELD = "markiert"
 
 
 @frappe.whitelist()
@@ -62,17 +68,18 @@ def get_bilder(doctype: str, name: str) -> list[dict]:
 	for d in dateien:
 		_eintrag(bilder, d.file_url, d, quelle=_("Anhang"))
 
-	for url, quelle in _feldwerte(doc):
+	for url, quelle, markiert in _feldwerte(doc):
 		# Metadaten nur aus Anhängen *dieses* Datensatzes, keine Suche in der ganzen File-Tabelle
 		datei = nach_url.get(url)
-		_eintrag(bilder, url, datei, quelle=quelle, fallback_creation=doc.creation)
+		_eintrag(bilder, url, datei, quelle=quelle, fallback_creation=doc.creation, markiert=markiert)
 
 	return sorted(bilder.values(), key=lambda b: (str(b["creation"] or ""), b["file_name"] or ""))
 
 
-def _feldwerte(doc) -> list[tuple[str, str]]:
+def _feldwerte(doc) -> list[tuple[str, str, bool]]:
 	"""Anhangsfelder des Datensatzes und seiner Kindtabellen, nur mit Leserecht auf das
-	Feld (permlevel) - zusätzlich zu ``apply_fieldlevel_read_permissions``."""
+	Feld (permlevel) - zusätzlich zu ``apply_fieldlevel_read_permissions``. Dritter Wert:
+	Zeile mit gesetztem ``markiert`` (Markierung im Foto, P3.1)."""
 	# Kindtabellen haben keine eigenen Rechte: es gelten die permlevel des Elterndokuments
 	zugriff = set(doc.meta.get_permlevel_access("read"))
 	werte = []
@@ -80,21 +87,28 @@ def _feldwerte(doc) -> list[tuple[str, str]]:
 		if (df.permlevel or 0) not in zugriff:
 			continue
 		if df.fieldtype in ANHANG_FELDTYPEN and doc.get(df.fieldname):
-			werte.append((doc.get(df.fieldname), _(df.label or df.fieldname)))
+			werte.append((doc.get(df.fieldname), _(df.label or df.fieldname), False))
 		elif df.fieldtype in ("Table", "Table MultiSelect") and df.options:
 			kind = frappe.get_meta(df.options)
 			felder = [
 				f for f in kind.fields if f.fieldtype in ANHANG_FELDTYPEN and (f.permlevel or 0) in zugriff
 			]
+			markiert_feld = any(
+				f.fieldname == MARKIERT_FELD and f.fieldtype == "Check" and (f.permlevel or 0) in zugriff
+				for f in kind.fields
+			)
 			for row in doc.get(df.fieldname) or []:
+				markiert = bool(markiert_feld and row.get(MARKIERT_FELD))
 				for f in felder:
 					if row.get(f.fieldname):
 						label = f"{_(df.label or df.fieldname)} {row.idx}"
-						werte.append((row.get(f.fieldname), label))
+						werte.append((row.get(f.fieldname), label, markiert))
 	return werte
 
 
-def _eintrag(bilder: dict, url: str | None, datei, quelle: str, fallback_creation=None) -> None:
+def _eintrag(
+	bilder: dict, url: str | None, datei, quelle: str, fallback_creation=None, markiert: bool = False
+) -> None:
 	if not _url_erlaubt(url):
 		return
 	# Bild oder nicht entscheidet die Ziel-URL (was der Browser bei „Original öffnen“ lädt),
@@ -106,6 +120,7 @@ def _eintrag(bilder: dict, url: str | None, datei, quelle: str, fallback_creatio
 		# Feldwert zu einem schon gelisteten Anhang: Feldbezeichnung ist aussagekräftiger
 		if quelle != _("Anhang"):
 			bilder[url]["quelle"] = quelle
+		bilder[url]["markiert"] = bilder[url]["markiert"] or markiert
 		return
 	thumbnail = datei and datei.thumbnail_url
 	bilder[url] = {
@@ -116,6 +131,7 @@ def _eintrag(bilder: dict, url: str | None, datei, quelle: str, fallback_creatio
 		"creation": (datei and datei.creation) or fallback_creation,
 		"is_private": bool(datei and datei.is_private) if datei else url.startswith("/private/"),
 		"quelle": quelle,
+		"markiert": markiert,
 	}
 
 

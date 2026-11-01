@@ -6,6 +6,13 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Neu (Phase 3 P3.1 Foto-Markierung, Handwerker#93)
+
+- **Foto-Galerie**: Fotos aus Fototabellen mit gesetztem `markiert` (am Befund: `Befund Foto`, Markierung aus der
+  App mit Kreis, Pfeil, Freihand, Maßpfeil, Text und nummerierten Pins) tragen das Kennzeichen „markiert“ im
+  Vorschaubild und in der Bildunterschrift der Vollansicht. `crm.galerie.get_bilder` liefert dazu `markiert` je
+  Bild (nur mit Leserecht auf das Feld). Rapport und Meldung haben im Desk keine Galerie (keine neue gebaut).
+
 ### Behoben (Phase 2, Abnahme Build 33 auf mvp-test)
 
 - **Meister ohne Benutzerberechtigung auf den eigenen Employee**: ERPNext legt beim Employee mit Benutzer eine User
