@@ -158,6 +158,12 @@ class TestGalerie(IntegrationTestCase):
 		self.assertEqual(hooks["Befund"][:2], ["public/js/galerie.js", "public/js/befund_galerie.js"])
 		for path in hooks["Lead"] + hooks["Befund"]:
 			self.assertTrue(frappe.read_file(frappe.get_app_path("corevatis_erpnext", path)))
+		# Sprachnotiz (P3.5): Player an Befund, Baustellenmeldung und ToDo
+		for doctype in ("Befund", "Baustellenmeldung", "ToDo"):
+			self.assertIn("public/js/sprachnotiz.js", hooks[doctype])
+		self.assertTrue(
+			frappe.read_file(frappe.get_app_path("corevatis_erpnext", "public/js/sprachnotiz.js"))
+		)
 
 	def test_fotofelder_aus_1_1(self):
 		if not frappe.get_meta("Lead").has_field("cv_foto_1"):

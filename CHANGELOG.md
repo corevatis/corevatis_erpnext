@@ -6,6 +6,16 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Phase 3 P3.5 Sprachnotizen (Handwerker#97)
+
+- Neue Datei `public/js/sprachnotiz.js` (doctype_js an Befund, Baustellenmeldung und ToDo): Abschnitt
+  „Sprachnotiz“ im Formular mit Audio-Player und „Herunterladen“ für die Aufnahme aus der App (Kern-Feld
+  `sprachnotiz` bzw. `cv_sprachnotiz` am ToDo; die Büro-Aufgabe einer Meldung zeigt die Sprachnotiz der
+  Meldung). Abgespielt werden nur Audiodateien der eigenen Site; das Leserecht prüft der Server beim Laden der
+  privaten Datei. Ohne Kern fehlt das Feld, es erscheint nichts.
+- Baustellenakte (Projekt/Auftrag): Hinweis „Sprachnotiz“ an Meldungen und Tagesrapporten mit Aufnahme;
+  Einträge der Art `mangel` heißen „Meldung“.
+
 ### Phase 3 P3.4 Aufgaben (Handwerker#96)
 
 - Seitenleiste „Betrieb“: Eintrag „Aufgaben“ nach „Nachrichten“ (ToDo-Liste, gefiltert auf Aufgaben mit Quelle

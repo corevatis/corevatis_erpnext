@@ -98,10 +98,18 @@ frappe.provide("corevatis_erpnext.planung");
 		foto: __("Foto"),
 		rapport: __("Tagesrapport"),
 		meldung: __("Meldung"),
+		mangel: __("Meldung"),
 		material: __("Material"),
 		kommentar: __("Kommentar"),
 		aufgabe: __("Arbeitspaket"),
 	};
+
+	// P3.5: Hinweis „Sprachnotiz“ am Eintrag (Meldung, Tagesrapport); abspielen im Formular des Eintrags
+	function sprachnotiz_hinweis(e) {
+		return e.details && e.details.sprachnotiz
+			? ` <span class="indicator-pill blue" style="margin-left:4px">${esc(__("Sprachnotiz"))}</span>`
+			: "";
+	}
 
 	corevatis_erpnext.planung.baustellenakte = function (frm) {
 		const projekt = frm.doctype === "Project" ? frm.doc.name : frm.doc.project;
@@ -124,7 +132,9 @@ frappe.provide("corevatis_erpnext.planung");
 						(e) =>
 							`<tr><td class="text-nowrap">${esc(e.zeitpunkt ? frappe.datetime.str_to_user(e.zeitpunkt) : e.datum || "")}</td><td>${esc(
 								TYP[e.typ] || e.typ
-							)}</td><td><b>${esc(e.titel)}</b>${e.text ? `<div class="text-muted small">${esc(e.text)}</div>` : ""}</td><td>${esc(
+							)}</td><td><b>${esc(e.titel)}</b>${sprachnotiz_hinweis(e)}${
+								e.text ? `<div class="text-muted small">${esc(e.text)}</div>` : ""
+							}</td><td>${esc(
 								e.benutzer_name || ""
 							)}</td></tr>`
 					)
