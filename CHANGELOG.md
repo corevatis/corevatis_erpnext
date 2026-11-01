@@ -44,6 +44,11 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   nur als PNG (Magic Bytes, 300 B bis 500 KB), Fotos nur JPEG/PNG/HEIC (Magic Bytes, `filetype`), Dateiname
   vom Server, immer privat; Kundendaten in der Vorlage HTML-maskiert, Begrüßung ist der (von Frappe beim
   Speichern bereinigte) Textbaustein des Büros; Fehler an den Kunden nur als Klartext, Details im Error Log.
+- Härtung (Security-Review): `Kundenzugang.validate` bestimmt Anker, Kundenname und Token-Hash immer selbst und
+  verwirft mitgeschickte Werte (REST mit Schreibrecht konnte sonst einen fremden Vorgang als Anker oder einen
+  eigenen Hash setzen), verlangt Leserecht am Vorgang für den anlegenden Benutzer, nullt die Zähler, begrenzt
+  die Gültigkeit auf 365 Tage und lässt Vorgang, Anker und Hash nach dem Anlegen nicht mehr ändern
+  (`set_only_once` plus Prüfung in `validate`). Test `test_zugang_manipulation_abgewiesen`.
 - Tests `tests/test_kundenportal.py`: Felder und Einrichtung, Zugang anlegen/prüfen/widerrufen/ablaufen/ersetzen,
   Rechte, Seite (Kontext, 404), Terminbestätigung, Annahme mit Unterschrift (Auftrag, Projekt, Datei, Felder,
   Kommentar, Gast-Kontext), Fotoupload (Typ, Größe, Höchstzahl, Zähler), Dokumente und Download (Freigabe,

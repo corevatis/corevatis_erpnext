@@ -169,20 +169,20 @@ def erzeugen(doctype: str, name: str, gueltig_tage: int | None = None) -> dict:
 	):
 		widerrufen(alt, _("Ersetzt durch einen neuen Link."))
 	token = token_neu()
+	# Anker, Kundenname und Hash setzt der Controller (``validate``) selbst - nie aus Eingaben
 	doc = frappe.get_doc(
 		{
 			"doctype": DOCTYPE,
 			"vorgang_doctype": doctype,
 			"vorgang": name,
-			"anker_doctype": anker_doctype,
-			"anker": anker,
-			"kunde_name": kunden_name(anker_doctype, anker),
 			"gueltig_bis": add_days(today(), tage),
-			"token_hash": token_hash(token),
 		}
 	)
+	doc.flags.cv_token_klar = token
+	doc.flags.cv_geprueft = True  # Leserecht am Vorgang oben geprüft
 	doc.flags.cv_stumm = True
 	doc.insert(ignore_permissions=True)
+	anker_doctype, anker = doc.anker_doctype, doc.anker
 	try:
 		frappe.get_doc(anker_doctype, anker).add_comment(
 			"Info",
