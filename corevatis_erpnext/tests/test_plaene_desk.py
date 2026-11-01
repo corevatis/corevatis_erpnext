@@ -22,7 +22,9 @@ class TestPlaeneDesk(UnitTestCase):
 		self.assertEqual(
 			(eintrag["type"], eintrag["link_type"], eintrag["link_to"]), ("Link", "DocType", "Plan")
 		)
-		self.assertEqual(labels.index("Pläne"), labels.index("Objekte") + 1)
+		# Desk-Navigation: Gruppe „Anfrage bis Auftrag“, Objekte, Befunde, Aufmaße, Pläne
+		self.assertEqual(labels.index("Pläne"), labels.index("Aufmaße") + 1)
+		self.assertLess(labels.index("Anfrage bis Auftrag"), labels.index("Objekte"))
 
 	def test_galerie_pins(self):
 		galerie = (BASIS / "public/js/galerie.js").read_text(encoding="utf-8")

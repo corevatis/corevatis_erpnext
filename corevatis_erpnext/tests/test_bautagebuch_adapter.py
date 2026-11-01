@@ -161,4 +161,6 @@ class TestBautagebuchAdapter(IntegrationTestCase):
 		labels = [i.get("label") for i in items]
 		eintrag = items[labels.index("Bautagebuch")]
 		self.assertEqual((eintrag["link_type"], eintrag["link_to"]), ("DocType", "Bautagebuch Tag"))
-		self.assertEqual(labels.index("Bautagebuch"), labels.index("Meldungen") + 1)
+		# Desk-Navigation: in der Gruppe „Ausführung“ hinter den Tagesrapporten
+		self.assertEqual(labels.index("Bautagebuch"), labels.index("Tagesrapporte") + 1)
+		self.assertLess(labels.index("Ausführung"), labels.index("Bautagebuch"))

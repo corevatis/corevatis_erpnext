@@ -78,3 +78,36 @@ corevatis_erpnext.nachrichten_badge = (function () {
 })();
 
 $(document).ready(() => corevatis_erpnext.nachrichten_badge.start());
+
+// Desk-Navigation (Handwerker docs/desk-navigation.md): Einträge der Leiste „Betrieb“ je Rolle.
+// Der Server legt in `frappe.boot.cv_navigation[shell]` die Schlüssel der Einträge ab, die der
+// Benutzer nicht sehen soll (corevatis_erpnext.prozess.navigation). Sie werden nur beim Zeichnen
+// weggelassen und bleiben in `frappe.boot.module_sidebars`, damit Frappe geöffnete Belege weiter in
+// der Shell „Betrieb“ hält (`shell_can_show` liest diese Liste). Leere Gruppen zeichnet Frappe nicht.
+// Eingehängt wird an `nest_section_items`, das `setup()` nach dem Ereignis `sidebar_setup` aufruft –
+// auch nach dem Neuladen der Leiste (Seitenleisten-Editor, Arbeitsbereich gespeichert).
+corevatis_erpnext.navigation = {
+	ausgeblendet(shell) {
+		const je_shell = (frappe.boot && frappe.boot.cv_navigation) || {};
+		return new Set(je_shell[shell] || []);
+	},
+	einhaengen(sidebar) {
+		if (!sidebar || sidebar.__cv_navigation || typeof sidebar.nest_section_items !== "function") return;
+		sidebar.__cv_navigation = true;
+		const original = sidebar.nest_section_items;
+		sidebar.nest_section_items = function () {
+			const ergebnis = original.apply(this, arguments);
+			const aus = corevatis_erpnext.navigation.ausgeblendet(this.current_module);
+			if (aus.size && Array.isArray(this.sidebar_items)) {
+				const sichtbar = (item) => !aus.has(item.key);
+				this.sidebar_items = this.sidebar_items.filter(sichtbar);
+				this.sidebar_items.forEach((item) => {
+					if (Array.isArray(item.nested_items)) item.nested_items = item.nested_items.filter(sichtbar);
+				});
+			}
+			return ergebnis;
+		};
+	},
+};
+
+$(document).on("sidebar_setup", (e, daten) => corevatis_erpnext.navigation.einhaengen(daten && daten.sidebar));

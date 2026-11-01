@@ -6,6 +6,27 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Desk: Navigation „Betrieb“ neu strukturiert
+
+- Leiste `sidebar/betrieb/betrieb.json` neu geordnet (`modified` 2026-11-07 10:00, `migrate` übernimmt sie):
+  oben ohne Abschnitt Vorgänge, Baustellen, Plantafel, Termine, Aufgaben, Nachrichten (immer offen), darunter
+  sechs klappbare Gruppen mit Symbol: Anfrage bis Auftrag, Ausführung, Material, Abrechnung, Stammdaten,
+  Einstellungen. Frappe v16 kann das nativ (Abschnitt mit `indent`, `collapsible`, `keep_closed`, Einträge mit
+  `child`); den Auf/Zu-Zustand merkt Frappe je Leiste im localStorage, die Gruppe der geöffneten Seite klappt
+  von selbst auf. Vorher standen alle Einträge ohne `child` flach untereinander, die Abschnitte waren unsichtbar.
+- Neu: Einstellungen → Geräte (`Corevatis Geraet`, Handwerker#70). Der Eintrag „Alle Anfragen“ entfällt sichtbar;
+  der Arbeitsbereich „Anfragen“ hat dafür oben die Kachel „Alle Anfragen“ (`modified` angehoben).
+- Einträge je Rolle: neues Modul `prozess.navigation` (Regel je Link, Hook `boot_session` legt die
+  auszublendenden Schlüssel in `frappe.boot.cv_navigation` ab), `betrieb.bundle.js` lässt sie beim Zeichnen
+  weg. Die Einträge bleiben in `frappe.boot.module_sidebars`, damit geöffnete Belege in der Shell „Betrieb“
+  bleiben. Büro und System Manager sehen alles; Meister ohne Abrechnung, Einstellungen, Kundenzugänge und
+  ohne Kunden/Fahrzeuge/Textbausteine/Lager/Lieferanten; Monteur: Baustellen („Meine Baustellen“), Termine,
+  Aufgaben, Nachrichten, Zeiten, Stundenkonto. Stundenkonto und Nachkalkulation stehen unter Ausführung
+  (Meister behält die Nachkalkulation, Monteur das Stundenkonto aus P2.5). Rechte bleiben an den Doctypes.
+- Neuer Test `test_sidebar` (Gruppen, keine doppelten Links, Ziele vorhanden, Symbole, Sicht je Rolle,
+  Schlüssel passend zu Frappes Payload); `test_plaene_desk`, `test_bautagebuch_adapter` an die neue
+  Reihenfolge angepasst.
+
 ### Kalkulation: Minuten je Einheit und Stundensatz aus einer Quelle (Handwerker#104)
 
 - Arbeitspakete (5.1) nehmen die Minuten je Einheit aus der im angenommenen Angebot eingefrorenen
