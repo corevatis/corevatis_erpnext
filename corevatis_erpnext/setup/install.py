@@ -70,6 +70,7 @@ def after_install() -> None:
 	ensure_abrechnung()
 	ensure_datev()
 	ensure_kundenportal()
+	ensure_baustellen()
 
 
 def after_migrate() -> None:
@@ -141,6 +142,16 @@ def after_migrate() -> None:
 	from corevatis_erpnext.angebot.stundensatz import ensure_abgleich
 
 	ensure_abgleich()
+
+	# Büro-Dashboard (5.9): Kennzahlen des Arbeitsbereichs „Baustellen“
+	ensure_baustellen()
+
+
+def ensure_baustellen() -> None:
+	"""Büro-Dashboard „Baustellen“ (5.9): Number Cards (der Arbeitsbereich kommt aus dem Modul)."""
+	from corevatis_erpnext.baustellen import ensure_setup as ensure_baustellen_setup
+
+	ensure_baustellen_setup()
 
 
 def ensure_kundenportal() -> None:

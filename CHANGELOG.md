@@ -27,6 +27,21 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   nicht.
 - Test `test_planung.test_schreibrechte_fuer_buttons` nimmt Büro auch das Anlegerecht an Material Request
   (seit P2.2 hat Büro dort volle Rechte; der Test schlug auf `main` fehl).
+### Büro-Dashboard „Baustellen“ (Handwerker#43, 5.9)
+
+- Neuer Script Report „Baustellen“ (Büro, Meister, System Manager): je laufendem Projekt (Status offen, Auftrag
+  eingereicht) eine Zeile mit Kunde/Objekt, Meister, Status (offen/in Arbeit), Soll- und Ist-Stunden, Ist im Zeitraum,
+  Abweichung gegen Soll x Fortschritt, Material Soll/Ist, Fortschritt (erledigte Arbeitspakete gewichtet nach
+  Sollstunden, Mangel-Aufgaben ausgenommen), nächstem Termin, offenen Meldungen/Mängeln und Ampel (grün bis 5 % über
+  Soll, gelb bis 15 %, sonst oder bei überfälligem Termin rot). Filter Ist von/bis (Standard laufende Woche), Meister,
+  Status, Ampel; Link „Nachkalkulation“ je Zeile. Meister und Kunde als Data-Spalten (Benutzerberechtigungen).
+- Neues Modul `baustellen`: Soll, Ist und Material aus `nachkalkulation.projekt_auswerten`/`ist_stunden`,
+  Zuweisungen aus `planung.projekt.zuweisungen`, Meister der Besichtigung aus `prozess.kette`; keine eigene
+  Soll/Ist-Rechnung.
+- Neuer Arbeitsbereich „Baustellen“ mit vier Kennzahlen (Number Cards vom Typ Custom: laufend, rot, Stunden diese
+  Woche, Meldungen und Mängel offen; 60 s je Benutzer zwischengespeichert) und Verknüpfungen; Eintrag in der Leiste
+  „Betrieb“ unter „Vorgänge“ (`modified` 2026-11-06 09:00). Die Karten legt `after_install`/`after_migrate` an
+  (`setup.install.ensure_baustellen`); `prozess.setup.ensure_kennzahlen` nimmt dafür Kartensatz und Doctype entgegen.
 
 ### Zeitfenster der Zeiterfassung (Handwerker#108)
 

@@ -1,0 +1,108 @@
+{
+ "charts": [],
+ "content": "[{\"id\": \"cvbsnc0\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Baustellen laufend\", \"col\": 3}}, {\"id\": \"cvbsnc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Baustellen rot\", \"col\": 3}}, {\"id\": \"cvbsnc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Baustellen: Stunden diese Woche\", \"col\": 3}}, {\"id\": \"cvbsnc3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Baustellen: Meldungen und Mängel offen\", \"col\": 3}}, {\"id\": \"cvbssp0\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cvbssc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Baustellen\", \"col\": 3}}, {\"id\": \"cvbssc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Nachkalkulation\", \"col\": 3}}, {\"id\": \"cvbssc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Plantafel\", \"col\": 3}}, {\"id\": \"cvbssc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Projekte\", \"col\": 3}}, {\"id\": \"cvbssc4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Arbeitspakete\", \"col\": 3}}, {\"id\": \"cvbssc5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Zeiten\", \"col\": 3}}, {\"id\": \"cvbssc6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Materialbuchungen\", \"col\": 3}}]",
+ "creation": "2026-11-01 18:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 1,
+ "icon": "tool",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Baustellen",
+ "links": [],
+ "modified": "2026-11-01 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Corevatis ERPNext",
+ "name": "Baustellen",
+ "number_cards": [
+  {
+   "label": "Baustellen laufend",
+   "number_card_name": "Baustellen laufend"
+  },
+  {
+   "label": "Baustellen rot",
+   "number_card_name": "Baustellen rot"
+  },
+  {
+   "label": "Baustellen: Stunden diese Woche",
+   "number_card_name": "Baustellen: Stunden diese Woche"
+  },
+  {
+   "label": "Baustellen: Meldungen und Mängel offen",
+   "number_card_name": "Baustellen: Meldungen und Mängel offen"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [
+  {
+   "role": "Büro"
+  },
+  {
+   "role": "Meister"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": -0.8,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "label": "Baustellen",
+   "link_to": "Baustellen",
+   "report_ref_doctype": "Project",
+   "type": "Report"
+  },
+  {
+   "color": "Orange",
+   "label": "Nachkalkulation",
+   "link_to": "Nachkalkulation",
+   "report_ref_doctype": "Project",
+   "type": "Report"
+  },
+  {
+   "color": "Yellow",
+   "label": "Plantafel",
+   "link_to": "plantafel",
+   "type": "Page"
+  },
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "label": "Projekte",
+   "link_to": "Project",
+   "type": "DocType",
+   "stats_filter": "[[\"Project\", \"status\", \"=\", \"Open\", false]]"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Arbeitspakete",
+   "link_to": "Task",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Zeiten",
+   "link_to": "Timesheet",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Materialbuchungen",
+   "link_to": "Stock Entry",
+   "type": "DocType"
+  }
+ ],
+ "standard": 1,
+ "title": "Baustellen",
+ "type": "Workspace"
+}

@@ -79,13 +79,14 @@ def ensure_prozess_setup() -> None:
 	ensure_lead_feldreihenfolge()
 
 
-def ensure_kennzahlen() -> None:
-	for karte in KENNZAHLEN:
+def ensure_kennzahlen(karten=KENNZAHLEN, document_type: str = "Lead") -> None:
+	"""Number Cards vom Typ Custom anlegen bzw. angleichen (auch für „Baustellen“, 5.9)."""
+	for karte in karten:
 		werte = {
 			"type": "Custom",
 			"method": karte["method"],
 			# Custom-Karten sieht nur, wer document_type lesen darf (number_card.has_permission)
-			"document_type": "Lead",
+			"document_type": document_type,
 			"is_public": 1,
 			"is_standard": 0,
 			"module": MODULE,
