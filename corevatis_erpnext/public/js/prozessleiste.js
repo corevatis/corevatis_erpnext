@@ -241,6 +241,8 @@ frappe.provide("corevatis_erpnext.prozess");
 		const material = daten.material || null;
 		// Bautagebuch (P3.2): Pille „Bautagebuch: 12 Tage“ am Projekt mit Knopf zur Liste
 		const bautagebuch = daten.bautagebuch || null;
+		// Aufgaben am Vorgang (P3.4): Pille „Aufgaben: 2 offen“ mit Sprung zur gefilterten Aufgabenliste, nur mit Kern
+		const aufgaben = daten.aufgaben || null;
 		const nachrichten_text = nachrichten
 			? nachrichten.ungelesen
 				? __("Nachrichten: {0} ungelesen", [nachrichten.ungelesen])
@@ -291,6 +293,13 @@ frappe.provide("corevatis_erpnext.prozess");
 						: ""
 				}
 				${
+					aufgaben
+						? `<span class="indicator-pill ${AMPEL[aufgaben.ampel] || "gray"} cv-pl-aufgaben">${esc(
+								aufgaben.text || __("Aufgaben")
+						  )}</span><button class="btn btn-xs btn-default cv-pl-aufgaben-knopf">${esc(__("Aufgaben"))}</button>`
+						: ""
+				}
+				${
 					naechste
 						? `<button class="btn btn-xs btn-primary cv-pl-naechste">${esc(__("Nächster Schritt"))}: ${esc(
 								naechste.label
@@ -328,6 +337,11 @@ frappe.provide("corevatis_erpnext.prozess");
 				frappe.route_options = { projekt: bautagebuch.projekt };
 				frappe.set_route("List", "Bautagebuch Tag");
 			}
+		});
+		el.find(".cv-pl-aufgaben-knopf").on("click", () => {
+			frappe.route_options = { cv_quelle: ["is", "set"], cv_vorgang: ["in", aufgaben.vorgaenge] };
+			if (aufgaben.offen) frappe.route_options.status = "Open";
+			frappe.set_route("List", "ToDo");
 		});
 		el.find(".cv-pl-nachkalkulation-knopf").on("click", () => {
 			frappe.route_options = { projekt: nachkalkulation.projekt };

@@ -69,6 +69,9 @@ _PROZESSLEISTE = "public/js/prozessleiste.js"
 _MATERIAL = "public/js/materialwirtschaft.bundle.js"
 # Kundenportal (P2.7): Knopf „Kundenzugang“ (Link mit Token) an Anfrage, Kunde, Projekt, Angebot
 _KUNDENZUGANG = "public/js/kundenzugang.js"
+# Aufgaben am Vorgang (P3.4): Knopf „Aufgabe“ an Anfrage, Auftrag und Projekt, „Erledigt“ am ToDo, Liste
+# „Aufgaben“ (ToDo-Liste in Handwerkersprache); Kern-Felder und -Methoden aus corevatis, ohne Kern inaktiv
+_AUFGABEN = "public/js/aufgaben.js"
 # Textbausteine (P2.6): Platzhalter-Hilfe und Vorschau am Baustein (Terms and Conditions)
 doctype_js = {
 	"Terms and Conditions": "public/js/textbaustein.js",
@@ -80,6 +83,7 @@ doctype_js = {
 		_PROZESSLEISTE,
 		"public/js/prozess_lead.js",
 		_KUNDENZUGANG,
+		_AUFGABEN,
 	],
 	# Angebot annehmen/ablehnen (4.4), Nachfassen (4.5); Mappenprüfung übersteuern (Epic D)
 	"Quotation": [
@@ -103,6 +107,7 @@ doctype_js = {
 		"public/js/planung.js",
 		"public/js/abrechnung.js",
 		_PROZESSLEISTE,
+		_AUFGABEN,
 	],
 	# Materialwirtschaft (P2.2): „Material bestellen“ am Projekt, Bestellung und Lieferung in Handwerkersprache
 	"Project": [
@@ -113,6 +118,7 @@ doctype_js = {
 		_KUNDENZUGANG,
 		# Bautagebuch (P3.2): Knopf „Bautagebuch“ mit Dialog Zeitraum (Kern corevatis.bautagebuch)
 		"public/js/bautagebuch.js",
+		_AUFGABEN,
 	],
 	"Material Request": [_MATERIAL],
 	"Purchase Order": [_MATERIAL],
@@ -136,6 +142,7 @@ doctype_js = {
 	"Dunning": ["public/js/mahnung_zahlung.bundle.js"],
 	# Abnahme (6.1): Doctype aus corevatis, ohne Kern lädt es nie; „Mangel-Aufgaben erzeugen“
 	"Abnahmeprotokoll": ["public/js/abnahme.js", _PROZESSLEISTE],
+	"ToDo": [_AUFGABEN],
 }
 
 # Verbindungen: Angebote am Objekt und am Aufmaß (Kern-Doctypes, Quotation.cv_objekt/cv_aufmass);
@@ -170,7 +177,7 @@ corevatis_sync_handlers = {
 # Gutschriften (Sales Invoice mit is_return) bekommen den Rückgabe-Nummernkreis aus
 # dem Site-Template (z. B. GS-.YYYY.-), solange die Standardserie gewählt ist.
 # Textbausteine (P2.6): Aktion „Serienbrief“ in der Kundenliste (Büro)
-doctype_list_js = {"Customer": "public/js/kunden_serienbrief.js"}
+doctype_list_js = {"Customer": "public/js/kunden_serienbrief.js", "ToDo": _AUFGABEN}
 
 doc_events = {
 	# Textbausteine (P2.6): Platzhalter prüfen, Mahntext in den Mahntyp übernehmen

@@ -6,6 +6,20 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
 
 ## [Unveröffentlicht]
 
+### Phase 3 P3.4 Aufgaben (Handwerker#96)
+
+- Seitenleiste „Betrieb“: Eintrag „Aufgaben“ nach „Nachrichten“ (ToDo-Liste, gefiltert auf Aufgaben mit Quelle
+  und Status offen). Die ToDo-Liste heißt „Aufgaben“, zeigt den Titel statt der Beschreibung, den Status als
+  Pille (Offen, Erledigt, Verworfen, Überfällig rot, fälliges Datum rot) und springt mit „Öffnen“ zum Vorgang;
+  Knopf „Neue Aufgabe“ für Büro, Meister, Monteur.
+- Knopf „Aufgabe“ (Gruppe „Erstellen“) an Anfrage, Auftrag und Projekt: Dialog mit „Was ist zu tun?“,
+  „Fällig bis“, „Wichtigkeit“, „Wer kümmert sich?“ und Beschreibung; legt über die Kern-Methode
+  `corevatis.aufgaben.desk.anlegen` an (dieselben Prüfungen wie in der App).
+- ToDo-Formular einer Aufgabe: „Erledigt“/„Wieder öffnen“ statt „Close“/„Reopen“, Sprung zum Vorgang, Hinweis
+  „überfällig“ bzw. auf die Meldung.
+- Prozessleiste: Pille „Aufgaben: n offen“ (gelb; mit überfälligen rot, alle erledigt grün) mit Knopf zur
+  gefilterten Aufgabenliste; zählt Aufgaben an Anfrage, Aufträgen und Projekten des Vorgangs (nur lesbare,
+  ToDo-Rechte des Benutzers). Ohne Kern entfallen Pille, Knöpfe und Listenanpassung.
 ### Neu (Phase 3 P3.2 Bautagebuch, Handwerker#94)
 
 - Modul `corevatis_erpnext.bautagebuch` für den Kern (`corevatis.bautagebuch`): Hook `corevatis_anwesenheit_adapter`

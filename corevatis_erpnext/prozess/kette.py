@@ -1061,6 +1061,7 @@ def auswerten(k: frappe._dict, einst=None, mit_aktionen: bool = True) -> dict:
 		else {"farbe": ergebnis_ampel["farbe"], "text": "", "gruende": []},
 		"mappe": _mappe(k, lead_lesbar),
 		"nachrichten": _nachrichten(k, lead_lesbar),
+		"aufgaben": _aufgaben(k, lead_lesbar),
 		"nachkalkulation": _nachkalkulation(k),
 		"material": _material(k),
 		"bautagebuch": _bautagebuch(k),
@@ -1104,6 +1105,29 @@ def _nachrichten(k: frappe._dict, lead_lesbar: bool) -> dict | None:
 		return None
 	except Exception:
 		frappe.log_error(title="Prozessleiste: Nachrichten")
+		return None
+
+
+def _aufgaben(k: frappe._dict, lead_lesbar: bool) -> dict | None:
+	"""Aufgaben am Vorgang (P3.4): Pille „Aufgaben: n offen“ mit Knopf zur gefilterten Liste. Zählt die
+	Aufgaben an der Anfrage, den Aufträgen und Projekten des Vorgangs (nur lesbare); ``None`` ohne Kern
+	oder ohne Aufgaben. Fehler halten die Leiste nicht auf."""
+	try:
+		from corevatis_erpnext import aufgaben
+
+		vorgaenge: list[tuple[str, str]] = []
+		start_doctype, start_name = k.get("start") or (None, None)
+		if start_doctype in aufgaben.VORGANG_DOCTYPES and start_name:
+			vorgaenge.append((start_doctype, start_name))
+		if k.lead and lead_lesbar:
+			vorgaenge.append(("Lead", k.lead.name))
+		for doctype, zeilen in (("Sales Order", k.auftraege), ("Project", k.projekte)):
+			for z in zeilen or []:
+				if lesbar(doctype, z.name):
+					vorgaenge.append((doctype, z.name))
+		return aufgaben.stand(list(dict.fromkeys(vorgaenge)))
+	except Exception:
+		frappe.log_error(title="Prozessleiste: Aufgaben")
 		return None
 
 
