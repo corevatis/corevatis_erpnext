@@ -525,9 +525,12 @@ frappe.provide("corevatis_erpnext.materialwirtschaft");
 				const positionen = frm.doc.items || [];
 				const voll = positionen.filter((z) => flt(z.qty) > 0 && flt(z.received_qty) >= flt(z.qty)).length;
 				const teil = positionen.filter((z) => flt(z.received_qty) > 0 && flt(z.received_qty) < flt(z.qty)).length;
+				const vollstaendig = positionen.length > 0 && voll === positionen.length;
 				frm.set_intro(
 					esc(
-						voll + teil > 0
+						vollstaendig
+							? __("Bestellung bei {0} vollständig geliefert.", [frm.doc.supplier_name || frm.doc.supplier])
+							: voll + teil > 0
 							? __("Bestellung bei {0} freigegeben, {1} von {2} Positionen geliefert{3}. Weitere Lieferung über „Lieferung buchen“.", [
 									frm.doc.supplier_name || frm.doc.supplier,
 									voll,
@@ -536,9 +539,9 @@ frappe.provide("corevatis_erpnext.materialwirtschaft");
 								])
 							: __("Bestellung bei {0} freigegeben. Kommt die Ware: „Lieferung buchen“ (Lieferschein abgleichen, Lager wählen).", [frm.doc.supplier_name || frm.doc.supplier])
 					),
-					"blue"
+					vollstaendig ? "green" : "blue"
 				);
-				if (prozent < 100 && !frm.is_dirty()) {
+				if (!vollstaendig && prozent < 100 && !frm.is_dirty()) {
 					frm.page.set_primary_action(__("Lieferung buchen"), () => M.lieferung_dialog(frm.doc.name, () => frm.reload_doc()));
 				}
 			} else if (frm.doc.docstatus === 1) {

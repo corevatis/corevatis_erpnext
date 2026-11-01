@@ -21,7 +21,13 @@ ein Tag `vX.Y.Z`, das zur Version in `corevatis_erpnext/__init__.py` passt.
   dem Eigentümer und per Freigabe frei). Wer Termine schreiben und die Anfrage bearbeiten darf, darf den alten
   Termin dieser Anfrage absagen.
 - **Bestellung**: Zustandstext nach Teillieferung zählt Positionen („1 von 8 Positionen geliefert“) statt des
-  mengengewichteten ERPNext-Prozentwerts („0 % geliefert“ bei 0,74 m³ von 1.100 Einheiten).
+  mengengewichteten ERPNext-Prozentwerts („0 % geliefert“ bei 0,74 m³ von 1.100 Einheiten); vollständig
+  gelieferte Bestellungen zeigen das auch im Status „To Bill“ (grün, kein Hauptknopf).
+- **Meister liest Mitarbeiter** (Nachprüfung Build 34): ohne Leserecht auf Employee verwarf jedes Link-Feld auf
+  Employee - Berichtsfilter „Fahrzeuglager“ und „Stundenkonto“, Dialoge - seinen Wert mit „Unzureichende
+  Berechtigung für Employee“. `mitarbeiter.ensure_rechte` gibt dem Meister Lesen und Bericht am Employee; die
+  Konto-Felder `cv_urlaubsanspruch`, `cv_urlaub_uebertrag`, `cv_saldo_uebertrag` liegen jetzt auf Feldrechtstufe 2
+  (Büro und System Manager), die persönlichen ERPNext-Felder bleiben auf Stufe 1 (Issue #72).
 
 ### Hinzugefügt (Kundenportal, Phase 2 P2.7, Handwerker#91)
 
